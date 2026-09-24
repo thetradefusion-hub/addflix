@@ -1,6 +1,29 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+
+async function apiFetch(path, options = {}) {
+  const url = `${API_BASE || ''}${path}`;
+  const response = await fetch(url, options);
+  const text = await response.text();
+
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: 'Server returned an invalid response.' };
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(data.message || `Request failed with status ${response.status}`);
+  }
+
+  return data;
+}
+
 const defaultRegister = {
   fullName: '',
   mobile: '',
@@ -43,16 +66,11 @@ export default function AuthPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const data = await apiFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(register),
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
 
       localStorage.setItem('addflix_token', data.token);
       localStorage.setItem('addflix_user', JSON.stringify(data.user));
@@ -71,16 +89,11 @@ export default function AuthPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const data = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(login),
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
 
       localStorage.setItem('addflix_token', data.token);
       localStorage.setItem('addflix_user', JSON.stringify(data.user));
@@ -99,13 +112,11 @@ export default function AuthPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
+      const data = await apiFetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: login.login }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Password reset request failed');
       setMessage(data.message || 'Password reset request sent.');
       setResetMode(false);
     } catch (error) {
