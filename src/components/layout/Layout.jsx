@@ -8,6 +8,7 @@ import ToastStack from "@/components/common/Toast";
 
 export default function Layout() {
   const [open, setOpen] = useState(false);
+  const impersonating = localStorage.getItem("addflix_impersonating") === "1";
   return (
     <div className="flex h-dvh overflow-hidden bg-[#f4f6f8]">
       <Sidebar className="hidden lg:flex" />
@@ -18,6 +19,12 @@ export default function Layout() {
         </div>
       ) : null}
       <div className="flex min-w-0 flex-1 flex-col">
+        {impersonating ? (
+          <div className="flex items-center justify-between gap-3 bg-[#111827] px-4 py-2 text-xs text-white">
+            <span>You are viewing this member account as admin.</span>
+            <Link to="/admin/users" className="font-bold text-[#ffb4b0]">Back to admin</Link>
+          </div>
+        ) : null}
         <TopHeader />
         <MobileHeader onMenu={() => setOpen(true)} />
         <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 pb-24 sm:px-4 lg:px-5 lg:pb-6">

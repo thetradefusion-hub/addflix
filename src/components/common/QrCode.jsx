@@ -1,4 +1,8 @@
-export default function QrCode({ className = "" }) {
+export default function QrCode({ className = "", value = "" }) {
+  if (value) {
+    const src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(value)}`;
+    return <img src={src} alt="QR code" className={`aspect-square w-full rounded-xl bg-white p-2 ${className}`} />;
+  }
   const cells = [
     "1111111001001111111",
     "1000001011101000001",

@@ -4,11 +4,32 @@ import PageHeader from "@/components/common/PageHeader";
 import StatusBadge from "@/components/common/StatusBadge";
 import ProgressBar from "@/components/common/ProgressBar";
 import { Button } from "@/components/ui/button";
-import { TODAY_ROI, useApp } from "@/context/AppContext";
+import { useApp } from "@/context/AppContext";
 import AppIcon from "@/components/common/AppIcon";
 import { money } from "@/lib/utils";
+import Pager, { usePaging } from "@/components/common/Pager";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
-import { roiCalendar } from "@/data/mockData";
+
+function monthGrid(dailyTask, roiDays) {
+  const today = dailyTask?.day || new Date().toISOString().slice(0, 10);
+  const [year, month] = today.split("-").map(Number);
+  const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+  const count = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const saved = new Map((roiDays || []).map((row) => [row.day, row.status]));
+  const cells = Array.from({ length: count }, (_, index) => {
+    const day = index + 1;
+    const key = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    let status = saved.get(key) || "";
+    if (key === today) {
+      if (dailyTask?.roiClaimed) status = "Claimed";
+      else if (dailyTask?.roiUnlocked) status = "Unlocked";
+      else status = "Pending";
+    }
+    return { day, key, status };
+  });
+  const label = new Date(Date.UTC(year, month - 1, 1)).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+  return { label, first, cells, today };
+}
 
 const steps = [
   ["Claim ROI", "Click the button to start"],
@@ -19,11 +40,13 @@ const steps = [
 
 export default function ROI() {
   const navigate = useNavigate();
-  const { taskProgress, taskCompleted, roiUnlocked, roiClaimed, balances, tasks, claimRoi, watching } = useApp();
+  const { taskProgress, taskCompleted, roiUnlocked, roiClaimed, balances, tasks, claimRoi, watching, todayRoi, dailyTask, roiDays } = useApp();
   const guard = useActiveGuard();
   const current = roiClaimed ? 4 : taskCompleted ? 3 : taskProgress > 0 ? 2 : 1;
-  const claimedDays = roiCalendar.filter((d) => d.status === "Claimed").length;
-  const missedDays = roiCalendar.filter((d) => d.status === "Missed" || d.status === "Expired").length;
+  const calendar = monthGrid(dailyTask, roiDays);
+  const claimedDays = calendar.cells.filter((d) => d.status === "Claimed").length;
+  const missedDays = calendar.cells.filter((d) => d.status === "Missed" || d.status === "Expired").length;
+  const taskPage = usePaging(tasks, 8, tasks.length);
 
   return (
     <div className="mx-auto max-w-[1180px]">
@@ -37,23 +60,23 @@ export default function ROI() {
       <section className="mb-4 rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <p className="font-bold">September 2026 · Missed day calendar</p>
-            <p className="text-xs text-[#98a2b3]">Activity completed → ROI eligible. Not completed → missed, no carry-forward.</p>
+            <p className="font-bold">{calendar.label} · UTC</p>
+            <p className="text-xs text-[#98a2b3]">A UTC day that closes before the task is complete is Missed. It does not carry forward.</p>
           </div>
-          <p className="text-xs text-[#667085]">{claimedDays} claimed · {missedDays} missed/expired · today pending</p>
+          <p className="text-xs text-[#667085]">{claimedDays} claimed · {missedDays} missed/expired · today {(calendar.cells.find((item) => item.key === calendar.today)?.status || "Pending").toLowerCase()}</p>
         </div>
         <div className="mb-3 flex flex-wrap gap-3 text-[11px] text-[#667085]">
-          {[["Claimed", "bg-emerald-500"], ["Missed", "bg-rose-500"], ["Expired", "bg-slate-400"], ["Pending", "bg-amber-400"]].map(([label, cls]) => (
+          {[["Claimed", "bg-emerald-500"], ["Unlocked", "bg-sky-500"], ["Missed", "bg-rose-500"], ["Expired", "bg-slate-400"], ["Pending", "bg-amber-400"]].map(([label, cls]) => (
             <span key={label} className="inline-flex items-center gap-1"><i className={`h-2 w-2 rounded-full ${cls}`} /> {label}</span>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1.5 text-center text-[11px]">
-          {["S", "M", "T", "W", "T", "F", "S"].map((d) => <span key={d} className="py-1 font-semibold text-[#98a2b3]">{d}</span>)}
-          {Array.from({ length: 2 }, (_, i) => <span key={`pad-${i}`} />)}
-          {roiCalendar.map((item) => {
-            const tone = item.status === "Claimed" ? "bg-emerald-50 text-emerald-700" : item.status === "Missed" ? "bg-rose-50 text-rose-600" : item.status === "Expired" ? "bg-slate-100 text-slate-500" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200";
+          {["S", "M", "T", "W", "T", "F", "S"].map((d, index) => <span key={`${d}-${index}`} className="py-1 font-semibold text-[#98a2b3]">{d}</span>)}
+          {Array.from({ length: calendar.first }, (_, i) => <span key={`pad-${i}`} />)}
+          {calendar.cells.map((item) => {
+            const tone = item.status === "Claimed" ? "bg-emerald-50 text-emerald-700" : item.status === "Unlocked" ? "bg-sky-50 text-sky-700" : item.status === "Missed" ? "bg-rose-50 text-rose-600" : item.status === "Expired" ? "bg-slate-100 text-slate-500" : item.status === "Pending" ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200" : "text-[#d0d5dd]";
             return (
-              <span key={item.day} title={`${item.status} · ${item.claim}`} className={`rounded-lg py-2 font-semibold ${tone}`}>{item.day}</span>
+              <span key={item.key} title={item.status || "No task yet"} className={`rounded-lg py-2 font-semibold ${tone}`}>{item.day}</span>
             );
           })}
         </div>
@@ -61,7 +84,7 @@ export default function ROI() {
 
       <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
-          ["Today's ROI", `$${money(TODAY_ROI)}`, "bg-sky-50 text-sky-600", "HandCoins"],
+          ["Today's ROI", `$${money(todayRoi)}`, "bg-sky-50 text-sky-600", "HandCoins"],
           ["Task Status", taskCompleted ? "Completed" : watching ? "In Progress" : "Pending", "bg-emerald-50 text-emerald-600", "CircleCheck"],
           ["Watch Progress", `${taskCompleted ? 100 : taskProgress}%`, "bg-orange-50 text-orange-600", "Play"],
           ["Wallet Balance", `$${money(balances.total)}`, "bg-amber-50 text-amber-600", "Wallet"],
@@ -151,7 +174,7 @@ export default function ROI() {
       <section className="mt-3 grid gap-3 lg:grid-cols-3">
         <article className="rounded-2xl bg-gradient-to-br from-[#3a0d14] to-[#e10600] p-4 text-center text-white">
           <p className="text-sm font-semibold">Today's ROI Status</p>
-          <p className="mt-2 text-4xl font-black">${money(TODAY_ROI)}</p>
+          <p className="mt-2 text-4xl font-black">${money(todayRoi)}</p>
           <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-black/20 px-3 py-1 text-xs font-bold">
             <Lock size={12} /> {roiClaimed ? "CLAIMED" : roiUnlocked ? "UNLOCKED" : "LOCKED"}
           </p>
@@ -183,7 +206,7 @@ export default function ROI() {
               <tr>{["Date", "Task Title", "Duration", "Completion", "Status", "ROI", "Claim Status"].map((h) => <th key={h} className="pb-2 font-medium">{h}</th>)}</tr>
             </thead>
             <tbody>
-              {tasks.slice(0, 6).map((row) => (
+              {taskPage.items.map((row) => (
                 <tr key={row.id} className="border-t border-[#f2f4f7]">
                   <td className="py-3">{row.date}</td>
                   <td>{row.title}</td>
@@ -198,7 +221,7 @@ export default function ROI() {
           </table>
         </div>
         <div className="space-y-2 lg:hidden">
-          {tasks.slice(0, 4).map((row) => (
+          {taskPage.items.map((row) => (
             <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3">
               <div className="flex items-center justify-between">
                 <p className="font-semibold">{row.title}</p>
@@ -209,6 +232,7 @@ export default function ROI() {
             </article>
           ))}
         </div>
+        <Pager page={taskPage.page} pages={taskPage.pages} total={taskPage.total} size={taskPage.size} onChange={taskPage.setPage} />
       </section>
     </div>
   );

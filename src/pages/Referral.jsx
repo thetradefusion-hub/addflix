@@ -6,8 +6,9 @@ import QrCode from "@/components/common/QrCode";
 import StatusBadge from "@/components/common/StatusBadge";
 import Modal from "@/components/common/Modal";
 import { Button } from "@/components/ui/button";
-import { levelRates, referralHistory, referralLink, teamMembers, user } from "@/data/mockData";
 import { copyText, money } from "@/lib/utils";
+import Pager, { usePaging } from "@/components/common/Pager";
+import { formatLedgerDate } from "@/lib/ledger";
 import { useApp } from "@/context/AppContext";
 import AppIcon from "@/components/common/AppIcon";
 
@@ -34,7 +35,11 @@ function TeamNode({ member, members, onPick, depth = 0 }) {
 }
 
 export default function Referral({ view = "link", level: fixedLevel = 1 }) {
-  const { toast } = useApp();
+  const { toast, sessionUser, referralCredits, network } = useApp();
+  const teamMembers = network.members || [];
+  const levelRates = network.levels?.length ? network.levels : [1, 2, 3, 4].map((level) => ({ level, label: `Level ${level}`, amount: 0, members: 0, active: 0 }));
+  const memberId = sessionUser?.id || "—";
+  const referralLink = sessionUser?.referralLink || "";
   const [picked, setPicked] = useState(null);
   const [level, setLevel] = useState(view === "level" ? fixedLevel : 0);
   const [openLevel, setOpenLevel] = useState(view === "level" ? fixedLevel : 1);
@@ -45,16 +50,48 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
     }
   }, [view, fixedLevel]);
   const rows = teamMembers.filter((member) => (level ? member.level === level : true));
-  const payouts = referralHistory.filter((row) => (view === "level" ? row.level === fixedLevel : true));
+  const livePayouts = (referralCredits || [])
+    .filter((row) => (view === "level" ? row.level === fixedLevel : true))
+    .map((row) => ({
+      id: row.id,
+      date: formatLedgerDate(row.date),
+      user: row.user,
+      level: row.level,
+      amount: row.amount,
+      commission: row.commission,
+      status: row.status,
+      tx: row.tx,
+    }));
+  const payouts = livePayouts;
+  const teamPage = usePaging(rows, 8, level);
+  const payoutPage = usePaging(payouts, 8, `${view}:${fixedLevel}`);
   const current = levelRates.find((item) => item.level === fixedLevel) || levelRates[0];
   const title = view === "team" ? "My Team" : view === "level" ? `Level ${fixedLevel}` : "My Referral Link";
+  const referralTotal = (referralCredits || []).reduce((sum, row) => sum + Number(row.commission || 0), 0);
   const subtitle = view === "team"
-    ? "126 members across 4 levels. 94 are active."
+    ? `${network.total || 0} members across 4 levels. ${network.active || 0} are active.`
     : view === "level"
-      ? `${current.members} members · ${current.rate || "commission"} · $${money(current.amount)} per $10 subscription`
+      ? `${current.members} members · $${money(current.amount)} per $10 subscription`
       : "Share your link and earn on every $10 USDT activation.";
 
-  const share = (name) => toast(`${name} share opened in this demo.`, "info");
+  const share = (name) => {
+    const text = `Join ADD FLIX with my link: ${referralLink}`;
+    const urls = {
+      WhatsApp: `https://wa.me/?text=${encodeURIComponent(text)}`,
+      Telegram: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("Join ADD FLIX")}`,
+      Facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`,
+    };
+    if (!referralLink) {
+      toast("Referral link is not ready yet.", "warning");
+      return;
+    }
+    if (!urls[name]) {
+      copyText(referralLink);
+      toast("Referral link copied.");
+      return;
+    }
+    window.open(urls[name], "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="mx-auto max-w-[1180px]">
@@ -66,10 +103,10 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
 
       <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
-          ["Total Referrals", "24", "Direct members", "UserPlus"],
-          ["Active Team", "94", "Of 126 members", "Users"],
-          ["Referral Income", "$180.00", "Lifetime", "HandCoins"],
-          ["4 Level Commission", "$5.00", "Per $10 subscription", "Gift"],
+          ["Total Referrals", String(network.direct || 0), "Direct members", "UserPlus"],
+          ["Active Team", String(network.active || 0), `Of ${network.total || 0} members`, "Users"],
+          ["Referral Income", `$${money(referralTotal)}`, "Lifetime", "HandCoins"],
+          ["4 Level Commission", `$${money(network.commissionPerTen || 0)}`, "Per $10 subscription", "Gift"],
         ].map(([label, value, hint, icon]) => (
           <article key={label} className="rounded-2xl border border-[#eaecf0] bg-white p-4">
             <span className="mb-2 grid h-9 w-9 place-items-center rounded-full bg-red-50 text-[#e10600]"><AppIcon name={icon} size={16} /></span>
@@ -89,7 +126,8 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
             </div>
           </div>
           <div className="rounded-xl bg-[#f8fafc] px-2 py-2">
-            <p className="px-2 py-1.5 text-sm font-black">You · {user.id}</p>
+            <p className="px-2 py-1.5 text-sm font-black">You · {memberId}</p>
+            {teamMembers.filter((row) => row.level === 1).length === 0 ? <p className="px-2 py-3 text-sm text-[#98a2b3]">No downline yet. Share your link to grow the tree.</p> : null}
             {teamMembers.filter((row) => row.level === 1).map((member) => (
               <TeamNode key={member.id} member={member} members={teamMembers} onPick={setPicked} depth={0} />
             ))}
@@ -101,7 +139,7 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
         <section className="mb-4 rounded-2xl bg-gradient-to-r from-[#3a0a12] to-[#e10600] p-5 text-white">
           <p className="text-sm text-white/70">Level {fixedLevel} commission</p>
           <p className="text-4xl font-black">${money(current.amount)}</p>
-          <p className="mt-1 text-sm text-white/80">{current.members} members · {current.active} active · {current.rate || "fixed USDT"}</p>
+          <p className="mt-1 text-sm text-white/80">{current.members} members · {current.active} active · ${money(current.amount)} each</p>
         </section>
       ) : null}
 
@@ -124,8 +162,8 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
         </article>
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 text-center">
           <p className="font-bold">Your Referral QR Code</p>
-          <div className="relative mx-auto mt-3 w-36"><QrCode /></div>
-          <Button variant="ghost" className="mt-3" onClick={() => toast("QR download is simulated in this demo.", "info")}><Download size={14} /> Download QR</Button>
+          <div className="relative mx-auto mt-3 w-36"><QrCode value={referralLink} /></div>
+          <Button variant="ghost" className="mt-3" onClick={() => { if (referralLink) window.open(`https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=${encodeURIComponent(referralLink)}`, "_blank", "noopener,noreferrer"); }}><Download size={14} /> Download QR</Button>
         </article>
       </section>
       ) : null}
@@ -153,7 +191,7 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
           <p className="font-bold">Team Tree (4 Levels)</p>
           <div className="mt-4 text-center">
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-xs font-bold">You<br />{` `}</span>
-            <p className="text-xs text-[#667085]">ADF12568</p>
+            <p className="text-xs text-[#667085]">{memberId}</p>
             <div className="mx-auto mt-2 h-4 w-px bg-slate-200" />
             <div className="grid grid-cols-4 gap-2">
               {levelRates.map((item) => (
@@ -164,6 +202,7 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
               ))}
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {teamMembers.filter((m) => m.level === openLevel).length === 0 ? <p className="col-span-4 text-xs text-[#98a2b3]">No members on this level.</p> : null}
               {teamMembers.filter((m) => m.level === openLevel).slice(0, 4).map((member) => (
                 <div key={member.id} className="rounded-xl bg-[#f8fafc] p-2 text-xs">
                   <p className="font-semibold">{member.name.split(" ")[0]}</p>
@@ -200,9 +239,10 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-[#667085]"><tr>{["#", "User ID", "Name", "Level", "Join Date", "Status"].map((h) => <th key={h} className="pb-2 font-medium">{h}</th>)}</tr></thead>
             <tbody>
-              {rows.map((row, index) => (
+              {rows.length === 0 ? <tr><td colSpan={6} className="py-6 text-center text-sm text-[#98a2b3]">No members on this level yet.</td></tr> : null}
+              {teamPage.items.map((row, index) => (
                 <tr key={row.id} className="border-t border-[#f2f4f7]">
-                  <td className="py-3">{index + 1}</td>
+                  <td className="py-3">{teamPage.start + index + 1}</td>
                   <td>{row.id}</td>
                   <td><button className="text-left font-semibold text-[#e10600]" onClick={() => setPicked(row)}>{row.name}</button></td>
                   <td>Level {row.level}</td>
@@ -214,7 +254,7 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
           </table>
         </div>
         <div className="space-y-2 lg:hidden">
-          {rows.map((row) => (
+          {teamPage.items.map((row) => (
             <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3">
               <div className="flex justify-between"><p className="font-semibold">{row.name}</p><StatusBadge tone={row.status}>{row.status}</StatusBadge></div>
               <p className="text-xs text-[#667085]">{row.id} · Level {row.level}</p>
@@ -222,6 +262,7 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
             </article>
           ))}
         </div>
+        <Pager page={teamPage.page} pages={teamPage.pages} total={teamPage.total} size={teamPage.size} onChange={teamPage.setPage} />
       </section>
       ) : null}
 
@@ -231,7 +272,7 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-[#667085]"><tr>{["Date & Time", "From User", "Level", "Subscription", "Commission", "Status", "TX ID"].map((h) => <th key={h} className="pb-2 font-medium">{h}</th>)}</tr></thead>
             <tbody>
-              {payouts.map((row) => (
+              {payoutPage.items.map((row) => (
                 <tr key={row.id} className="border-t border-[#f2f4f7]">
                   <td className="py-3">{row.date}</td>
                   <td>{row.user}</td>
@@ -246,13 +287,14 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
           </table>
         </div>
         <div className="space-y-2 lg:hidden">
-          {payouts.map((row) => (
+          {payoutPage.items.map((row) => (
             <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3 text-sm">
               <div className="flex justify-between"><span>Level {row.level} · {row.user}</span><span className="font-bold text-emerald-600">+${money(row.commission)}</span></div>
               <p className="text-xs text-[#98a2b3]">{row.date} · {row.tx}</p>
             </article>
           ))}
         </div>
+        <Pager page={payoutPage.page} pages={payoutPage.pages} total={payoutPage.total} size={payoutPage.size} onChange={payoutPage.setPage} />
         <button className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#e10600]" onClick={() => share("Share")}><Share2 size={12} /> Share link again</button>
       </section>
 

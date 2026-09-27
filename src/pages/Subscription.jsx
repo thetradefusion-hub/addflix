@@ -4,23 +4,24 @@ import PageHeader from "@/components/common/PageHeader";
 import QrCode from "@/components/common/QrCode";
 import StatusBadge from "@/components/common/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { subscriptionPackage, walletAddress } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
-import { copyText } from "@/lib/utils";
+import { activationLabel, copyText, shortHash } from "@/lib/utils";
+import Pager, { usePaging } from "@/components/common/Pager";
 
 const steps = ["Make Payment", "Submit TX Hash", "Verification", "Account Activated"];
 
 export default function Subscription() {
-  const { subscriptionActive, paymentState, activateAccount, toast, setSubscriptionActive } = useApp();
+  const { subscriptionActive, paymentState, activatedAt, subscriptionPayments, submitSubscription, toast, depositAddress, subscriptionPrice } = useApp();
   const [hash, setHash] = useState("");
   const [tab, setTab] = useState("qr");
   const step = subscriptionActive ? 4 : paymentState === "pending" ? 3 : hash ? 2 : 1;
+  const history = usePaging(subscriptionPayments, 8, subscriptionPayments.length);
 
   return (
     <div className="mx-auto max-w-[1180px]">
       <PageHeader
         title="My Subscription"
-        subtitle="Activate your account with $10 USDT subscription to start earning."
+        subtitle={`Activate your account with $${subscriptionPrice} USDT subscription to start earning.`}
         crumbs={[{ label: "Home", to: "/dashboard" }, { label: "My Subscription" }]}
       />
 
@@ -32,7 +33,7 @@ export default function Subscription() {
           </div>
           <div className="rounded-2xl border border-red-500/40 bg-black/40 px-6 py-4 text-center">
             <Crown className="mx-auto text-amber-300" />
-            <p className="text-4xl font-black text-[#ff2a2a]">$10 <span className="text-lg">USDT</span></p>
+            <p className="text-4xl font-black text-[#ff2a2a]">${subscriptionPrice} <span className="text-lg">USDT</span></p>
           </div>
           <ul className="space-y-1 text-sm">
             {["Activate Your ID", "Start Earning", "Enable Referral Income", "Access All Features"].map((item) => (
@@ -55,7 +56,18 @@ export default function Subscription() {
 
       {subscriptionActive ? (
         <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-          ACCOUNT ACTIVATED ✓ · Subscription ACTIVE · Activation Date: {subscriptionPackage.activationDate}
+          ACCOUNT ACTIVATED ✓ · Subscription ACTIVE · Activation Date: {activatedAt ? activationLabel(activatedAt) : "—"}
+        </div>
+      ) : null}
+
+      {paymentState === "pending" && !subscriptionActive ? (
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">Payment is waiting for admin review. Your ID stays inactive until an admin marks it Success.</p>
+        </div>
+      ) : null}
+      {paymentState === "failed" ? (
+        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
+          Last payment failed. Send ${subscriptionPrice} USDT again and submit a new transaction hash.
         </div>
       ) : null}
 
@@ -64,7 +76,7 @@ export default function Subscription() {
           <p className="mb-3 font-bold">Subscription Details <StatusBadge tone="danger">Mandatory</StatusBadge></p>
           <dl className="space-y-2 text-sm">
             {[
-              ["Subscription Amount", "$10 USDT"],
+              ["Subscription Amount", `$${subscriptionPrice} USDT`],
               ["Network", "BEP-20 (BSC)"],
               ["Plan Type", "Account Activation"],
               ["Validity", "Lifetime"],
@@ -92,11 +104,11 @@ export default function Subscription() {
           <div className="relative mx-auto w-40">
             <QrCode />
           </div>
-          <p className="mt-3 break-all rounded-xl bg-[#f8fafc] p-2 text-center text-xs">{walletAddress}</p>
-          <Button className="mt-3 w-full" onClick={() => { copyText(walletAddress); toast("Wallet address copied."); }}>
-            <Copy size={14} /> Copy Wallet Address
+          <p className="mt-3 break-all rounded-xl bg-[#f8fafc] p-2 text-center text-xs">{depositAddress}</p>
+          <Button className="mt-3 w-full" onClick={() => { copyText(depositAddress); toast("Deposit address copied."); }}>
+            <Copy size={14} /> Copy Deposit Address
           </Button>
-          <p className="mt-2 text-center text-[11px] text-[#98a2b3]">Send exactly 10 USDT using BEP-20 (BSC) network only.</p>
+          <p className="mt-2 text-center text-[11px] text-[#98a2b3]">Send exactly {subscriptionPrice} USDT using BEP-20 (BSC) network only.</p>
         </article>
 
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
@@ -106,11 +118,11 @@ export default function Subscription() {
           <div className="mt-3 grid h-20 place-items-center rounded-xl border border-dashed border-[#d0d5dd] text-xs text-[#98a2b3]">
             Payment screenshot optional · PNG, JPG (Max 5MB)
           </div>
-          <Button className="mt-3 w-full" disabled={paymentState === "pending" || subscriptionActive} onClick={() => activateAccount(hash || "0xdemo12345678")}>
-            {paymentState === "pending" ? "Verifying..." : subscriptionActive ? "Payment Verified" : "Submit for Verification"}
+          <Button className="mt-3 w-full" disabled={paymentState === "pending" || subscriptionActive} onClick={() => submitSubscription(hash)}>
+            {paymentState === "pending" ? "Pending verification" : subscriptionActive ? "Payment Verified" : "Submit for Verification"}
           </Button>
-          {!subscriptionActive ? (
-            <Button className="mt-2 w-full" variant="dark" onClick={() => activateAccount("0xDEMO" + Date.now())}>Pay & Activate</Button>
+          {!subscriptionActive && paymentState !== "pending" ? (
+            <Button className="mt-2 w-full" variant="dark" onClick={() => submitSubscription(`0xDEMO${Date.now()}`)}>Submit demo hash</Button>
           ) : null}
         </article>
       </section>
@@ -119,7 +131,7 @@ export default function Subscription() {
         <article className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4 text-sm">
           <p className="font-bold">Important Instructions</p>
           <ol className="mt-2 list-decimal space-y-1 pl-4 text-[#475467]">
-            <li>Send exactly 10 USDT using BEP-20 (BSC) network.</li>
+            <li>Send exactly {subscriptionPrice} USDT using BEP-20 (BSC) network.</li>
             <li>Do not send from other network (ERC20, TRC20, etc).</li>
             <li>After payment, enter the correct transaction hash.</li>
             <li>Verification may take a few minutes.</li>
@@ -129,32 +141,25 @@ export default function Subscription() {
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 text-center">
           <Crown className={`mx-auto ${subscriptionActive ? "text-emerald-500" : "text-[#e10600]"}`} />
           <p className="mt-2 text-lg font-black">{subscriptionActive ? "Active" : "Not Active"}</p>
-          <p className="text-xs text-[#667085]">{subscriptionActive ? "Your account is ready to earn." : "Complete payment to activate your account."}</p>
-          <StatusBadge className="mt-3" tone={subscriptionActive ? "active" : "pending"}>{subscriptionActive ? "Activated" : "Waiting for Payment"}</StatusBadge>
+          <p className="text-xs text-[#667085]">{subscriptionActive ? "Your account is ready to earn." : paymentState === "pending" ? "Waiting for payment verification." : paymentState === "failed" ? "Last payment failed." : "Complete payment to activate your account."}</p>
+          <StatusBadge className="mt-3" tone={subscriptionActive ? "active" : paymentState === "failed" ? "danger" : "pending"}>{subscriptionActive ? "Activated" : paymentState === "pending" ? "Pending" : paymentState === "failed" ? "Failed" : "Waiting for Payment"}</StatusBadge>
         </article>
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
           <p className="font-bold">Subscription History</p>
-          {subscriptionActive ? (
-            <div className="mt-3 rounded-xl bg-[#f8fafc] p-3 text-sm">
-              <div className="flex justify-between"><span>24 Sep 2026</span><StatusBadge tone="success">Success</StatusBadge></div>
-              <p className="mt-1 font-semibold">$10 USDT · BEP-20</p>
-              <p className="text-xs text-[#98a2b3]">TX 0x3A7F...D0e1</p>
-            </div>
-          ) : (
-            <p className="mt-6 text-center text-sm text-[#98a2b3]">No subscription found. Complete your subscription to get started.</p>
-          )}
+          <div className="mt-3 space-y-2">
+            {history.total ? history.items.map((row) => (
+              <div key={row.id} className="rounded-xl bg-[#f8fafc] p-3 text-sm">
+                <div className="flex justify-between gap-2"><span>{row.verifiedAt || row.submittedAt}</span><StatusBadge tone={row.status === "Success" ? "success" : row.status === "Failed" ? "danger" : "pending"}>{row.status}</StatusBadge></div>
+                <p className="mt-1 font-semibold">${Number(row.amount).toFixed(2)} USDT · {row.network}</p>
+                <p className="text-xs text-[#98a2b3]">TX {shortHash(row.txHash, 6, 4)}</p>
+              </div>
+            )) : (
+              <p className="py-6 text-center text-sm text-[#98a2b3]">No subscription found. Complete your subscription to get started.</p>
+            )}
+          </div>
+          <Pager page={history.page} pages={history.pages} total={history.total} size={history.size} onChange={history.setPage} />
         </article>
       </section>
-      <p className="mt-4 text-center text-[11px] text-[#98a2b3]">
-        Demo lock:{" "}
-        <button type="button" className="font-semibold text-[#e10600]" onClick={() => { setSubscriptionActive(false); toast("Subscription set to Not Active. Task, claim, invest and withdraw are locked.", "info"); }}>
-          Set Not Active
-        </button>
-        {" · "}
-        <button type="button" className="font-semibold text-emerald-600" onClick={() => { setSubscriptionActive(true); toast("Subscription Active again."); }}>
-          Restore Active
-        </button>
-      </p>
     </div>
   );
 }

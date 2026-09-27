@@ -8,14 +8,14 @@ import QrCode from "@/components/common/QrCode";
 import IconBubble, { BalanceTile } from "@/components/common/IconBubble";
 import AppIcon from "@/components/common/AppIcon";
 import { Button } from "@/components/ui/button";
-import { walletAddress } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { useActiveGuard } from "@/components/common/ActiveGate";
 import { copyText, money } from "@/lib/utils";
+import Pager, { usePaging } from "@/components/common/Pager";
 
 export default function WalletPage({ initialTab = "Overview" }) {
   const navigate = useNavigate();
-  const { balances, transactions, toast } = useApp();
+  const { balances, transactions, toast, walletAddress } = useApp();
   const guard = useActiveGuard();
   const [tab, setTab] = useState(initialTab);
   const [hidden, setHidden] = useState(false);
@@ -75,7 +75,7 @@ export default function WalletPage({ initialTab = "Overview" }) {
             {[
               ["Deposit", "Add USDT to your wallet", "ArrowDownToLine", "bg-emerald-50 text-emerald-500", "/wallet/deposit"],
               ["Withdraw", "Withdraw to external wallet", "ArrowUpFromLine", "bg-rose-50 text-rose-500", "/wallet/withdraw"],
-              ["Transfer", "Transfer to other users", "ArrowLeftRight", "bg-sky-50 text-sky-500", "/wallet"],
+              ["Transfer", "Transfer to other users", "ArrowLeftRight", "bg-sky-50 text-sky-500", "/wallet/transfer"],
               ["Wallet Address", "View your wallet address", "QrCode", "bg-violet-50 text-violet-500", "/wallet/deposit"],
             ].map(([label, body, icon, color, to]) => (
               <button key={label} onClick={() => navigate(to)} className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#eaecf0] bg-white p-3 text-left shadow-sm sm:p-4">
@@ -175,11 +175,11 @@ function txIcon(type) {
 }
 
 function TransactionList({ rows, toast }) {
+  const list = usePaging(rows, 8, rows.length);
   return (
     <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <p className="font-bold">Recent Transactions</p>
-        <button className="text-xs font-semibold text-[#e10600]" onClick={() => toast("Showing the latest wallet ledger.", "info")}>View All</button>
+        <p className="font-bold">Transactions</p>
       </div>
       <div className="hidden overflow-x-auto lg:block">
         <table className="w-full min-w-[520px] text-left text-sm">
@@ -187,9 +187,9 @@ function TransactionList({ rows, toast }) {
             <tr>{["#", "Date & Time", "Type", "Amount (USDT)", "Status", "Details"].map((h) => <th key={h} className="pb-2 font-medium">{h}</th>)}</tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
+            {list.items.map((row, index) => (
               <tr key={row.id} className="border-t border-[#f2f4f7]">
-                <td className="py-3">{index + 1}</td>
+                <td className="py-3">{list.start + index + 1}</td>
                 <td className="whitespace-nowrap">{row.date}</td>
                 <td>{row.type}</td>
                 <td className={row.amount > 0 ? "font-semibold text-emerald-600" : "font-semibold text-[#e10600]"}>{row.amount > 0 ? "+" : ""}{money(row.amount)}</td>
@@ -201,7 +201,7 @@ function TransactionList({ rows, toast }) {
         </table>
       </div>
       <div className="space-y-2 lg:hidden">
-        {rows.map((row) => {
+        {list.items.map((row) => {
           const meta = txIcon(row.type);
           return (
             <article key={row.id} className="flex items-center gap-3 rounded-xl border border-[#f2f4f7] bg-white p-3">
@@ -218,6 +218,7 @@ function TransactionList({ rows, toast }) {
           );
         })}
       </div>
+      <Pager page={list.page} pages={list.pages} total={list.total} size={list.size} onChange={list.setPage} />
     </article>
   );
 }

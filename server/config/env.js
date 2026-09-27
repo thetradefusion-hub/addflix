@@ -17,4 +17,5 @@ export const env = {
   clientOrigin: process.env.CLIENT_ORIGIN || "http://127.0.0.1:5173",
   mongoUri: process.env.MONGODB_URI,
   mongoDb: process.env.MONGODB_DB || "addflix",
+  jwtSecret: process.env.JWT_SECRET || "addflix-demo-secret",
 };

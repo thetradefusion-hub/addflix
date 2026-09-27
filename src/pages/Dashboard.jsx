@@ -3,38 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ChevronRight, Eye, EyeOff } from "lucide-react";
 import AppIcon from "@/components/common/AppIcon";
-import { user } from "@/data/mockData";
-import { TODAY_ROI, useApp } from "@/context/AppContext";
-import { money } from "@/lib/utils";
+import { useApp } from "@/context/AppContext";
+import { activationLabel, money } from "@/lib/utils";
+import { incomeByDay, lifetimeFigures, liveTransactions } from "@/lib/ledger";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
 
-const week = [
-  { day: "18 Sep", roi: 18, referral: 14 },
-  { day: "19 Sep", roi: 24, referral: 16 },
-  { day: "20 Sep", roi: 28, referral: 15 },
-  { day: "21 Sep", roi: 32, referral: 19 },
-  { day: "22 Sep", roi: 30, referral: 21 },
-  { day: "23 Sep", roi: 36, referral: 18 },
-  { day: "24 Sep", roi: 33, referral: 20 },
-];
-
-const txRows = [
-  { id: 1, date: "24 Sep 2026, 10:30 AM", type: "ROI Credit", amount: 2.5, status: "Success", icon: "HandCoins", tone: "bg-emerald-50 text-emerald-500" },
-  { id: 2, date: "23 Sep 2026, 04:15 PM", type: "Referral Income", amount: 2, status: "Success", icon: "Gift", tone: "bg-sky-50 text-sky-500" },
-  { id: 3, date: "22 Sep 2026, 11:20 AM", type: "Withdrawal", amount: -20, status: "Pending", icon: "ArrowUpFromLine", tone: "bg-rose-50 text-rose-500" },
-  { id: 4, date: "21 Sep 2026, 03:40 PM", type: "Deposit", amount: 50, status: "Success", icon: "ArrowDownToLine", tone: "bg-emerald-50 text-emerald-500" },
-  { id: 5, date: "21 Sep 2026, 01:15 PM", type: "Bonus", amount: 1.5, status: "Success", icon: "Coins", tone: "bg-amber-50 text-amber-500" },
-];
-
-const notes = [
-  { icon: "Gift", tone: "bg-orange-50 text-orange-500", title: "Daily Bonus Available", body: "Watch 10 videos and get extra $0.50 USDT", time: "2 hours ago" },
-  { icon: "UserPlus", tone: "bg-emerald-50 text-emerald-500", title: "New Referral Joined", body: "Amit Sharma joined using your link", time: "5 hours ago" },
-  { icon: "Wallet", tone: "bg-sky-50 text-sky-500", title: "Withdrawal Request", body: "Your withdrawal request is under review", time: "1 day ago" },
-];
+const txTone = {
+  "ROI Credit": ["HandCoins", "bg-emerald-50 text-emerald-500"],
+  "Referral Income": ["Gift", "bg-sky-50 text-sky-500"],
+  Withdrawal: ["ArrowUpFromLine", "bg-rose-50 text-rose-500"],
+  Deposit: ["ArrowDownToLine", "bg-emerald-50 text-emerald-500"],
+  Bonus: ["Coins", "bg-amber-50 text-amber-500"],
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { balances, taskProgress, taskCompleted, roiUnlocked, roiClaimed, subscriptionActive, claimRoi } = useApp();
+  const { balances, taskProgress, taskCompleted, roiUnlocked, roiClaimed, subscriptionActive, activatedAt, subscriptionPrice, claimRoi, sessionUser, investments, todayRoi, income, transactions, notes, referralCredits, network } = useApp();
   const guard = useActiveGuard();
   const [hidden, setHidden] = useState(false);
   const progress = taskCompleted ? 100 : taskProgress;
@@ -47,13 +31,23 @@ export default function Dashboard() {
     if (result?.reason === "locked") navigate("/daily-task");
   };
 
+  const activePlans = investments.filter((row) => row.status === "Active");
+  const activeAmount = activePlans.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const activeHint = activePlans.length === 0 ? "Buy a plan" : activePlans.length === 1 ? activePlans[0].planName : `${activePlans.length} active plans`;
+  const earned = lifetimeFigures(balances, referralCredits, income);
+  const week = incomeByDay(income, 7);
+  const txRows = liveTransactions(transactions).slice(0, 5).map((row) => {
+    const [icon, tone] = txTone[row.type] || ["Coins", "bg-slate-100 text-slate-500"];
+    return { ...row, icon, tone };
+  });
+  const share = earned.total > 0 ? `${((earned.referral / earned.total) * 100).toFixed(1)}% of income` : "No referral credits yet";
   const stats = [
-    { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", label: "Today's ROI", value: `$${money(TODAY_ROI)}`, hint: roiClaimed ? "Credited to wallet" : "Complete today's task to unlock", hintClass: "text-[#98a2b3]", badge: roiStatus, to: "/roi" },
-    { icon: "Gift", iconBg: "bg-emerald-50 text-emerald-600", label: "Total ROI Earned", value: "$312.50", hint: "+12% this month", hintClass: "text-emerald-500", to: "/income/roi" },
-    { icon: "Users", iconBg: "bg-rose-50 text-rose-500", label: "Referral Income", value: "$180.00", hint: "33.2% of total", hintClass: "text-[#98a2b3]", to: "/income/referral" },
-    { icon: "Landmark", iconBg: "bg-sky-50 text-sky-500", label: "Active Plan", value: "$100.00", hint: "Standard Plan", hintClass: "text-[#98a2b3]", to: "/investment" },
-    { icon: "HandCoins", iconBg: "bg-emerald-50 text-emerald-500", label: "Total Income", value: "$542.50", hint: "+18% this month", hintClass: "text-emerald-500", to: "/income" },
-    { icon: "Users", iconBg: "bg-sky-50 text-sky-500", label: "Total Team", value: "126", hint: "94 Active Members", hintClass: "text-[#98a2b3]", to: "/team" },
+    { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", label: "Today's ROI", value: `$${money(todayRoi)}`, hint: roiClaimed ? "Credited to wallet" : "Complete today's task to unlock", hintClass: "text-[#98a2b3]", badge: roiStatus, to: "/roi" },
+    { icon: "Gift", iconBg: "bg-emerald-50 text-emerald-600", label: "Total ROI Earned", value: `$${money(earned.roi)}`, hint: "Credited ROI", hintClass: "text-emerald-500", to: "/income/roi" },
+    { icon: "Users", iconBg: "bg-rose-50 text-rose-500", label: "Referral Income", value: `$${money(earned.referral)}`, hint: share, hintClass: "text-[#98a2b3]", to: "/income/referral" },
+    { icon: "Landmark", iconBg: "bg-sky-50 text-sky-500", label: "Active Plan", value: `$${money(activeAmount)}`, hint: activeHint, hintClass: "text-[#98a2b3]", to: "/investment" },
+    { icon: "HandCoins", iconBg: "bg-emerald-50 text-emerald-500", label: "Total Income", value: `$${money(earned.total)}`, hint: "ROI, referral and bonus", hintClass: "text-emerald-500", to: "/income" },
+    { icon: "Users", iconBg: "bg-sky-50 text-sky-500", label: "Total Team", value: String(network.total || 0), hint: `${network.active || 0} Active Members`, hintClass: "text-[#98a2b3]", to: "/team" },
   ];
 
   return (
@@ -63,10 +57,10 @@ export default function Dashboard() {
         <div className="min-w-0">
           <p className="text-sm text-[#667085] lg:hidden">Good Morning <span aria-hidden="true">👋</span></p>
           <h1 className="truncate text-xl font-black tracking-tight text-[#101828] sm:text-2xl">
-            <span className="lg:hidden">{user.name}</span>
-            <span className="hidden lg:inline">Welcome Back, {user.name} <span aria-hidden="true">👋</span></span>
+            <span className="lg:hidden">{sessionUser?.name || "Member"}</span>
+            <span className="hidden lg:inline">Welcome Back, {sessionUser?.name || "Member"} <span aria-hidden="true">👋</span></span>
           </h1>
-          <p className="mt-0.5 text-sm text-[#667085] lg:hidden">ID: {user.id}</p>
+          <p className="mt-0.5 text-sm text-[#667085] lg:hidden">ID: {sessionUser?.id || "—"}</p>
           <p className="mt-0.5 hidden text-sm text-[#667085] lg:block">Watch videos, complete tasks and earn instant rewards.</p>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-600 lg:hidden">
@@ -85,8 +79,8 @@ export default function Dashboard() {
             <span className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-[#e10600]"><AppIcon name="CreditCard" size={16} /></span>
             <span>
               <span className="block text-[11px] text-[#667085]">Subscription</span>
-              <span className="block text-xs font-black">$10 USDT</span>
-              <span className="block text-[10px] text-[#98a2b3]">Activated on 24 Sep 2026</span>
+              <span className="block text-xs font-black">${subscriptionPrice} USDT</span>
+              <span className="block text-[10px] text-[#98a2b3]">{subscriptionActive ? (activatedAt ? `Activated on ${activationLabel(activatedAt)}` : "Active") : "Not activated"}</span>
             </span>
           </article>
         </div>
@@ -186,7 +180,7 @@ export default function Dashboard() {
                 <AppIcon name={roiClaimed ? "BadgeCheck" : "LockKeyhole"} size={16} />
               </span>
               <span>
-                <span className="block text-sm font-black">${money(TODAY_ROI)} USDT</span>
+                <span className="block text-sm font-black">${money(todayRoi)} USDT</span>
                 <span className="block text-[11px] text-[#667085]">
                   {roiClaimed ? "Today's ROI has been credited." : roiUnlocked ? "Ready to claim." : "Complete today's task to unlock your ROI"}
                 </span>
@@ -241,6 +235,7 @@ export default function Dashboard() {
                 <tr>{["#", "Date & Time", "Type", "Amount", "Status"].map((h) => <th key={h} className="pb-2 pr-2 font-medium">{h}</th>)}</tr>
               </thead>
               <tbody>
+                {txRows.length === 0 ? <tr><td colSpan={5} className="py-6 text-center text-[#98a2b3]">No wallet activity yet.</td></tr> : null}
                 {txRows.map((row) => (
                   <tr key={row.id} className="border-t border-[#f8fafc]">
                     <td className="py-2 pr-2 text-[#98a2b3]">{row.id}</td>
@@ -296,9 +291,10 @@ export default function Dashboard() {
             <button className="text-xs font-semibold text-[#e10600]" onClick={() => navigate("/notifications")}>View All</button>
           </div>
           <ul className="space-y-3">
-            {notes.map((note) => (
-              <li key={note.title} className="flex gap-3">
-                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${note.tone}`}><AppIcon name={note.icon} size={15} /></span>
+            {notes.length === 0 ? <li className="text-sm text-[#98a2b3]">No notifications yet.</li> : null}
+            {notes.slice(0, 4).map((note) => (
+              <li key={note.id || note.title} className="flex gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-sky-50 text-sky-500"><AppIcon name="Bell" size={15} /></span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-start justify-between gap-2">
                     <span className="text-sm font-semibold">{note.title}</span>

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, ChevronDown, Search } from "lucide-react";
-import { searchPages, user } from "@/data/mockData";
+import { searchPages } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 
 export default function TopHeader() {
   const navigate = useNavigate();
-  const { unreadCount, notes, markNotesRead } = useApp();
+  const { unreadCount, notes, markNotesRead, sessionUser } = useApp();
   const [query, setQuery] = useState("");
   const [openNotes, setOpenNotes] = useState(false);
   const [openLang, setOpenLang] = useState(false);
@@ -121,8 +121,8 @@ export default function TopHeader() {
         <button onClick={() => navigate("/profile")} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-left text-white hover:bg-white/5">
           <img src="/images/avatar-rahul.png" alt="" className="h-9 w-9 rounded-full object-cover" />
           <span className="leading-tight">
-            <span className="block text-sm font-semibold">{user.name}</span>
-            <span className="block text-[11px] text-white/55">ID: {user.id}</span>
+            <span className="block text-sm font-semibold">{sessionUser?.name || "Member"}</span>
+            <span className="block text-[11px] text-white/55">ID: {sessionUser?.id || "—"}</span>
           </span>
         </button>
       </div>

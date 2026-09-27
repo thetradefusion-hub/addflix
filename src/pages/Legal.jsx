@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/common/PageHeader";
 
@@ -81,8 +82,20 @@ export const legalLinks = Object.entries(pages).map(([slug, item]) => ({ slug, t
 
 export default function Legal() {
   const { slug } = useParams();
-  const page = pages[slug];
-  if (!page) return <Navigate to="/legal/about" replace />;
+  const fallback = pages[slug];
+  const [page, setPage] = useState(fallback);
+  useEffect(() => {
+    setPage(fallback);
+    if (!fallback) return;
+    fetch(`/api/cms/${slug}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.page?.title) setPage(data.page);
+      })
+      .catch(() => {});
+  }, [slug]);
+  if (!fallback) return <Navigate to="/legal/about" replace />;
+  if (!page) return null;
 
   return (
     <div className="mx-auto max-w-3xl">

@@ -20,6 +20,7 @@ const NotificationsPage = lazy(() => import("@/pages/Secondary").then((m) => ({ 
 const SupportPage = lazy(() => import("@/pages/Secondary").then((m) => ({ default: m.SupportPage })));
 const ProfilePage = lazy(() => import("@/pages/Secondary").then((m) => ({ default: m.ProfilePage })));
 const NotFound = lazy(() => import("@/pages/Secondary").then((m) => ({ default: m.NotFound })));
+const Admin = lazy(() => import("@/pages/Admin"));
 
 function Page({ children }) {
   return <Suspense fallback={<LoadingState label="Loading page" />}>{children}</Suspense>;
@@ -47,6 +48,21 @@ export default function App() {
   return (
     <Routes>
       <Route path="/auth" element={<Page><AuthPage /></Page>} />
+      <Route path="/ref/:code" element={<Page><AuthPage /></Page>} />
+      <Route path="/admin" element={<Page><Admin view="overview" /></Page>} />
+      <Route path="/admin/users" element={<Page><Admin view="users" /></Page>} />
+      <Route path="/admin/users/:id" element={<Page><Admin view="user" /></Page>} />
+      <Route path="/admin/withdrawals" element={<Page><Admin view="withdrawals" /></Page>} />
+      <Route path="/admin/deposits" element={<Page><Admin view="deposits" /></Page>} />
+      <Route path="/admin/settings" element={<Page><Admin view="settings" /></Page>} />
+      <Route path="/admin/plans" element={<Page><Admin view="plans" /></Page>} />
+      <Route path="/admin/subscriptions" element={<Page><Admin view="subscriptions" /></Page>} />
+      <Route path="/admin/audit" element={<Page><Admin view="audit" /></Page>} />
+      <Route path="/admin/tickets" element={<Page><Admin view="tickets" /></Page>} />
+      <Route path="/admin/fraud" element={<Page><Admin view="fraud" /></Page>} />
+      <Route path="/admin/videos" element={<Page><Admin view="videos" /></Page>} />
+      <Route path="/admin/pages" element={<Page><Admin view="pages" /></Page>} />
+      <Route path="/admin/messages" element={<Page><Admin view="messages" /></Page>} />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Page><Dashboard /></Page>} />

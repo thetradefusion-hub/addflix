@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   Bell,
   ChevronDown,
@@ -115,8 +115,7 @@ function Item({ item, onNavigate }) {
 }
 
 export default function Sidebar({ onNavigate, className = "" }) {
-  const navigate = useNavigate();
-  const { toast } = useApp();
+  const { logout } = useApp();
   return (
     <aside className={cn("flex h-full w-[248px] shrink-0 flex-col bg-[#0c0e13] text-white", className)}>
       <div className="px-5 pb-4 pt-5">
@@ -130,8 +129,7 @@ export default function Sidebar({ onNavigate, className = "" }) {
       <div className="p-3">
         <button
           onClick={() => {
-            toast("You have been logged out of the demo.", "info");
-            navigate("/dashboard");
+            logout();
             onNavigate?.();
           }}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-white/75 hover:bg-white/5 hover:text-white"

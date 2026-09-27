@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useApp } from '@/context/AppContext';
+import { deviceId } from '@/lib/device';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
@@ -18,7 +20,8 @@ async function apiFetch(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(data.message || `Request failed with status ${response.status}`);
+    const details = Array.isArray(data.errors) ? data.errors.filter(Boolean) : [];
+    throw new Error(details.length ? details.join(' ') : (data.message || `Request failed with status ${response.status}`));
   }
 
   return data;
@@ -31,7 +34,7 @@ const defaultRegister = {
   username: '',
   password: '',
   confirmPassword: '',
-  sponsorId: 'ADD12568',
+  sponsorId: '',
   otp: '',
   termsAccepted: false,
   privacyAccepted: false,
@@ -46,12 +49,28 @@ const defaultLogin = {
 
 export default function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState('login');
-  const [register, setRegister] = useState(defaultRegister);
+  const { code } = useParams();
+  const sponsorCode = String(code || '').trim().toUpperCase();
+  const { refreshSession } = useApp();
+  const [mode, setMode] = useState(sponsorCode ? 'register' : 'login');
+  const [register, setRegister] = useState({ ...defaultRegister, sponsorId: sponsorCode });
+  const [sponsorName, setSponsorName] = useState('');
   const [login, setLogin] = useState(defaultLogin);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [resetMode, setResetMode] = useState(false);
+
+  useEffect(() => {
+    if (!sponsorCode) return;
+    setMode('register');
+    setRegister((prev) => ({ ...prev, sponsorId: sponsorCode }));
+    apiFetch(`/api/auth/sponsor/${encodeURIComponent(sponsorCode)}`)
+      .then((data) => setSponsorName(data.sponsor?.name || ''))
+      .catch((error) => {
+        setSponsorName('');
+        setMessage(error.message);
+      });
+  }, [sponsorCode]);
 
   const isSubmitDisabled = useMemo(() => loading, [loading]);
 
@@ -74,6 +93,8 @@ export default function AuthPage() {
 
       localStorage.setItem('addflix_token', data.token);
       localStorage.setItem('addflix_user', JSON.stringify(data.user));
+      localStorage.removeItem('addflix_impersonating');
+      await refreshSession();
       setMessage('Registration successful. Redirecting...');
       setTimeout(() => navigate('/dashboard'), 500);
     } catch (error) {
@@ -92,11 +113,13 @@ export default function AuthPage() {
       const data = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(login),
+        body: JSON.stringify({ ...login, portal: 'member', deviceId: deviceId() }),
       });
 
       localStorage.setItem('addflix_token', data.token);
       localStorage.setItem('addflix_user', JSON.stringify(data.user));
+      localStorage.removeItem('addflix_impersonating');
+      await refreshSession();
       setMessage('Login successful. Redirecting...');
       setTimeout(() => navigate('/dashboard'), 500);
     } catch (error) {
@@ -239,6 +262,7 @@ export default function AuthPage() {
                   <label className="block">
                     <span className="mb-1 block text-xs font-semibold text-[#475467]">Password</span>
                     <input type="password" value={register.password} onChange={setField(setRegister, 'password')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Password@123" required />
+                    <span className="mt-1 block text-[11px] text-[#98a2b3]">At least 8 characters, with one capital letter, one number and one symbol such as @.</span>
                   </label>
 
                   <label className="block">
@@ -248,7 +272,8 @@ export default function AuthPage() {
 
                   <label className="block sm:col-span-2">
                     <span className="mb-1 block text-xs font-semibold text-[#475467]">Sponsor / Referral ID</span>
-                    <input value={register.sponsorId} onChange={setField(setRegister, 'sponsorId')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Enter referral ID" required />
+                    <input value={register.sponsorId} onChange={setField(setRegister, 'sponsorId')} readOnly={Boolean(sponsorCode)} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600] read-only:text-[#475467]" placeholder="Enter referral ID" required />
+                    {sponsorName ? <span className="mt-1 block text-xs font-semibold text-emerald-600">Sponsor: {sponsorName}</span> : null}
                   </label>
 
                   <label className="block sm:col-span-2">
