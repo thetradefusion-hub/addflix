@@ -4,9 +4,9 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Bell,
-  ChevronDown,
   FileText,
   Headphones,
+  Layers,
   LayoutDashboard,
   PieChart,
   CreditCard,
@@ -20,7 +20,8 @@ import {
   ShieldAlert,
   Users,
 } from "lucide-react";
-import Logo from "./Logo";
+import Logo, { BrandLockup } from "./Logo";
+import ThemeToggle from "@/components/common/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -30,6 +31,7 @@ const items = [
   { to: "/admin/deposits", label: "Deposits", icon: ArrowDownToLine },
   { to: "/admin/plans", label: "Plans", icon: PieChart },
   { to: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { to: "/admin/level-income", label: "Level Income", icon: Layers },
   { to: "/admin/tickets", label: "Tickets", icon: Headphones },
   { to: "/admin/fraud", label: "Fraud", icon: ShieldAlert },
   { to: "/admin/videos", label: "Videos", icon: Play },
@@ -66,11 +68,9 @@ function NavItems({ onNavigate }) {
 
 function AdminSidebar({ onLogout, onNavigate, className = "" }) {
   return (
-    <aside className={cn("flex h-full w-[248px] shrink-0 flex-col bg-[#0c0e13] text-white", className)}>
-      <div className="px-5 pb-4 pt-5">
-        <Logo />
-        <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">Admin</p>
-      </div>
+    <aside className={cn("flex h-full w-[260px] shrink-0 flex-col bg-[#0c0e13] text-white", className)}>
+      <BrandLockup caption="Admin" />
+      <div className="mx-4 mb-2 h-px bg-white/10" />
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4" aria-label="Admin">
         <NavItems onNavigate={onNavigate} />
       </nav>
@@ -93,8 +93,6 @@ function AdminSidebar({ onLogout, onNavigate, className = "" }) {
 function AdminTopHeader({ user }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [openLang, setOpenLang] = useState(false);
-  const [lang, setLang] = useState("English");
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -130,23 +128,10 @@ function AdminTopHeader({ user }) {
         ) : null}
       </div>
       <div className="ml-auto flex items-center gap-3">
+        <ThemeToggle tone="light" />
         <button className="relative grid h-10 w-10 place-items-center rounded-full text-white hover:bg-white/10" aria-label="Admin alerts" onClick={() => navigate("/admin/messages")}>
           <Bell size={18} />
         </button>
-        <div className="relative">
-          <button className="flex items-center gap-1 rounded-full px-2 py-1 text-sm text-white" onClick={() => setOpenLang((value) => !value)}>
-            {lang} <ChevronDown size={14} />
-          </button>
-          {openLang ? (
-            <div className="absolute right-0 top-10 z-30 w-36 rounded-xl border border-[#eaecf0] bg-white py-1 text-sm text-[#101828] shadow-xl">
-              {["English", "Hindi"].map((item) => (
-                <button key={item} className="block w-full px-3 py-2 text-left hover:bg-slate-50" onClick={() => { setLang(item); setOpenLang(false); }}>
-                  {item}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
         <div className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-white">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-[#e10600] text-sm font-black">A</span>
           <span className="leading-tight">
@@ -162,7 +147,7 @@ function AdminTopHeader({ user }) {
 export default function AdminShell({ user, onLogout, children }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex h-dvh overflow-hidden bg-[#f4f6f8]">
+    <div className="app-canvas flex h-dvh overflow-hidden bg-[#f4f6f8]">
       <AdminSidebar className="hidden lg:flex" onLogout={onLogout} />
       {open ? (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -176,10 +161,14 @@ export default function AdminShell({ user, onLogout, children }) {
           <button onClick={() => setOpen(true)} className="grid h-10 w-10 place-items-center rounded-xl text-[#111]" aria-label="Open menu">
             <Menu size={22} />
           </button>
-          <Logo light={false} compact />
+          <Logo light={false} className="h-10" />
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </header>
-        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 pb-24 sm:px-4 lg:px-5 lg:pb-6">
-          <div className="mx-auto max-w-[1180px]">{children}</div>
+        <main className="relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 pb-24 sm:px-4 lg:px-5 lg:pb-6">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(225,6,0,0.12),transparent_68%)]" />
+          <div className="relative mx-auto max-w-[1180px]">{children}</div>
         </main>
       </div>
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#eaecf0] bg-white px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(16,24,40,0.06)] lg:hidden" aria-label="Admin mobile">
@@ -191,10 +180,16 @@ export default function AdminShell({ user, onLogout, children }) {
                 <NavLink
                   to={item.to}
                   end={item.end}
-                  className={({ isActive }) => cn("flex flex-col items-center gap-1 py-2 text-[11px] font-medium text-[#98a2b3]", isActive && "text-[#e10600]")}
+                  className={({ isActive }) => cn("flex flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium text-[#98a2b3]", isActive && "text-[#e10600]")}
                 >
-                  <Icon size={20} strokeWidth={2.25} />
-                  {item.label === "Withdrawals" ? "Payouts" : item.label}
+                  {({ isActive }) => (
+                    <>
+                      <span className={cn("grid h-8 w-12 place-items-center rounded-full", isActive && "bg-[#e10600]/10")}>
+                        <Icon size={20} strokeWidth={2.25} />
+                      </span>
+                      {item.label === "Withdrawals" ? "Payouts" : item.label}
+                    </>
+                  )}
                 </NavLink>
               </li>
             );

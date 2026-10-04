@@ -18,7 +18,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import Logo from "./Logo";
+import { BrandLockup } from "./Logo";
 import { navItems } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { cn } from "@/lib/utils";
@@ -117,10 +117,9 @@ function Item({ item, onNavigate }) {
 export default function Sidebar({ onNavigate, className = "" }) {
   const { logout } = useApp();
   return (
-    <aside className={cn("flex h-full w-[248px] shrink-0 flex-col bg-[#0c0e13] text-white", className)}>
-      <div className="px-5 pb-4 pt-5">
-        <Logo />
-      </div>
+    <aside className={cn("flex h-full w-[260px] shrink-0 flex-col bg-[#0c0e13] text-white", className)}>
+      <BrandLockup />
+      <div className="mx-4 mb-2 h-px bg-white/10" />
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4" aria-label="Main">
         {navItems.map((item) => (
           <Item key={item.label} item={item} onNavigate={onNavigate} />

@@ -68,7 +68,7 @@ export function liveTransactions(rows = []) {
 function addIncome(bucket, row) {
   const amount = Number(row.amount) || 0;
   if (row.type === "ROI Income") bucket.roi += amount;
-  else if (row.type === "Referral Income") bucket.referral += amount;
+  else if (row.type === "Referral Income" || row.type === "Level Income") bucket.referral += amount;
   else if (row.type === "Bonus Income") bucket.bonus += amount;
   else bucket.other += amount;
 }

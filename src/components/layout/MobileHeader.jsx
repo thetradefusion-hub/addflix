@@ -1,6 +1,7 @@
 import { Bell, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Logo from "./Logo";
+import ThemeToggle from "@/components/common/ThemeToggle";
 import { useApp } from "@/context/AppContext";
 
 export default function MobileHeader({ onMenu }) {
@@ -11,8 +12,9 @@ export default function MobileHeader({ onMenu }) {
       <button onClick={onMenu} className="grid h-10 w-10 place-items-center rounded-xl text-[#111]" aria-label="Open menu">
         <Menu size={22} />
       </button>
-      <Logo light={false} compact />
+      <Logo light={false} className="h-10" />
       <div className="ml-auto flex items-center gap-1">
+        <ThemeToggle />
         <button onClick={() => navigate("/notifications")} className="relative grid h-10 w-10 place-items-center" aria-label="Notifications">
           <Bell size={18} />
           {unreadCount > 0 ? (

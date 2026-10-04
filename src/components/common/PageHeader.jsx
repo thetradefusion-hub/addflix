@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 
 export default function PageHeader({ title, subtitle, crumbs = [] }) {
   return (
-    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-[#101828] sm:text-[26px]">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-[#667085]">{subtitle}</p> : null}
+        <h1 className="text-[22px] font-semibold tracking-tight text-[#101828] sm:text-[26px]">{title}</h1>
+        {subtitle ? <p className="mt-1 max-w-2xl text-sm leading-5 text-[#667085]">{subtitle}</p> : null}
       </div>
       {crumbs.length ? (
         <nav aria-label="Breadcrumb" className="hidden items-center gap-1 text-xs text-[#98a2b3] lg:flex">

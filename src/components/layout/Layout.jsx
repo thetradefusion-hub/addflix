@@ -10,7 +10,7 @@ export default function Layout() {
   const [open, setOpen] = useState(false);
   const impersonating = localStorage.getItem("addflix_impersonating") === "1";
   return (
-    <div className="flex h-dvh overflow-hidden bg-[#f4f6f8]">
+    <div className="app-canvas flex h-dvh overflow-hidden bg-[#f4f6f8]">
       <Sidebar className="hidden lg:flex" />
       {open ? (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -27,9 +27,11 @@ export default function Layout() {
         ) : null}
         <TopHeader />
         <MobileHeader onMenu={() => setOpen(true)} />
-        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 pb-24 sm:px-4 lg:px-5 lg:pb-6">
+        <main className="relative min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 pb-24 sm:px-4 lg:px-5 lg:pb-6">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(225,6,0,0.12),transparent_68%)]" />
+          <div className="relative">
           <Outlet />
-          <nav className="mx-auto mt-6 flex max-w-[1180px] flex-wrap gap-x-3 gap-y-1 pb-2 text-[11px] text-[#98a2b3]">
+          <nav className="mx-auto mt-8 flex max-w-[1180px] flex-wrap gap-x-3 gap-y-1 pb-2 text-[11px] text-[#98a2b3]">
             {[
               ["/legal/about", "About"],
               ["/legal/how-it-works", "How it works"],
@@ -43,6 +45,7 @@ export default function Layout() {
               <Link key={to} to={to} className="hover:text-[#e10600]">{label}</Link>
             ))}
           </nav>
+          </div>
         </main>
       </div>
       <MobileBottomNav />

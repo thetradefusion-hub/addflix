@@ -151,9 +151,9 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
           <p className="mt-3 text-xs">Your Referral Link</p>
           <div className="mt-1 flex items-center gap-2 rounded-xl bg-white/10 p-2">
             <p className="flex-1 truncate text-sm">{referralLink}</p>
-            <button aria-label="Copy referral link" onClick={() => { copyText(referralLink); toast("Referral link copied."); }} className="rounded-lg bg-white p-2 text-[#111]"><Copy size={14} /></button>
+            <button aria-label="Copy referral link" onClick={() => { copyText(referralLink); toast("Referral link copied."); }} className="theme-fixed rounded-lg bg-white p-2 text-[#111]"><Copy size={14} /></button>
           </div>
-          <Button className="mt-3 bg-white text-[#e10600] hover:bg-white" onClick={() => { copyText(referralLink); toast("Referral link copied."); }}>Copy Link</Button>
+          <Button className="theme-fixed mt-3 bg-white text-[#e10600] hover:bg-white" onClick={() => { copyText(referralLink); toast("Referral link copied."); }}>Copy Link</Button>
           <div className="mt-3 flex flex-wrap gap-2">
             {["WhatsApp", "Telegram", "Facebook", "More"].map((name) => (
               <button key={name} onClick={() => share(name)} className="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold">{name}</button>

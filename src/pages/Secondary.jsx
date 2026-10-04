@@ -179,7 +179,6 @@ export function ProfilePage() {
   const { toast, subscriptionActive, balances, sessionUser, walletAddress, saveProfile, resetTransactionPin, savePayoutWallet, loginHistory, investments, network } = useApp();
   const logins = usePaging(loginHistory, 8, loginHistory.length);
   const [form, setForm] = useState({ name: "", email: "", phone: "", country: "India" });
-  const [language, setLanguage] = useState("English");
   const [alerts, setAlerts] = useState(true);
   const [photo, setPhoto] = useState("/images/avatar-rahul.png");
   const [pinOpen, setPinOpen] = useState(false);
@@ -304,13 +303,7 @@ export function ProfilePage() {
         <div className="space-y-3">
           <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
             <p className="mb-3 font-bold">Preferences</p>
-            <label className="block text-xs font-semibold text-[#667085]">
-              Language
-              <select value={language} onChange={(e) => { setLanguage(e.target.value); toast(`Language set to ${e.target.value}.`); }} className="mt-1.5 h-12 w-full rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 text-sm text-[#101828] outline-none">
-                {["English", "Hindi"].map((item) => <option key={item}>{item}</option>)}
-              </select>
-            </label>
-            <button type="button" onClick={() => setAlerts((v) => !v)} className="mt-3 flex w-full items-center justify-between rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 py-3 text-left">
+            <button type="button" onClick={() => setAlerts((v) => !v)} className="flex w-full items-center justify-between rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 py-3 text-left">
               <span>
                 <span className="block text-sm font-semibold">ROI & task alerts</span>
                 <span className="text-xs text-[#98a2b3]">Reminders for daily video and claim</span>

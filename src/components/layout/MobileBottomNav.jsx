@@ -21,11 +21,17 @@ export default function MobileBottomNav() {
               <NavLink
                 to={item.to}
                 className={({ isActive }) =>
-                  cn("flex flex-col items-center gap-1 py-2 text-[11px] font-medium text-[#98a2b3]", isActive && "text-[#e10600]")
+                  cn("flex flex-col items-center gap-0.5 py-1.5 text-[11px] font-medium text-[#98a2b3]", isActive && "text-[#e10600]")
                 }
               >
-                <Icon size={20} strokeWidth={2.25} />
-                {item.label}
+                {({ isActive }) => (
+                  <>
+                    <span className={cn("grid h-8 w-12 place-items-center rounded-full", isActive && "bg-[#e10600]/10")}>
+                      <Icon size={20} strokeWidth={2.25} />
+                    </span>
+                    {item.label}
+                  </>
+                )}
               </NavLink>
             </li>
           );

@@ -46,6 +46,7 @@ export function AppProvider({ children }) {
   const [referralCredits, setReferralCredits] = useState([]);
   const [investments, setInvestments] = useState([]);
   const [todayRoi, setTodayRoi] = useState(2.5);
+  const [roiDay, setRoiDay] = useState(null);
   const [tasks, setTasks] = useState(seedTasks);
   const [notes, setNotes] = useState(seedNotes);
   const [depositRows, setDepositRows] = useState(seedDeposits);
@@ -68,6 +69,7 @@ export function AppProvider({ children }) {
     setReferralCredits(Array.isArray(account.referralCredits) ? account.referralCredits : []);
     setInvestments(Array.isArray(account.investments) ? account.investments : []);
     setTodayRoi(Number(account.todayRoi || 0));
+    setRoiDay(account.roiDay || null);
     setTasks(Array.isArray(account.tasks) ? account.tasks : seedTasks);
     setSubscriptionFlag(Boolean(account.subscription?.active));
     setPaymentState(account.subscription?.paymentState || "idle");
@@ -162,7 +164,13 @@ export function AppProvider({ children }) {
 
   const dismissToast = (id) => setToasts((list) => list.filter((item) => item.id !== id));
 
+  const offDayMessage = () => `${roiDay?.weekday || "Today"} is an ROI off day for your plan. No task or ROI today${roiDay?.resumesOn ? ` — it resumes on ${roiDay.resumesOn}` : ""}.`;
+
   const startTask = () => {
+    if (roiDay?.allOff && !roiClaimed) {
+      toast(offDayMessage(), "info");
+      return;
+    }
     if (taskCompleted) {
       toast("Today's task is already completed.");
       return;
@@ -200,6 +208,10 @@ export function AppProvider({ children }) {
     if (roiClaimed) {
       toast("Today's ROI is already credited.");
       return { ok: false, reason: "claimed" };
+    }
+    if (roiDay?.allOff) {
+      toast(offDayMessage(), "info");
+      return { ok: false, reason: "off" };
     }
     if (!roiUnlocked) {
       toast("Complete today's activity to unlock your ROI.", "warning");
@@ -408,6 +420,7 @@ export function AppProvider({ children }) {
       referralCredits,
       investments,
       todayRoi,
+      roiDay,
       tasks,
       notes,
       unreadCount,
@@ -466,6 +479,7 @@ export function AppProvider({ children }) {
       referralCredits,
       investments,
       todayRoi,
+      roiDay,
       tasks,
       notes,
       unreadCount,

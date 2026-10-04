@@ -8,6 +8,7 @@ import TaskVideo from "@/components/task/TaskVideo";
 import { useApp } from "@/context/AppContext";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
 import { parsePlayableUrl } from "@/lib/videoUrl";
+import OffDayBanner, { useOffDay } from "@/components/common/OffDayBanner";
 
 function clock(total) {
   const seconds = Math.max(0, Math.floor(Number(total) || 0));
@@ -18,6 +19,7 @@ export default function DailyTask() {
   const { taskProgress, taskCompleted, roiClaimed, completeTask, reportPlayback, dailyTask, toast } = useApp();
   const navigate = useNavigate();
   const guard = useActiveGuard();
+  const { off: offToday, roiDay } = useOffDay();
   const duration = dailyTask?.durationLocked ? Number(dailyTask.durationSeconds) || 0 : 0;
   const required = dailyTask?.requiredPercent || 95;
   const watched = dailyTask?.watchSeconds || 0;
@@ -43,7 +45,7 @@ export default function DailyTask() {
   ];
 
   useEffect(() => {
-    if (!playable || taskCompleted) return undefined;
+    if (!playable || taskCompleted || offToday) return undefined;
     let stopped = false;
     const send = async () => {
       const sample = sampleRef.current;
@@ -73,7 +75,7 @@ export default function DailyTask() {
       stopped = true;
       clearInterval(id);
     };
-  }, [playable?.kind, playable?.id, playable?.src, taskCompleted]);
+  }, [playable?.kind, playable?.id, playable?.src, taskCompleted, offToday]);
 
   const finish = async () => {
     if (!guard()) return;
@@ -91,6 +93,7 @@ export default function DailyTask() {
         crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Daily Task", to: "/daily-task" }, { label: "Watch Video" }]}
       />
       <InactiveBanner />
+      <OffDayBanner />
 
       <section className="mb-4 rounded-2xl border border-[#eaecf0] bg-white px-3 py-4 shadow-sm sm:px-6">
         <div className="relative grid grid-cols-4">
@@ -114,7 +117,14 @@ export default function DailyTask() {
       <section className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.85fr)]">
         <article className="overflow-hidden rounded-2xl bg-[#07111f] text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
           <div className="relative aspect-video w-full bg-black">
-            {taskCompleted ? (
+            {offToday ? (
+              <div className="grid h-full place-items-center px-6 text-center">
+                <div>
+                  <p className="text-lg font-black">No task today</p>
+                  <p className="mt-1 text-sm text-white/70">{roiDay?.weekday} is an ROI off day for your plan.{roiDay?.resumesOn ? ` The next task opens on ${roiDay.resumesOn}.` : ""}</p>
+                </div>
+              </div>
+            ) : taskCompleted ? (
               <div className="grid h-full place-items-center px-6 text-center">
                 <div>
                   <p className="text-lg font-black">Today's task is complete</p>
@@ -182,11 +192,11 @@ export default function DailyTask() {
           </div>
           <button
             onClick={finish}
-            disabled={taskCompleted || !ready}
+            disabled={taskCompleted || !ready || offToday}
             className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#e10600] text-sm font-bold text-white shadow-[0_8px_18px_rgba(225,6,0,0.28)] transition hover:bg-[#c10500] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <CircleCheck size={16} />
-            {taskCompleted ? "TASK COMPLETED ✓" : ready ? "MARK AS COMPLETE" : "WATCH THE VIDEO TO UNLOCK ROI"}
+            {offToday ? "ROI OFF TODAY" : taskCompleted ? "TASK COMPLETED ✓" : ready ? "MARK AS COMPLETE" : "WATCH THE VIDEO TO UNLOCK ROI"}
           </button>
           {taskCompleted ? (
             <button
@@ -198,7 +208,7 @@ export default function DailyTask() {
             </button>
           ) : null}
           <p className="mt-2 text-center text-xs text-[#98a2b3]">
-            {taskCompleted ? "Today's task is complete and ROI is unlocked." : ahead ? "Forward skip was pulled back. Watch from the counted time." : ready ? "Required watch reached. Mark the task to unlock today's ROI." : "Forward skip is blocked. Only playback at normal speed is counted."}
+            {offToday ? `No task on ${roiDay?.weekday}. Come back on ${roiDay?.resumesOn || "the next ROI day"}.` : taskCompleted ? "Today's task is complete and ROI is unlocked." : ahead ? "Forward skip was pulled back. Watch from the counted time." : ready ? "Required watch reached. Mark the task to unlock today's ROI." : "Forward skip is blocked. Only playback at normal speed is counted."}
           </p>
         </article>
 

@@ -2,7 +2,7 @@ import express from "express";
 import Account, { defaultDailyTask } from "../models/Account.js";
 import User from "../models/User.js";
 import { requireAuth } from "../middleware/requireAuth.js";
-import { applyDailyPayout, demoInvestments, previewTodayRoi, quotePlan } from "../utils/plans.js";
+import { applyDailyPayout, cleanOffDays, demoInvestments, previewTodayRoi, quotePlan, roiDayInfo } from "../utils/plans.js";
 import { findActivePlan } from "../utils/planCatalog.js";
 import { applyPlayback, requiredSeconds, todayKey } from "../utils/dailyTask.js";
 import { parsePlayableUrl } from "../utils/videoUrl.js";
@@ -14,17 +14,13 @@ import AuditLog from "../models/AuditLog.js";
 import Video from "../models/Video.js";
 import { flagSkip } from "../utils/fraud.js";
 import { notifyUser } from "../utils/notify.js";
+import { creditRoiLevelIncome } from "../utils/roiLevelCommission.js";
+import { istStamp } from "../utils/day.js";
 
 const router = express.Router();
 
 function stamp() {
-  const d = new Date();
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const hour = d.getHours();
-  const hh = hour % 12 || 12;
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const am = hour >= 12 ? "PM" : "AM";
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm} ${am}`;
+  return istStamp();
 }
 
 function money2(value) {
@@ -249,6 +245,7 @@ router.post("/invest", async (req, res) => {
     startDate: when.split(",")[0],
     status: "Active",
     validityDays: plan.validity,
+    offDays: cleanOffDays(plan.offDays),
   });
   account.transactions.unshift({
     id: Date.now(),
@@ -279,6 +276,15 @@ router.post("/task", async (req, res) => {
   const settings = await getSettings();
   if (!settings.taskPublished && (action === "heartbeat" || action === "complete")) {
     return res.status(403).json({ ok: false, message: "Today's task is not published." });
+  }
+  const roiDay = roiDayInfo(account.investments || [], account.dailyTask.day);
+  if (roiDay.allOff && !account.dailyTask.roiClaimed && ["playback", "complete", "claim"].includes(action)) {
+    return res.status(400).json({
+      ok: false,
+      offDay: true,
+      message: `${roiDay.weekday} is an ROI off day for your plan. No task or ROI today${roiDay.resumesOn ? ` — it resumes on ${roiDay.resumesOn}` : ""}.`,
+      account: account.toClient(),
+    });
   }
 
   if (action === "playback") {
@@ -326,7 +332,7 @@ router.post("/task", async (req, res) => {
       duration: "2 Minutes",
       completion: `${account.dailyTask.progress}%`,
       status: "Completed",
-      roi: previewTodayRoi(account.investments || []),
+      roi: previewTodayRoi(account.investments || [], account.dailyTask.day),
       claim: "Ready",
     });
     account.markModified("dailyTask");
@@ -345,7 +351,7 @@ router.post("/task", async (req, res) => {
     if (!account.dailyTask.roiUnlocked) {
       return res.status(400).json({ ok: false, message: "Complete today's activity to unlock your ROI." });
     }
-    const payout = applyDailyPayout(account.investments || []);
+    const payout = applyDailyPayout(account.investments || [], account.dailyTask.day);
     if (payout.total <= 0) {
       return res.status(400).json({ ok: false, message: "No active plan can earn ROI. Buy a plan, or the cap is already reached." });
     }
@@ -355,9 +361,10 @@ router.post("/task", async (req, res) => {
     account.balances.roi = money2(account.balances.roi + payout.total);
     const tx = `TX${Math.floor(1000 + Math.random() * 9000)}...${Math.random().toString(16).slice(2, 6).toUpperCase()}`;
     const when = stamp();
+    const claimId = `ROI-${req.user.referralId}-${account.dailyTask.day}`;
     const planLabel = payout.rows.map((row) => row.planName).join(", ");
     account.income.unshift({
-      id: Date.now(),
+      id: claimId,
       date: when,
       type: "ROI Income",
       description: `Daily ROI (${planLabel})`,
@@ -389,6 +396,12 @@ router.post("/task", async (req, res) => {
       target: req.user.referralId,
       note: `$${payout.total.toFixed(2)}`,
     });
+    try {
+      await creditRoiLevelIncome({ earner: req.user, roi: payout.total, claimId, when, tx });
+    } catch (error) {
+      console.error("ROI level income failed", claimId, error);
+      await AuditLog.create({ action: "roi.level.error", target: req.user.referralId, note: `${claimId}: ${error.message}` });
+    }
     return res.json({ ok: true, message: `Today's ROI of ${payout.total.toFixed(2)} USDT has been credited.`, account: account.toClient() });
   }
 

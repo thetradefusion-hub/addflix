@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
+import Logo from '@/components/layout/Logo';
+import ThemeToggle from '@/components/common/ThemeToggle';
 import { useApp } from '@/context/AppContext';
 import { deviceId } from '@/lib/device';
 
@@ -47,18 +50,57 @@ const defaultLogin = {
   remember: true,
 };
 
+const inputClass = 'h-11 w-full rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 text-sm outline-none transition placeholder:text-[#98a2b3] focus:border-[#e10600] focus:ring-4 focus:ring-[#e10600]/10';
+const submitClass = 'h-11 w-full rounded-xl bg-[#e10600] text-sm font-semibold text-white shadow-[0_8px_20px_rgba(225,6,0,0.28)] disabled:cursor-not-allowed disabled:opacity-60';
+
+function Field({ label, hint, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[13px] font-medium text-[#344054]">{label}</span>
+      {children}
+      {hint ? <span className="mt-1.5 block text-[11px] leading-4 text-[#98a2b3]">{hint}</span> : null}
+    </label>
+  );
+}
+
+function PasswordInput({ value, onChange, autoComplete, required }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={visible ? 'text' : 'password'}
+        value={value}
+        onChange={onChange}
+        className={`${inputClass} pr-11`}
+        autoComplete={autoComplete}
+        required={required}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((open) => !open)}
+        className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-[#667085] hover:text-[#101828]"
+        aria-label={visible ? 'Hide password' : 'Show password'}
+      >
+        {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
+  );
+}
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const { code } = useParams();
+  const [searchParams] = useSearchParams();
   const sponsorCode = String(code || '').trim().toUpperCase();
   const { refreshSession } = useApp();
-  const [mode, setMode] = useState(sponsorCode ? 'register' : 'login');
+  const [mode, setMode] = useState(sponsorCode || searchParams.get('join') === '1' ? 'register' : 'login');
   const [register, setRegister] = useState({ ...defaultRegister, sponsorId: sponsorCode });
   const [sponsorName, setSponsorName] = useState('');
   const [login, setLogin] = useState(defaultLogin);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [resetMode, setResetMode] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
 
   useEffect(() => {
     if (!sponsorCode) return;
@@ -149,167 +191,123 @@ export default function AuthPage() {
     }
   }
 
+  const heading = resetMode ? 'Reset password' : mode === 'login' ? 'Sign in' : 'Create account';
+  const subheading = resetMode
+    ? 'Enter the email on your account. We will send a reset link.'
+    : mode === 'login'
+      ? 'Use your email, mobile, or username.'
+      : 'A few details, then your account is ready.';
+
   return (
-    <div className="min-h-screen bg-[linear-gradient(135deg,#0f172a,#1f2937_35%,#7f1d1d)] px-4 py-10 text-slate-900">
-      <div className="mx-auto max-w-6xl overflow-hidden rounded-3xl border border-white/10 bg-white/95 shadow-2xl backdrop-blur-sm">
-        <div className="grid md:grid-cols-2">
-          <div className="hidden bg-[radial-gradient(circle_at_top,#e10600,#5b0210_60%,#0f172a)] p-8 text-white md:flex md:flex-col md:justify-between">
-            <div>
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-bold">
-                ADD FLIX
-              </div>
-              <h1 className="text-4xl font-black tracking-tight">Watch, Promote &amp; Earn</h1>
-              <p className="mt-4 max-w-md text-sm text-white/80">
-                Create your account, unlock ROI rewards, grow your referral team and manage secure wallet activity from one dashboard.
-              </p>
-            </div>
-            <div className="grid gap-3 text-sm text-white/80">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">• Full registration flow with OTP validation</div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">• Secure login, password reset and 2FA support</div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">• Referral-based onboarding and wallet security</div>
-            </div>
-          </div>
-
-          <div className="p-6 sm:p-8">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#667085]">Welcome</p>
-                <h2 className="text-2xl font-black text-[#101828]">{mode === 'login' ? 'Login' : 'Create account'}</h2>
-              </div>
-              <div className="flex gap-2 rounded-full bg-slate-100 p-1">
-                <button type="button" onClick={() => setMode('login')} className={`rounded-full px-3 py-1.5 text-xs font-bold ${mode === 'login' ? 'bg-[#e10600] text-white' : 'text-slate-600'}`}>
-                  Login
-                </button>
-                <button type="button" onClick={() => setMode('register')} className={`rounded-full px-3 py-1.5 text-xs font-bold ${mode === 'register' ? 'bg-[#e10600] text-white' : 'text-slate-600'}`}>
-                  Register
-                </button>
-              </div>
-            </div>
-
-            {message ? <div className="mb-4 rounded-xl border border-[#f4d5d4] bg-[#fff1ef] px-3 py-2 text-sm text-[#7a1d17]">{message}</div> : null}
-
-            {mode === 'login' && !resetMode ? (
-              <form onSubmit={submitLogin} className="space-y-4">
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-[#475467]">Email / Mobile / Username</span>
-                  <input value={login.login} onChange={setField(setLogin, 'login')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Enter your login ID" required />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-[#475467]">Password</span>
-                  <input type="password" value={login.password} onChange={setField(setLogin, 'password')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Enter password" required />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-[#475467]">2FA OTP (optional, demo: 123456)</span>
-                  <input value={login.otp} onChange={setField(setLogin, 'otp')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Enter OTP if enabled" />
-                </label>
-
-                <div className="flex items-center justify-between gap-3 text-sm">
-                  <label className="flex items-center gap-2 text-[#475467]">
-                    <input type="checkbox" checked={login.remember} onChange={setField(setLogin, 'remember')} className="h-4 w-4 rounded border-slate-300" />
-                    Remember me
-                  </label>
-                  <button type="button" onClick={() => setResetMode(true)} className="font-semibold text-[#e10600]">Forgot Password?</button>
-                </div>
-
-                <button type="submit" disabled={isSubmitDisabled} className="h-12 w-full rounded-xl bg-[#e10600] text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">
-                  {loading ? 'Signing in...' : 'Login'}
-                </button>
-              </form>
-            ) : null}
-
-            {resetMode ? (
-              <form onSubmit={submitForgotPassword} className="space-y-4">
-                <label className="block">
-                  <span className="mb-1 block text-xs font-semibold text-[#475467]">Email Address</span>
-                  <input value={login.login} onChange={setField(setLogin, 'login')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Enter your email" required />
-                </label>
-                <div className="flex gap-2">
-                  <button type="submit" disabled={isSubmitDisabled} className="h-12 flex-1 rounded-xl bg-[#e10600] text-sm font-bold text-white disabled:opacity-60">
-                    {loading ? 'Sending...' : 'Send Reset Link'}
-                  </button>
-                  <button type="button" onClick={() => setResetMode(false)} className="h-12 flex-1 rounded-xl border border-[#e4e7ec] bg-white text-sm font-semibold text-[#475467]">
-                    Back to Login
-                  </button>
-                </div>
-              </form>
-            ) : null}
-
-            {mode === 'register' ? (
-              <form onSubmit={submitRegister} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="block sm:col-span-2">
-                    <span className="mb-1 block text-xs font-semibold text-[#475467]">Full Name</span>
-                    <input value={register.fullName} onChange={setField(setRegister, 'fullName')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Enter full name" required />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-[#475467]">Mobile Number</span>
-                    <input value={register.mobile} onChange={setField(setRegister, 'mobile')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="+91 98765 43210" required />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-[#475467]">Email Address</span>
-                    <input type="email" value={register.email} onChange={setField(setRegister, 'email')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="name@example.com" required />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-[#475467]">Username / User ID</span>
-                    <input value={register.username} onChange={setField(setRegister, 'username')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="username123" required />
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-[#475467]">Password</span>
-                    <input type="password" value={register.password} onChange={setField(setRegister, 'password')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Password@123" required />
-                    <span className="mt-1 block text-[11px] text-[#98a2b3]">At least 8 characters, with one capital letter, one number and one symbol such as @.</span>
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-1 block text-xs font-semibold text-[#475467]">Confirm Password</span>
-                    <input type="password" value={register.confirmPassword} onChange={setField(setRegister, 'confirmPassword')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Repeat password" required />
-                  </label>
-
-                  <label className="block sm:col-span-2">
-                    <span className="mb-1 block text-xs font-semibold text-[#475467]">Sponsor / Referral ID</span>
-                    <input value={register.sponsorId} onChange={setField(setRegister, 'sponsorId')} readOnly={Boolean(sponsorCode)} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600] read-only:text-[#475467]" placeholder="Enter referral ID" required />
-                    {sponsorName ? <span className="mt-1 block text-xs font-semibold text-emerald-600">Sponsor: {sponsorName}</span> : null}
-                  </label>
-
-                  <label className="block sm:col-span-2">
-                    <span className="mb-1 block text-xs font-semibold text-[#475467]">OTP Verification</span>
-                    <input value={register.otp} onChange={setField(setRegister, 'otp')} className="h-12 w-full rounded-xl border border-[#e4e7ec] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600]" placeholder="Demo OTP: 123456" required />
-                  </label>
-                </div>
-
-                <div className="space-y-2 text-sm text-[#475467]">
-                  <label className="flex items-start gap-2">
-                    <input type="checkbox" checked={register.termsAccepted} onChange={setField(setRegister, 'termsAccepted')} className="mt-1 h-4 w-4 rounded border-slate-300" required />
-                    <span>I accept the Terms &amp; Conditions.</span>
-                  </label>
-                  <label className="flex items-start gap-2">
-                    <input type="checkbox" checked={register.privacyAccepted} onChange={setField(setRegister, 'privacyAccepted')} className="mt-1 h-4 w-4 rounded border-slate-300" required />
-                    <span>I accept the Privacy Policy.</span>
-                  </label>
-                </div>
-
-                <button type="submit" disabled={isSubmitDisabled} className="h-12 w-full rounded-xl bg-[#e10600] text-sm font-bold text-white disabled:opacity-60">
-                  {loading ? 'Creating account...' : 'Create account'}
-                </button>
-              </form>
-            ) : null}
-
-            <div className="mt-5 text-center text-xs text-[#667085]">
-              Demo login credentials: <span className="font-bold text-[#101828]">rahul123 / Password@123</span>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between border-t border-[#eaecf0] pt-4 text-xs text-[#667085]">
-              <span>Need help?</span>
-              <Link to="/legal/privacy" className="font-semibold text-[#e10600]">Privacy Policy</Link>
-            </div>
-          </div>
-        </div>
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#f4f6f8] px-4 py-8 text-[#101828]">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top,rgba(225,6,0,0.18),transparent_70%)]" />
+      <div className="fixed right-4 top-4 z-20">
+        <ThemeToggle />
       </div>
+      <main className="relative mx-auto flex w-full max-w-[440px] flex-1 flex-col items-center justify-center">
+        <Logo light={false} className="h-24" />
+        <section className="mt-7 w-full rounded-3xl border border-[#eaecf0] bg-white p-6 shadow-[0_24px_60px_rgba(16,24,40,0.08)] sm:p-7">
+        <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
+        <p className="mt-1 text-sm text-[#667085]">{subheading}</p>
+
+        {resetMode ? null : (
+          <div className="mt-5 grid grid-cols-2 rounded-xl bg-[#f4f6f8] p-1 text-sm font-medium">
+            <button type="button" onClick={() => { setMode('login'); setMessage(''); }} className={`h-9 rounded-lg ${mode === 'login' ? 'bg-white text-[#101828] shadow-sm' : 'text-[#667085]'}`}>
+              Sign in
+            </button>
+            <button type="button" onClick={() => { setMode('register'); setResetMode(false); setMessage(''); }} className={`h-9 rounded-lg ${mode === 'register' ? 'bg-white text-[#101828] shadow-sm' : 'text-[#667085]'}`}>
+              Create account
+            </button>
+          </div>
+        )}
+
+        {message ? <div className="mt-5 rounded-lg border border-[#f4d5d4] bg-[#fff1ef] px-3 py-2 text-sm text-[#7a1d17]">{message}</div> : null}
+
+        {mode === 'login' && !resetMode ? (
+          <form onSubmit={submitLogin} className="mt-5 space-y-3.5">
+            <Field label="Email, mobile, or username">
+              <input value={login.login} onChange={setField(setLogin, 'login')} className={inputClass} autoComplete="username" required />
+            </Field>
+            <Field label="Password">
+              <PasswordInput value={login.password} onChange={setField(setLogin, 'password')} autoComplete="current-password" required />
+            </Field>
+            {showOtp ? (
+              <Field label="2FA code">
+                <input value={login.otp} onChange={setField(setLogin, 'otp')} className={inputClass} inputMode="numeric" autoComplete="one-time-code" />
+              </Field>
+            ) : (
+              <button type="button" onClick={() => setShowOtp(true)} className="text-sm font-medium text-[#667085]">Have a 2FA code?</button>
+            )}
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <label className="flex items-center gap-2 text-[#475467]">
+                <input type="checkbox" checked={login.remember} onChange={setField(setLogin, 'remember')} className="h-4 w-4 rounded border-slate-300" />
+                Remember me
+              </label>
+              <button type="button" onClick={() => { setResetMode(true); setMessage(''); }} className="font-medium text-[#e10600]">Forgot password</button>
+            </div>
+            <button type="submit" disabled={isSubmitDisabled} className={submitClass}>
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+        ) : null}
+
+        {resetMode ? (
+          <form onSubmit={submitForgotPassword} className="mt-6 space-y-4">
+            <Field label="Email">
+              <input type="email" value={login.login} onChange={setField(setLogin, 'login')} className={inputClass} autoComplete="email" required />
+            </Field>
+            <button type="submit" disabled={isSubmitDisabled} className={submitClass}>
+              {loading ? 'Sending...' : 'Send reset link'}
+            </button>
+            <button type="button" onClick={() => { setResetMode(false); setMessage(''); }} className="h-11 w-full rounded-lg text-sm font-medium text-[#475467]">
+              Back to sign in
+            </button>
+          </form>
+        ) : null}
+
+        {mode === 'register' && !resetMode ? (
+          <form onSubmit={submitRegister} className="mt-6 space-y-4">
+            <Field label="Full name">
+              <input value={register.fullName} onChange={setField(setRegister, 'fullName')} className={inputClass} autoComplete="name" required />
+            </Field>
+            <Field label="Mobile">
+              <input value={register.mobile} onChange={setField(setRegister, 'mobile')} className={inputClass} autoComplete="tel" required />
+            </Field>
+            <Field label="Email">
+              <input type="email" value={register.email} onChange={setField(setRegister, 'email')} className={inputClass} autoComplete="email" required />
+            </Field>
+            <Field label="Username">
+              <input value={register.username} onChange={setField(setRegister, 'username')} className={inputClass} autoComplete="username" required />
+            </Field>
+            <Field label="Password" hint="8 or more characters, with a capital letter, a number, and a symbol.">
+              <PasswordInput value={register.password} onChange={setField(setRegister, 'password')} autoComplete="new-password" required />
+            </Field>
+            <Field label="Confirm password">
+              <PasswordInput value={register.confirmPassword} onChange={setField(setRegister, 'confirmPassword')} autoComplete="new-password" required />
+            </Field>
+            <Field label="Referral ID" hint={sponsorName ? `Sponsor: ${sponsorName}` : null}>
+              <input value={register.sponsorId} onChange={setField(setRegister, 'sponsorId')} readOnly={Boolean(sponsorCode)} className={`${inputClass} read-only:text-[#475467]`} required />
+            </Field>
+            <Field label="OTP">
+              <input value={register.otp} onChange={setField(setRegister, 'otp')} className={inputClass} inputMode="numeric" autoComplete="one-time-code" required />
+            </Field>
+            <div className="space-y-2.5 pt-1 text-sm text-[#475467]">
+              <label className="flex items-start gap-2">
+                <input type="checkbox" checked={register.termsAccepted} onChange={setField(setRegister, 'termsAccepted')} className="mt-0.5 h-4 w-4 rounded border-slate-300" required />
+                <span>I accept the <Link to="/legal/terms" className="font-medium text-[#e10600]">Terms</Link>.</span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input type="checkbox" checked={register.privacyAccepted} onChange={setField(setRegister, 'privacyAccepted')} className="mt-0.5 h-4 w-4 rounded border-slate-300" required />
+                <span>I accept the <Link to="/legal/privacy" className="font-medium text-[#e10600]">Privacy Policy</Link>.</span>
+              </label>
+            </div>
+            <button type="submit" disabled={isSubmitDisabled} className={submitClass}>
+              {loading ? 'Creating account...' : 'Create account'}
+            </button>
+          </form>
+        ) : null}
+        </section>
+      </main>
     </div>
   );
 }

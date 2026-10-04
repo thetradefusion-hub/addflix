@@ -1,7 +1,7 @@
 export default function QrCode({ className = "", value = "" }) {
   if (value) {
     const src = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(value)}`;
-    return <img src={src} alt="QR code" className={`aspect-square w-full rounded-xl bg-white p-2 ${className}`} />;
+    return <img src={src} alt="QR code" className={`theme-fixed aspect-square w-full rounded-xl bg-white p-2 ${className}`} />;
   }
   const cells = [
     "1111111001001111111",
@@ -25,7 +25,7 @@ export default function QrCode({ className = "", value = "" }) {
     "1111111001011110111",
   ];
   return (
-    <div className={`relative grid aspect-square w-full grid-cols-[repeat(19,1fr)] gap-px bg-white p-2 ${className}`} aria-hidden="true">
+    <div className={`theme-fixed relative grid aspect-square w-full grid-cols-[repeat(19,1fr)] gap-px bg-white p-2 ${className}`} aria-hidden="true">
       {cells.flatMap((row, y) =>
         row.split("").map((bit, x) => <span key={`${y}-${x}`} className={bit === "1" ? "bg-[#111]" : "bg-white"} />)
       )}

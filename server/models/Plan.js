@@ -8,6 +8,7 @@ const planSchema = new mongoose.Schema(
     dailyRate: { type: Number, required: true },
     maxRoi: { type: Number, required: true },
     validity: { type: Number, required: true },
+    offDays: { type: [Number], default: [] },
     accent: { type: String, default: "red" },
     popular: { type: Boolean, default: false },
     active: { type: Boolean, default: true },

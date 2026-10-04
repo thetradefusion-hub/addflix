@@ -217,7 +217,7 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
 
 function PlayButton({ playing, onClick }) {
   return (
-    <button type="button" onClick={onClick} className="absolute bottom-3 left-3 z-20 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#111827] shadow">
+    <button type="button" onClick={onClick} className="theme-fixed absolute bottom-3 left-3 z-20 rounded-full bg-white px-4 py-2 text-sm font-bold text-[#111827] shadow">
       {playing ? "Pause" : "Play"}
     </button>
   );

@@ -76,3 +76,252 @@ svg.lucide {
 .toast-in {
   animation: toast-in 0.25s ease;
 }
+
+html.landing-smooth {
+  scroll-behavior: smooth;
+}
+
+.landing [data-reveal] {
+  opacity: 0;
+  transform: translate3d(0, 28px, 0);
+  transition:
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0ms);
+  will-change: opacity, transform;
+}
+
+.landing [data-reveal].is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes landing-zoom {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes landing-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.landing-rise {
+  animation: landing-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+.landing-zoom {
+  animation: landing-zoom 2.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-glow {
+  animation: landing-glow 5s ease-in-out infinite;
+}
+
+.landing-lift {
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.landing-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.38);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.landing-smooth {
+    scroll-behavior: auto;
+  }
+  .landing [data-reveal],
+  .landing-rise,
+  .landing-zoom,
+  .landing-glow {
+    opacity: 1;
+    transform: none;
+    animation: none;
+    transition: none;
+  }
+  .landing-lift:hover {
+    transform: none;
+  }
+}
+
+/* Dark theme. Light surfaces flip; branded dark chrome and .theme-fixed controls stay as designed. */
+html.dark {
+  color-scheme: dark;
+  --color-ink: #f2f4f7;
+  --color-muted: #b0b7c3;
+  --color-line: #2a3142;
+  --color-canvas: #0b0e14;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #3a4254;
+}
+
+html.dark .bg-white:not(.theme-fixed, .theme-fixed *),
+html.dark .bg-white\/95:not(.theme-fixed, .theme-fixed *),
+html.dark .bg-white\/90:not(.theme-fixed, .theme-fixed *) {
+  background-color: #161b24;
+}
+
+html.dark .bg-\[\#f4f6f8\] {
+  background-color: #0b0e14;
+}
+
+html.dark .bg-\[\#f8fafc\]:not(.theme-fixed, .theme-fixed *),
+html.dark .bg-\[\#fafbfc\],
+html.dark .bg-slate-50 {
+  background-color: #1c2330;
+}
+
+html.dark .bg-\[\#f2f4f7\],
+html.dark .bg-\[\#eef2f6\],
+html.dark .bg-\[\#eceff3\],
+html.dark .bg-slate-100 {
+  background-color: #242b3a;
+}
+
+html.dark .bg-\[\#fff5f5\],
+html.dark .bg-\[\#fff1ef\],
+html.dark .bg-red-50,
+html.dark .bg-rose-50 {
+  background-color: #2a151c;
+}
+
+html.dark .bg-emerald-50 {
+  background-color: #10281f;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-orange-50 {
+  background-color: #2a220f;
+}
+
+html.dark .bg-sky-50 {
+  background-color: #122433;
+}
+
+html.dark .bg-violet-50 {
+  background-color: #221833;
+}
+
+html.dark .hover\:bg-white:hover:not(.theme-fixed, .theme-fixed *),
+html.dark .focus\:bg-white:focus:not(.theme-fixed, .theme-fixed *) {
+  background-color: #222836;
+}
+
+html.dark .hover\:bg-\[\#f8fafc\]:hover,
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #242b3a;
+}
+
+html.dark .hover\:bg-\[\#fff5f5\]:hover,
+html.dark .hover\:bg-red-50:hover,
+html.dark .hover\:bg-red-100:hover {
+  background-color: #3a1c22;
+}
+
+html.dark .text-\[\#101828\]:not(.theme-fixed, .theme-fixed *),
+html.dark .text-\[\#111827\]:not(.theme-fixed, .theme-fixed *),
+html.dark .text-\[\#111\]:not(.theme-fixed, .theme-fixed *),
+html.dark .text-slate-900:not(.theme-fixed, .theme-fixed *) {
+  color: #f2f4f7;
+}
+
+html.dark .text-\[\#344054\]:not(.theme-fixed, .theme-fixed *),
+html.dark .text-\[\#475467\]:not(.theme-fixed, .theme-fixed *),
+html.dark .text-slate-600:not(.theme-fixed, .theme-fixed *),
+html.dark .text-slate-700:not(.theme-fixed, .theme-fixed *) {
+  color: #d0d5dd;
+}
+
+html.dark .text-\[\#667085\]:not(.theme-fixed, .theme-fixed *),
+html.dark .text-\[\#98a2b3\]:not(.theme-fixed, .theme-fixed *),
+html.dark .text-slate-500:not(.theme-fixed, .theme-fixed *) {
+  color: #b0b7c3;
+}
+
+html.dark .text-\[\#d0d5dd\] {
+  color: #4b5568;
+}
+
+html.dark .text-\[\#9f1239\],
+html.dark .text-\[\#7a1d17\],
+html.dark .text-red-600,
+html.dark .text-rose-600 {
+  color: #fda4af;
+}
+
+html.dark .text-\[\#7a4b00\],
+html.dark .text-amber-600,
+html.dark .text-amber-700,
+html.dark .text-orange-600 {
+  color: #fcd34d;
+}
+
+html.dark .text-emerald-600,
+html.dark .text-emerald-700 {
+  color: #6ee7b7;
+}
+
+html.dark .text-sky-600,
+html.dark .text-sky-700 {
+  color: #7dd3fc;
+}
+
+html.dark .border-\[\#eaecf0\],
+html.dark .border-\[\#f2f4f7\],
+html.dark .border-\[\#f0f2f5\],
+html.dark .border-\[\#e4e7ec\],
+html.dark .border-\[\#f8fafc\],
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .divide-\[\#eaecf0\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2a3142;
+}
+
+html.dark .border-rose-100,
+html.dark .border-\[\#f4d5d4\],
+html.dark .border-\[\#fda4a4\] {
+  border-color: #5c2433;
+}
+
+html.dark .ring-white:not(.theme-fixed, .theme-fixed *) {
+  --tw-ring-color: #161b24;
+}
+
+.app-canvas main :is(article, section, form).rounded-2xl.border.bg-white,
+.app-canvas main .rounded-2xl.border.bg-white.shadow-sm,
+.app-canvas main .overflow-hidden.rounded-2xl.border.bg-white {
+  box-shadow: 0 16px 40px rgba(16, 24, 40, 0.06);
+}
+
+html.dark .app-canvas main :is(article, section, form).rounded-2xl.border.bg-white,
+html.dark .app-canvas main .rounded-2xl.border.bg-white.shadow-sm,
+html.dark .app-canvas main .overflow-hidden.rounded-2xl.border.bg-white {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+}

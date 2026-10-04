@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Navigate, useLocation, useParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { apiFetch, clearAdminSession, readAdminSession } from "@/lib/api";
-import { activationLabel, money, shortHash } from "@/lib/utils";
+import { activationLabel, fineMoney, money, shortHash } from "@/lib/utils";
 import { formatLedgerDate } from "@/lib/ledger";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -28,6 +28,7 @@ const pageMeta = {
   pages: ["Pages", "About, rules, FAQ and the other public pages."],
   messages: ["Messages", "Broadcast to members. In-app is delivered. Email, SMS and push stay queued."],
   audit: ["Audit", "Wallet, ROI, commission, withdrawal and admin login history."],
+  level: ["Level Income", "Level 1–15 commission on claimed daily ROI. Every credit and every skipped upline is listed."],
   settings: ["Settings", "Subscription price, deposit address, referral rates, withdrawal rules and today's task."],
   plans: ["Plans", "Daily rate, minimum, cap and whether members can buy the plan."],
   subscriptions: ["Subscriptions", "Approve a $10 payment to activate the ID, or mark it failed."],
@@ -62,8 +63,9 @@ function AdminConsole({ view, onLogout }) {
   const [deposits, setDeposits] = useState([]);
   const [settings, setSettings] = useState(null);
   const [plans, setPlans] = useState([]);
-  const [planDraft, setPlanDraft] = useState({ planId: "", name: "", min: "100", dailyRate: "2", maxRoi: "150", validity: "75" });
+  const [planDraft, setPlanDraft] = useState({ planId: "", name: "", min: "100", dailyRate: "2", maxRoi: "150", validity: "75", offDays: [] });
   const [subscriptions, setSubscriptions] = useState([]);
+  const [levelData, setLevelData] = useState(null);
   const [entering, setEntering] = useState("");
 
   const load = async () => {
@@ -94,6 +96,8 @@ function AdminConsole({ view, onLogout }) {
       } else if (view === "subscriptions") {
         const data = await apiFetch("/api/admin/subscriptions");
         setSubscriptions(data.subscriptions || []);
+      } else if (view === "level") {
+        setLevelData(await apiFetch("/api/admin/level-income"));
       }
     } catch (err) {
       if (String(err.message).includes("Admin")) {
@@ -201,6 +205,7 @@ function AdminConsole({ view, onLogout }) {
             />
           ) : null}
           {["audit", "tickets", "fraud", "videos", "pages", "messages"].includes(view) ? <AdminDesk view={view} /> : null}
+          {view === "level" && levelData ? <LevelIncome data={levelData} /> : null}
           {view === "plans" ? (
             <PlansPanel
               plans={plans}
@@ -210,7 +215,7 @@ function AdminConsole({ view, onLogout }) {
               onCreate={async (event) => {
                 event.preventDefault();
                 const saved = await run("/api/admin/plans", { method: "POST", body: JSON.stringify(planDraft) });
-                if (saved) setPlanDraft({ planId: "", name: "", min: "100", dailyRate: "2", maxRoi: "150", validity: "75" });
+                if (saved) setPlanDraft({ planId: "", name: "", min: "100", dailyRate: "2", maxRoi: "150", validity: "75", offDays: [] });
               }}
               onSave={(plan) => run(`/api/admin/plans/${plan.id}`, {
                 method: "PUT",
@@ -220,6 +225,7 @@ function AdminConsole({ view, onLogout }) {
                   dailyRate: Number(plan.dailyRate),
                   maxRoi: Number(plan.maxRoi),
                   validity: Number(plan.validity),
+                  offDays: Array.isArray(plan.offDays) ? plan.offDays : [],
                   active: Boolean(plan.active),
                   popular: Boolean(plan.popular),
                 }),
@@ -254,6 +260,8 @@ function Overview({ overview, audits, name }) {
     { to: "/admin/users", icon: "Clapperboard", iconBg: "bg-amber-50 text-amber-600", label: "Tasks today", value: String(overview.tasksToday || 0), hint: `${overview.claimsToday || 0} ROI claimed` },
     { to: "/admin/deposits", icon: "ArrowDownToLine", iconBg: "bg-sky-50 text-sky-500", label: "Pending deposits", value: String(overview.pendingDeposits || 0), hint: "Waiting for review" },
     { to: "/admin/withdrawals", icon: "ArrowUpFromLine", iconBg: "bg-rose-50 text-rose-500", label: "Pending withdrawals", value: String(overview.pendingWithdrawals || 0), hint: "Payout queue" },
+    { to: "/admin/level-income", icon: "HandCoins", iconBg: "bg-violet-50 text-violet-600", label: "Level income today", value: `$${fineMoney(overview.levelToday)}`, hint: "L1–L15 on claimed ROI" },
+    { to: "/admin/level-income", icon: "Coins", iconBg: "bg-red-50 text-[#e10600]", label: "Level income paid", value: `$${fineMoney(overview.levelPaid)}`, hint: "All time" },
   ];
   const queues = [
     ["Deposits", overview.pendingDeposits, "/admin/deposits"],
@@ -264,7 +272,7 @@ function Overview({ overview, audits, name }) {
     <div className="space-y-3">
       <section className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-black tracking-tight text-[#101828] sm:text-2xl">Welcome Back, {name}</h1>
+          <h1 className="truncate text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">Welcome Back, {name}</h1>
           <p className="mt-0.5 text-sm text-[#667085]">Review payouts, deposits and new members.</p>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-600">
@@ -280,7 +288,7 @@ function Overview({ overview, audits, name }) {
           <p className="mt-1 text-sm text-white/75">{overview.subscribers || 0} active of {overview.users || 0} members</p>
           <div className="mt-6 grid grid-cols-3 gap-2">
             <NavLink to="/admin/users" className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#e10600] px-2 text-xs font-bold sm:text-sm"><AppIcon name="Users" size={15} /> Users</NavLink>
-            <NavLink to="/admin/deposits" className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-white px-2 text-xs font-bold text-[#111827] sm:text-sm"><AppIcon name="ArrowDownToLine" size={15} /> Deposits</NavLink>
+            <NavLink to="/admin/deposits" className="theme-fixed inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-white px-2 text-xs font-bold text-[#111827] sm:text-sm"><AppIcon name="ArrowDownToLine" size={15} /> Deposits</NavLink>
             <NavLink to="/admin/withdrawals" className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#4c1d95] px-2 text-xs font-bold sm:text-sm"><AppIcon name="ArrowUpFromLine" size={15} /> Payouts</NavLink>
           </div>
         </article>
@@ -377,7 +385,7 @@ function Users({ users, query, setQuery, onSearch, onLoginAs, entering }) {
   return (
     <div className="space-y-3">
       <section>
-        <h1 className="text-xl font-black tracking-tight text-[#101828] sm:text-2xl">Members</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">Members</h1>
         <p className="mt-0.5 text-sm text-[#667085]">Search a member, open the profile, or sign in as that account.</p>
       </section>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -419,10 +427,10 @@ function Users({ users, query, setQuery, onSearch, onLoginAs, entering }) {
                   <span className="block truncate text-[11px] text-[#98a2b3]">Sponsor {user.sponsorId || "—"} · Joined {user.joined || "—"}</span>
                 </span>
               </NavLink>
-              <div className="grid grid-cols-3 gap-2 text-center lg:w-72">
+              <div className="grid grid-cols-[1fr_1fr_1.6fr] gap-2 text-center lg:w-96">
                 <span><span className="block text-[10px] text-[#98a2b3]">Wallet</span><span className="text-sm font-black">${money(user.wallet)}</span></span>
                 <span><span className="block text-[10px] text-[#98a2b3]">Plan</span><span className="block truncate text-sm font-bold">{String(user.plan || "None").replace(" Plan", "")}</span></span>
-                <span><span className="block text-[10px] text-[#98a2b3]">Task</span><span className="block truncate text-sm font-bold">{user.taskStatus || "Pending"}</span></span>
+                <TodayTask task={user.todayTask} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge tone={user.subscription ? "active" : "inactive"}>{user.subscription ? "Subscribed" : "Not subscribed"}</StatusBadge>
@@ -454,6 +462,32 @@ function FieldList({ rows }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+const taskTone = {
+  claimed: "text-emerald-600",
+  done: "text-sky-600",
+  watching: "text-amber-600",
+  not_started: "text-[#667085]",
+  off: "text-violet-600",
+  locked: "text-rose-600",
+};
+
+function TodayTask({ task }) {
+  const state = task?.state || "not_started";
+  return (
+    <span className="min-w-0" title={task?.lastDay ? `Last task ${task.lastDay}: ${task.lastStatus}` : undefined}>
+      <span className="block text-[10px] text-[#98a2b3]">Today's task</span>
+      <span className={`block truncate text-sm font-bold ${taskTone[state] || taskTone.not_started}`}>{task?.label || "Not started"}</span>
+      {state === "watching" ? (
+        <span className="mx-auto mt-1 block h-1 w-16 overflow-hidden rounded-full bg-[#eaecf0]">
+          <span className="block h-full rounded-full bg-amber-500" style={{ width: `${Math.min(100, task.progress || 0)}%` }} />
+        </span>
+      ) : task?.lastDay ? (
+        <span className="block truncate text-[10px] text-[#98a2b3]">Last {task.lastDay.slice(5)} · {task.lastStatus}</span>
+      ) : null}
+    </span>
   );
 }
 
@@ -551,8 +585,8 @@ function Member({ member, adjust, setAdjust, onStatus, onAdjust, onLoginAs, ente
 
       <article className={card}>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="font-bold">Today's task</p>
-          <StatusBadge tone={task.completed ? "success" : "pending"}>{task.status || "Pending"}</StatusBadge>
+          <p className="font-bold">Today's task <span className="font-normal text-[#98a2b3]">· {task.day || "—"}</span></p>
+          <StatusBadge tone={{ claimed: "success", done: "active", locked: "danger" }[task.state] || "pending"}>{task.status || "Not started"}</StatusBadge>
         </div>
         <p className="mt-1 text-sm text-[#667085]">{task.title || "No task"}{task.subtitle ? ` · ${task.subtitle}` : ""}</p>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f2f4f7]">
@@ -563,6 +597,31 @@ function Member({ member, adjust, setAdjust, onStatus, onAdjust, onLoginAs, ente
           <StatusBadge tone={task.completed ? "success" : "pending"}>{task.completed ? "Watched" : "Not watched"}</StatusBadge>
           <StatusBadge tone={task.roiUnlocked ? "success" : "pending"}>{task.roiUnlocked ? "ROI unlocked" : "ROI locked"}</StatusBadge>
           <StatusBadge tone={task.roiClaimed ? "success" : "pending"}>{task.roiClaimed ? "ROI claimed" : "Not claimed"}</StatusBadge>
+          {!task.hasPlan ? <StatusBadge tone="danger">No active plan</StatusBadge> : null}
+        </div>
+        {task.lastDay ? <p className="mt-2 text-xs text-[#667085]">Not opened today. Last task {task.lastDay}: {task.lastStatus}.</p> : null}
+        {member.roiDays?.length ? (
+          <div className="mt-3">
+            <p className="text-xs font-semibold text-[#667085]">Last days</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {member.roiDays.map((row) => (
+                <StatusBadge key={row.day} tone={row.status === "Claimed" ? "success" : row.status === "Missed" ? "danger" : row.status === "Off" ? "active" : "pending"}>{row.day.slice(5)} · {row.status}</StatusBadge>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </article>
+
+      <article className={card}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-bold">Level income eligibility</p>
+          <StatusBadge tone={member.levelIncome?.eligible ? "success" : "danger"}>{member.levelIncome?.eligible ? "Eligible" : "Not eligible"}</StatusBadge>
+        </div>
+        <p className="mt-1 text-sm text-[#667085]">Earns Level 1–15 commission on the team's claimed ROI only with an active ID and at least one active direct.</p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          <StatusBadge tone={member.levelIncome?.idActive ? "success" : "danger"}>{member.levelIncome?.idActive ? "ID active" : "ID not active"}</StatusBadge>
+          <StatusBadge tone={member.levelIncome?.activeDirects ? "success" : "danger"}>{member.levelIncome?.activeDirects || 0} active direct</StatusBadge>
+          <StatusBadge tone="active">${fineMoney(member.levelIncome?.total)} earned · {member.levelIncome?.count || 0} credits</StatusBadge>
         </div>
       </article>
 
@@ -599,6 +658,18 @@ function Member({ member, adjust, setAdjust, onStatus, onAdjust, onLoginAs, ente
               <div className="flex justify-between gap-2"><span className="font-semibold">${money(row.amount)} {row.network}</span><StatusBadge tone={row.status}>{row.status}</StatusBadge></div>
               <p className="text-xs text-[#667085]">{shortHash(row.txHash, 8, 6)}</p>
               <p className="text-xs text-[#98a2b3]">Submitted {row.submittedAt || "—"}{row.verifiedAt ? ` · verified ${activationLabel(row.verifiedAt)}` : ""}</p>
+            </article>
+          )}
+        />
+        <RecordList resetKey={member.id}
+          title={`Level income · $${fineMoney(member.levelIncome?.total)}`}
+          empty="No level income yet."
+          rows={member.levelCredits || []}
+          render={(row, index) => (
+            <article key={row.id || index} className="rounded-xl bg-[#f8fafc] p-3 text-sm">
+              <div className="flex justify-between gap-2"><span className="font-semibold">+${fineMoney(row.commission)} · Level {row.level}</span><span className="text-xs text-[#667085]">{row.rate}%</span></div>
+              <p className="text-xs text-[#667085]">{row.name ? `${row.name} · ${row.user}` : row.user} · ROI ${money(row.roi)}</p>
+              <p className="text-xs text-[#98a2b3]">{showWhen(row.at, row.date)}</p>
             </article>
           )}
         />
@@ -728,6 +799,129 @@ function Member({ member, adjust, setAdjust, onStatus, onAdjust, onLoginAs, ente
   );
 }
 
+function showWhen(value, fallback = "") {
+  if (!value) return fallback;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback || String(value);
+  return date.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" });
+}
+
+const levelTabs = [["credits", "Credits"], ["claims", "ROI claims"], ["skipped", "Skipped"]];
+
+function LevelIncome({ data }) {
+  const [tab, setTab] = useState("credits");
+  const [query, setQuery] = useState("");
+  const [level, setLevel] = useState("0");
+  const totals = data.totals || {};
+  const q = query.trim().toLowerCase();
+  const match = (...values) => !q || values.join(" ").toLowerCase().includes(q);
+  const credits = (data.credits || []).filter((row) => (level === "0" || String(row.level) === level) && match(row.receiver, row.receiverCode, row.from, row.fromName, row.claimId));
+  const claims = (data.claims || []).filter((row) => match(row.earner, row.earnerName, row.note));
+  const skipped = (data.skipped || []).filter((row) => (level === "0" || String(row.level) === level) && match(row.referralId, row.name, row.earner, row.reason));
+  const rows = tab === "credits" ? credits : tab === "claims" ? claims : skipped;
+  const list = usePaging(rows, 10, `${tab}:${q}:${level}`);
+  const busiest = Math.max(...(data.byLevel || []).map((row) => row.amount), 0);
+
+  return (
+    <div className="space-y-3">
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <StatCard icon={<AppIcon name="HandCoins" size={18} />} label="Total paid" value={`$${fineMoney(totals.paid)}`} hint={`${totals.count || 0} credits`} />
+        <StatCard icon={<AppIcon name="Coins" size={18} />} label="Paid today" value={`$${fineMoney(totals.todayPaid)}`} hint={`${totals.todayCount || 0} credits today`} />
+        <StatCard icon={<AppIcon name="Users" size={18} />} label="Uplines paid" value={String(totals.receivers || 0)} hint="Members with level income" />
+        <StatCard icon={<AppIcon name="ListChecks" size={18} />} label="ROI claims" value={String(totals.claims || 0)} hint={`${(data.skipped || []).length} skipped levels`} />
+      </section>
+
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)]">
+        <article className={card}>
+          <p className="font-bold">By level</p>
+          <p className="text-xs text-[#667085]">Rate on the claimed ROI. An active ID and one active direct are required.</p>
+          <table className="mt-3 w-full text-left text-sm">
+            <thead className="text-xs text-[#667085]">
+              <tr><th className="pb-2 font-medium">Level</th><th className="pb-2 font-medium">Rate</th><th className="pb-2 text-right font-medium">Credits</th><th className="pb-2 text-right font-medium">Paid</th></tr>
+            </thead>
+            <tbody>
+              {(data.byLevel || []).map((row) => (
+                <tr key={row.level} className="border-t border-[#f2f4f7]">
+                  <td className="py-2 font-semibold">L{row.level}</td>
+                  <td className="py-2 text-[#667085]">{row.rate}%</td>
+                  <td className="py-2 text-right">{row.count}</td>
+                  <td className="py-2 text-right">
+                    <span className="font-semibold">${fineMoney(row.amount)}</span>
+                    <span className="mt-1 block h-1 overflow-hidden rounded-full bg-[#f2f4f7]">
+                      <span className="block h-full rounded-full bg-[#e10600]" style={{ width: `${busiest ? (row.amount / busiest) * 100 : 0}%` }} />
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </article>
+
+        <article className={card}>
+          <div className="flex flex-wrap gap-2">
+            {levelTabs.map(([id, label]) => (
+              <button key={id} type="button" onClick={() => setTab(id)} className={`rounded-full px-3 py-1.5 text-xs font-semibold ${tab === id ? "bg-[#e10600] text-white" : "bg-slate-100 text-[#475467]"}`}>
+                {label} · {id === "credits" ? credits.length : id === "claims" ? claims.length : skipped.length}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_160px]">
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search member ID, name or claim" className="h-10 rounded-xl border border-[#eaecf0] px-3 text-sm" aria-label="Search level income" />
+            <select value={level} onChange={(event) => setLevel(event.target.value)} disabled={tab === "claims"} className="h-10 rounded-xl border border-[#eaecf0] px-3 text-sm disabled:opacity-50" aria-label="Level">
+              <option value="0">All levels</option>
+              {(data.byLevel || []).map((row) => <option key={row.level} value={String(row.level)}>Level {row.level}</option>)}
+            </select>
+          </div>
+
+          {rows.length === 0 ? (
+            <p className="mt-4 rounded-xl bg-[#f8fafc] px-3 py-6 text-center text-sm text-[#98a2b3]">
+              {tab === "credits" ? "No level income yet. It appears after a member claims daily ROI." : tab === "claims" ? "No ROI claims with an upline yet." : "No upline has been skipped."}
+            </p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {tab === "credits" ? list.items.map((row) => (
+                <div key={row.id} className="rounded-xl bg-[#f8fafc] p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <NavLink to={`/admin/users/${row.receiverId}`} className="font-semibold hover:text-[#e10600]">{row.receiver || row.receiverCode} <span className="font-normal text-[#98a2b3]">{row.receiverCode}</span></NavLink>
+                    <span className="font-bold text-emerald-600">+${fineMoney(row.commission)}</span>
+                  </div>
+                  <p className="text-xs text-[#667085]">Level {row.level} · {row.rate}% of {row.fromName || row.from} ({row.from}) ROI ${money(row.roi)}</p>
+                  <p className="text-xs text-[#98a2b3]">{showWhen(row.at, row.date)} · {row.claimId}</p>
+                </div>
+              )) : null}
+              {tab === "claims" ? list.items.map((row) => (
+                <div key={row.id} className="rounded-xl bg-[#f8fafc] p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">{row.earnerName || row.earner} <span className="font-normal text-[#98a2b3]">{row.earner}</span></span>
+                    <span className="text-xs text-[#667085]">ROI ${money(row.roi)} → paid <b className="text-[#101828]">${fineMoney(row.paid)}</b></span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    <StatusBadge tone="success">{row.credited} paid</StatusBadge>
+                    {row.skipped ? <StatusBadge tone="pending">{row.skipped} skipped</StatusBadge> : null}
+                  </div>
+                  <p className="mt-1 break-words text-xs text-[#667085]">{row.note}</p>
+                  <p className="text-xs text-[#98a2b3]">{showWhen(row.at)}</p>
+                </div>
+              )) : null}
+              {tab === "skipped" ? list.items.map((row, index) => (
+                <div key={`${row.at}-${row.level}-${index}`} className="rounded-xl bg-[#f8fafc] p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">{row.name || row.referralId} <span className="font-normal text-[#98a2b3]">{row.referralId}</span></span>
+                    <StatusBadge tone="pending">{row.reason}</StatusBadge>
+                  </div>
+                  <p className="text-xs text-[#667085]">Level {row.level} · would have been {row.rate}% of {row.earner} ROI ${money(row.roi)}</p>
+                  <p className="text-xs text-[#98a2b3]">{showWhen(row.at)}</p>
+                </div>
+              )) : null}
+              <Pager page={list.page} pages={list.pages} total={list.total} size={list.size} onChange={list.setPage} />
+            </div>
+          )}
+        </article>
+      </div>
+    </div>
+  );
+}
+
 function payoutGroup(status) {
   if (status === "Pending" || status === "Processing") return "pending";
   if (status === "Rejected" || status === "Failed") return "rejected";
@@ -751,7 +945,7 @@ function Withdrawals({ rows, txHash, setTxHash, onApprove, onReject }) {
   return (
     <div className="space-y-3">
       <section>
-        <h1 className="text-xl font-black tracking-tight text-[#101828] sm:text-2xl">Withdrawals</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">Withdrawals</h1>
         <p className="mt-0.5 text-sm text-[#667085]">Paste the payout hash, then approve a waiting request or reject it.</p>
       </section>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -833,7 +1027,7 @@ function Deposits({ rows, onVerify }) {
   return (
     <div className="space-y-3">
       <section>
-        <h1 className="text-xl font-black tracking-tight text-[#101828] sm:text-2xl">Deposits</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">Deposits</h1>
         <p className="mt-0.5 text-sm text-[#667085]">Mark a waiting deposit success to credit the wallet, or failed to leave it unchanged.</p>
       </section>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -919,7 +1113,7 @@ function PlansPanel({ plans, setPlans, draft, setDraft, onCreate, onSave }) {
     <div className="space-y-3">
       <section className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-[#101828] sm:text-2xl">Plans</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">Plans</h1>
           <p className="mt-0.5 text-sm text-[#667085]">Set the minimum, daily rate and cap. Hidden plans stay off the member invest page.</p>
         </div>
         <Button type="button" variant={adding ? "outline" : "default"} onClick={() => setAdding((open) => !open)}>{adding ? "Close" : "Add plan"}</Button>
@@ -964,6 +1158,7 @@ function PlansPanel({ plans, setPlans, draft, setDraft, onCreate, onSave }) {
               </label>
             ))}
           </div>
+          <OffDaysPicker value={draft.offDays} onChange={(days) => setDraft({ ...draft, offDays: days })} />
           <p className="mt-3 text-sm text-[#475467]">{offerLine(draft)}</p>
           <Button className="mt-4" type="submit">Publish plan</Button>
         </form>
@@ -1009,6 +1204,7 @@ function PlansPanel({ plans, setPlans, draft, setDraft, onCreate, onSave }) {
                 </label>
               ))}
             </div>
+            <OffDaysPicker value={plan.offDays} onChange={(days) => update(plan.id, "offDays", days)} />
             <div className="mt-3 flex flex-wrap gap-2">
               <Button type="button" onClick={() => onSave(plan)}>Save changes</Button>
               <Button type="button" variant="outline" onClick={() => onSave({ ...plan, active: !plan.active })}>{plan.active ? "Hide from members" : "Publish"}</Button>
@@ -1021,10 +1217,56 @@ function PlansPanel({ plans, setPlans, draft, setDraft, onCreate, onSave }) {
   );
 }
 
+const weekOrder = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
+
+function offLabel(offDays) {
+  const off = weekOrder.filter(([day]) => (offDays || []).includes(day)).map(([, label]) => label);
+  return off.length ? `No ROI on ${off.join(", ")}` : "ROI every day";
+}
+
+function OffDaysPicker({ value, onChange }) {
+  const off = Array.isArray(value) ? value : [];
+  const toggle = (day) => {
+    const next = off.includes(day) ? off.filter((item) => item !== day) : [...off, day];
+    if (next.length < 7) onChange(next.sort());
+  };
+  return (
+    <div className="mt-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-[#667085]">ROI off days <span className="text-[#98a2b3]">· no task and no ROI on these days</span></p>
+        <div className="flex gap-1.5">
+          <button type="button" onClick={() => onChange([])} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-[#475467]">Every day</button>
+          <button type="button" onClick={() => onChange([0, 6])} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-[#475467]">Sat & Sun off</button>
+        </div>
+      </div>
+      <div className="mt-2 grid grid-cols-7 gap-1.5">
+        {weekOrder.map(([day, label]) => {
+          const isOff = off.includes(day);
+          return (
+            <button
+              key={day}
+              type="button"
+              aria-pressed={isOff}
+              onClick={() => toggle(day)}
+              className={`h-10 rounded-xl border text-xs font-bold transition ${isOff ? "border-[#e10600] bg-red-50 text-[#e10600]" : "border-[#eaecf0] bg-white text-[#101828]"}`}
+            >
+              {label}
+              <span className="block text-[9px] font-semibold opacity-70">{isOff ? "Off" : "ROI"}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function offerLine(plan) {
   const offer = planOffer(plan);
   if (!offer.min || !offer.dailyRate) return "Enter a minimum and daily rate to preview what a member earns.";
-  return `A $${money(offer.min)} buy pays $${money(offer.daily)} a day until $${money(offer.cap)} (${offer.maxRoi}% cap, ${offer.days} days).`;
+  const offCount = (plan.offDays || []).length;
+  const paying = offer.daily > 0 ? Math.ceil(offer.cap / offer.daily) : 0;
+  const weeks = offCount && paying ? ` About ${Math.ceil((paying / (7 - offCount)) * 7)} calendar days to reach the cap.` : "";
+  return `A $${money(offer.min)} buy pays $${money(offer.daily)} a day until $${money(offer.cap)} (${offer.maxRoi}% cap, ${offer.days} days). ${offLabel(plan.offDays)}.${weeks}`;
 }
 
 function Subscriptions({ rows, onReview }) {
@@ -1044,7 +1286,7 @@ function Subscriptions({ rows, onReview }) {
   return (
     <div className="space-y-3">
       <section>
-        <h1 className="text-xl font-black tracking-tight text-[#101828] sm:text-2xl">Subscriptions</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">Subscriptions</h1>
         <p className="mt-0.5 text-sm text-[#667085]">Approve a waiting payment to activate the member ID. A failed payment leaves the ID inactive.</p>
       </section>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">

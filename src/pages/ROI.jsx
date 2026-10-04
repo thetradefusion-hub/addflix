@@ -9,9 +9,11 @@ import AppIcon from "@/components/common/AppIcon";
 import { money } from "@/lib/utils";
 import Pager, { usePaging } from "@/components/common/Pager";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
+import OffDayBanner, { useOffDay } from "@/components/common/OffDayBanner";
 
-function monthGrid(dailyTask, roiDays) {
-  const today = dailyTask?.day || new Date().toISOString().slice(0, 10);
+function monthGrid(dailyTask, roiDays, roiDay) {
+  const today = dailyTask?.day || new Date(Date.now() + 330 * 60 * 1000).toISOString().slice(0, 10);
+  const offWeekdays = roiDay?.offWeekdays || [];
   const [year, month] = today.split("-").map(Number);
   const first = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
   const count = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -22,8 +24,11 @@ function monthGrid(dailyTask, roiDays) {
     let status = saved.get(key) || "";
     if (key === today) {
       if (dailyTask?.roiClaimed) status = "Claimed";
+      else if (roiDay?.allOff) status = "Off";
       else if (dailyTask?.roiUnlocked) status = "Unlocked";
       else status = "Pending";
+    } else if (key > today && offWeekdays.includes(new Date(`${key}T00:00:00Z`).getUTCDay())) {
+      status = "Off";
     }
     return { day, key, status };
   });
@@ -40,10 +45,11 @@ const steps = [
 
 export default function ROI() {
   const navigate = useNavigate();
-  const { taskProgress, taskCompleted, roiUnlocked, roiClaimed, balances, tasks, claimRoi, watching, todayRoi, dailyTask, roiDays } = useApp();
+  const { taskProgress, taskCompleted, roiUnlocked, roiClaimed, balances, tasks, claimRoi, watching, todayRoi, dailyTask, roiDays, roiDay } = useApp();
   const guard = useActiveGuard();
+  const { off: offToday } = useOffDay();
   const current = roiClaimed ? 4 : taskCompleted ? 3 : taskProgress > 0 ? 2 : 1;
-  const calendar = monthGrid(dailyTask, roiDays);
+  const calendar = monthGrid(dailyTask, roiDays, roiDay);
   const claimedDays = calendar.cells.filter((d) => d.status === "Claimed").length;
   const missedDays = calendar.cells.filter((d) => d.status === "Missed" || d.status === "Expired").length;
   const taskPage = usePaging(tasks, 8, tasks.length);
@@ -56,17 +62,18 @@ export default function ROI() {
         crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Daily ROI" }]}
       />
       <InactiveBanner />
+      <OffDayBanner />
 
       <section className="mb-4 rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <p className="font-bold">{calendar.label} · UTC</p>
-            <p className="text-xs text-[#98a2b3]">A UTC day that closes before the task is complete is Missed. It does not carry forward.</p>
+            <p className="font-bold">{calendar.label} · India time (IST)</p>
+            <p className="text-xs text-[#98a2b3]">A new day starts at 12:00 midnight IST. A day that closes before the task is complete is Missed. It does not carry forward.</p>
           </div>
-          <p className="text-xs text-[#667085]">{claimedDays} claimed · {missedDays} missed/expired · today {(calendar.cells.find((item) => item.key === calendar.today)?.status || "Pending").toLowerCase()}</p>
+          <p className="text-xs text-[#667085]">{claimedDays} claimed · {missedDays} missed/expired · today {(calendar.cells.find((item) => item.key === calendar.today)?.status || "Pending").toLowerCase()}{roiDay?.offWeekdays?.length ? ` · ${[[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]].filter(([day]) => roiDay.offWeekdays.includes(day)).map(([, name]) => name).join(", ")} off` : ""}</p>
         </div>
         <div className="mb-3 flex flex-wrap gap-3 text-[11px] text-[#667085]">
-          {[["Claimed", "bg-emerald-500"], ["Unlocked", "bg-sky-500"], ["Missed", "bg-rose-500"], ["Expired", "bg-slate-400"], ["Pending", "bg-amber-400"]].map(([label, cls]) => (
+          {[["Claimed", "bg-emerald-500"], ["Unlocked", "bg-sky-500"], ["Missed", "bg-rose-500"], ["Expired", "bg-slate-400"], ["Pending", "bg-amber-400"], ["Off", "bg-violet-400"]].map(([label, cls]) => (
             <span key={label} className="inline-flex items-center gap-1"><i className={`h-2 w-2 rounded-full ${cls}`} /> {label}</span>
           ))}
         </div>
@@ -74,7 +81,7 @@ export default function ROI() {
           {["S", "M", "T", "W", "T", "F", "S"].map((d, index) => <span key={`${d}-${index}`} className="py-1 font-semibold text-[#98a2b3]">{d}</span>)}
           {Array.from({ length: calendar.first }, (_, i) => <span key={`pad-${i}`} />)}
           {calendar.cells.map((item) => {
-            const tone = item.status === "Claimed" ? "bg-emerald-50 text-emerald-700" : item.status === "Unlocked" ? "bg-sky-50 text-sky-700" : item.status === "Missed" ? "bg-rose-50 text-rose-600" : item.status === "Expired" ? "bg-slate-100 text-slate-500" : item.status === "Pending" ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200" : "text-[#d0d5dd]";
+            const tone = item.status === "Claimed" ? "bg-emerald-50 text-emerald-700" : item.status === "Unlocked" ? "bg-sky-50 text-sky-700" : item.status === "Missed" ? "bg-rose-50 text-rose-600" : item.status === "Expired" ? "bg-slate-100 text-slate-500" : item.status === "Pending" ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200" : item.status === "Off" ? "bg-violet-50 text-violet-500" : "text-[#d0d5dd]";
             return (
               <span key={item.key} title={item.status || "No task yet"} className={`rounded-lg py-2 font-semibold ${tone}`}>{item.day}</span>
             );
@@ -85,7 +92,7 @@ export default function ROI() {
       <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           ["Today's ROI", `$${money(todayRoi)}`, "bg-sky-50 text-sky-600", "HandCoins"],
-          ["Task Status", taskCompleted ? "Completed" : watching ? "In Progress" : "Pending", "bg-emerald-50 text-emerald-600", "CircleCheck"],
+          ["Task Status", offToday ? "Off day" : taskCompleted ? "Completed" : watching ? "In Progress" : "Pending", "bg-emerald-50 text-emerald-600", "CircleCheck"],
           ["Watch Progress", `${taskCompleted ? 100 : taskProgress}%`, "bg-orange-50 text-orange-600", "Play"],
           ["Wallet Balance", `$${money(balances.total)}`, "bg-amber-50 text-amber-600", "Wallet"],
         ].map(([label, value, color, icon]) => (
@@ -150,7 +157,7 @@ export default function ROI() {
               <p className="text-lg font-semibold">SMARTPHONE</p>
               <p className="text-xs text-white/70">Faster. Smarter. Brighter.</p>
             </div>
-            <button onClick={() => navigate("/daily-task")} className="absolute grid h-14 w-14 place-items-center rounded-full bg-white/90 text-[#111]" aria-label="Play sponsored video">
+            <button onClick={() => navigate("/daily-task")} className="theme-fixed absolute grid h-14 w-14 place-items-center rounded-full bg-white/90 text-[#111]" aria-label="Play sponsored video">
               <Play className="fill-[#111]" />
             </button>
             <div className="absolute inset-x-3 bottom-3">
@@ -176,11 +183,11 @@ export default function ROI() {
           <p className="text-sm font-semibold">Today's ROI Status</p>
           <p className="mt-2 text-4xl font-black">${money(todayRoi)}</p>
           <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-black/20 px-3 py-1 text-xs font-bold">
-            <Lock size={12} /> {roiClaimed ? "CLAIMED" : roiUnlocked ? "UNLOCKED" : "LOCKED"}
+            <Lock size={12} /> {roiClaimed ? "CLAIMED" : offToday ? "OFF DAY" : roiUnlocked ? "UNLOCKED" : "LOCKED"}
           </p>
-          <p className="mt-3 text-xs text-white/80">{roiClaimed ? "Today's ROI has been credited to your wallet." : roiUnlocked ? "Your ROI is ready to claim." : "Complete today's activity to unlock your ROI."}</p>
-          <button onClick={() => { if (!guard()) return; claimRoi(); }} disabled={roiClaimed} className="mt-4 h-11 w-full rounded-xl bg-white font-bold text-[#e10600] disabled:opacity-70">
-            {roiClaimed ? "CLAIMED" : "CLAIM TODAY'S ROI"}
+          <p className="mt-3 text-xs text-white/80">{roiClaimed ? "Today's ROI has been credited to your wallet." : offToday ? `No ROI on ${roiDay?.weekday}.${roiDay?.resumesOn ? ` It resumes on ${roiDay.resumesOn}.` : ""}` : roiUnlocked ? "Your ROI is ready to claim." : "Complete today's activity to unlock your ROI."}</p>
+          <button onClick={() => { if (!guard()) return; claimRoi(); }} disabled={roiClaimed || offToday} className="theme-fixed mt-4 h-11 w-full rounded-xl bg-white font-bold text-[#e10600] disabled:opacity-70">
+            {roiClaimed ? "CLAIMED" : offToday ? "ROI OFF TODAY" : "CLAIM TODAY'S ROI"}
           </button>
         </article>
         <article className="rounded-2xl border border-amber-100 bg-amber-50/60 p-4">

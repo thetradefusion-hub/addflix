@@ -13,6 +13,20 @@ export function money(value, digits = 2) {
   });
 }
 
+export function fineMoney(value) {
+  return Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+const weekNames = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
+
+export function roiDaysLabel(offDays) {
+  const off = Array.isArray(offDays) ? offDays : [];
+  if (!off.length) return "ROI every day";
+  const on = weekNames.filter(([day]) => !off.includes(day)).map(([, name]) => name);
+  const closed = weekNames.filter(([day]) => off.includes(day)).map(([, name]) => name);
+  return `ROI ${on.join(", ")} · off ${closed.join(", ")}`;
+}
+
 export function activationLabel(value) {
   const raw = String(value || "").trim();
   const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)$/i);

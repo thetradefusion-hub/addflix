@@ -1,3 +1,5 @@
+import { istDayKey } from "./day.js";
+
 export function money2(value) {
   return Number(Number(value).toFixed(2));
 }
@@ -22,20 +24,66 @@ export function quotePlan(plan, amount) {
   };
 }
 
-export function previewTodayRoi(investments = []) {
+export const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function currentDay() {
+  return istDayKey();
+}
+
+export function weekdayOf(day = currentDay()) {
+  return new Date(`${day}T00:00:00.000Z`).getUTCDay();
+}
+
+export function cleanOffDays(value) {
+  const list = Array.isArray(value) ? value : [];
+  return [...new Set(list.map(Number).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))].sort();
+}
+
+export function isOffDay(row, day = currentDay()) {
+  return cleanOffDays(row?.offDays).includes(weekdayOf(day));
+}
+
+export function nextEarningDay(row, day = currentDay()) {
+  const off = cleanOffDays(row?.offDays);
+  const start = weekdayOf(day);
+  for (let step = 1; step <= 7; step += 1) {
+    const weekday = (start + step) % 7;
+    if (!off.includes(weekday)) return WEEKDAYS[weekday];
+  }
+  return "";
+}
+
+export function roiDayInfo(investments = [], day = currentDay()) {
+  const active = (investments || []).filter((row) => row?.status === "Active" && Number(row.cap) - Number(row.earnedRoi) > 0);
+  const off = active.filter((row) => isOffDay(row, day));
+  const resume = off.map((row) => nextEarningDay(row, day)).filter(Boolean);
+  return {
+    day,
+    weekday: WEEKDAYS[weekdayOf(day)],
+    activePlans: active.length,
+    offPlans: off.map((row) => row.planName),
+    allOff: active.length > 0 && off.length === active.length,
+    resumesOn: resume[0] || "",
+    offWeekdays: active.length ? [0, 1, 2, 3, 4, 5, 6].filter((weekday) => active.every((row) => cleanOffDays(row.offDays).includes(weekday))) : [],
+  };
+}
+
+export function previewTodayRoi(investments = [], day = currentDay()) {
   return (investments || []).reduce((sum, row) => {
     if (row?.status !== "Active") return sum;
+    if (isOffDay(row, day)) return sum;
     const room = money2(Number(row.cap) - Number(row.earnedRoi));
     if (room <= 0) return sum;
     return money2(sum + Math.min(Number(row.dailyAmount) || 0, room));
   }, 0);
 }
 
-export function applyDailyPayout(investments = []) {
+export function applyDailyPayout(investments = [], day = currentDay()) {
   const rows = [];
   let total = 0;
   for (const row of investments || []) {
     if (row?.status !== "Active") continue;
+    if (isOffDay(row, day)) continue;
     const room = money2(Number(row.cap) - Number(row.earnedRoi));
     if (room <= 0) {
       row.status = "Completed";

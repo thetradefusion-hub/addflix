@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { previewTodayRoi } from "../utils/plans.js";
+import { previewTodayRoi, roiDayInfo } from "../utils/plans.js";
 import { assignDailyTask, rollTask, todayKey } from "../utils/dailyTask.js";
 
 export const TODAY_ROI = 2.5;
@@ -26,6 +26,7 @@ const accountSchema = new mongoose.Schema(
     withdrawals: { type: Array, default: [] },
     income: { type: Array, default: [] },
     referralCredits: { type: Array, default: [] },
+    levelCredits: { type: Array, default: [] },
     tasks: { type: Array, default: [] },
     roiDays: { type: Array, default: [] },
     investments: { type: Array, default: [] },
@@ -74,10 +75,12 @@ accountSchema.methods.toClient = function toClient() {
     withdrawals: this.withdrawals,
     income: this.income,
     referralCredits: this.referralCredits || [],
+    levelCredits: this.levelCredits || [],
     tasks: this.tasks,
     roiDays: this.roiDays || [],
     investments: this.investments || [],
-    todayRoi: previewTodayRoi(this.investments || []),
+    todayRoi: previewTodayRoi(this.investments || [], this.dailyTask?.day || todayKey()),
+    roiDay: roiDayInfo(this.investments || [], this.dailyTask?.day || todayKey()),
     subscriptionPayments: this.subscriptionPayments || [],
     notifications: this.notifications || [],
     subscription: this.subscription,

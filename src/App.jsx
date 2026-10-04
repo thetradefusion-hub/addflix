@@ -21,6 +21,7 @@ const SupportPage = lazy(() => import("@/pages/Secondary").then((m) => ({ defaul
 const ProfilePage = lazy(() => import("@/pages/Secondary").then((m) => ({ default: m.ProfilePage })));
 const NotFound = lazy(() => import("@/pages/Secondary").then((m) => ({ default: m.NotFound })));
 const Admin = lazy(() => import("@/pages/Admin"));
+const Landing = lazy(() => import("@/pages/Landing"));
 
 function Page({ children }) {
   return <Suspense fallback={<LoadingState label="Loading page" />}>{children}</Suspense>;
@@ -47,8 +48,10 @@ function ProtectedRoute({ children }) {
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<Page><Landing /></Page>} />
       <Route path="/auth" element={<Page><AuthPage /></Page>} />
       <Route path="/ref/:code" element={<Page><AuthPage /></Page>} />
+      <Route path="/legal/:slug" element={<Page><Landing frame><Legal /></Landing></Page>} />
       <Route path="/admin" element={<Page><Admin view="overview" /></Page>} />
       <Route path="/admin/users" element={<Page><Admin view="users" /></Page>} />
       <Route path="/admin/users/:id" element={<Page><Admin view="user" /></Page>} />
@@ -57,6 +60,7 @@ export default function App() {
       <Route path="/admin/settings" element={<Page><Admin view="settings" /></Page>} />
       <Route path="/admin/plans" element={<Page><Admin view="plans" /></Page>} />
       <Route path="/admin/subscriptions" element={<Page><Admin view="subscriptions" /></Page>} />
+      <Route path="/admin/level-income" element={<Page><Admin view="level" /></Page>} />
       <Route path="/admin/audit" element={<Page><Admin view="audit" /></Page>} />
       <Route path="/admin/tickets" element={<Page><Admin view="tickets" /></Page>} />
       <Route path="/admin/fraud" element={<Page><Admin view="fraud" /></Page>} />
@@ -64,7 +68,6 @@ export default function App() {
       <Route path="/admin/pages" element={<Page><Admin view="pages" /></Page>} />
       <Route path="/admin/messages" element={<Page><Admin view="messages" /></Page>} />
       <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Page><Dashboard /></Page>} />
         <Route path="/roi" element={<Page><ROI /></Page>} />
         <Route path="/daily-task" element={<Page><DailyTask /></Page>} />
@@ -82,6 +85,7 @@ export default function App() {
         <Route path="/income" element={<Page><Income preset="All Income" /></Page>} />
         <Route path="/income/roi" element={<Page><Income preset="ROI Income" /></Page>} />
         <Route path="/income/referral" element={<Page><Income preset="Referral Income" /></Page>} />
+        <Route path="/income/level" element={<Page><Income preset="Level Income" /></Page>} />
         <Route path="/income/bonus" element={<Page><Income preset="Bonus Income" /></Page>} />
         <Route path="/watch" element={<Page><WatchVideos /></Page>} />
         <Route path="/notifications" element={<Page><NotificationsPage /></Page>} />
@@ -89,7 +93,6 @@ export default function App() {
         <Route path="/reports" element={<Page><Reports /></Page>} />
         <Route path="/reports/:kind" element={<ReportRoute />} />
         <Route path="/profile" element={<Page><ProfilePage /></Page>} />
-        <Route path="/legal/:slug" element={<Page><Legal /></Page>} />
         <Route path="*" element={<Page><NotFound /></Page>} />
       </Route>
     </Routes>

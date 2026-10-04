@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, ChevronDown, Search } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { searchPages } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
+import ThemeToggle from "@/components/common/ThemeToggle";
 
 export default function TopHeader() {
   const navigate = useNavigate();
   const { unreadCount, notes, markNotesRead, sessionUser } = useApp();
   const [query, setQuery] = useState("");
   const [openNotes, setOpenNotes] = useState(false);
-  const [openLang, setOpenLang] = useState(false);
-  const [lang, setLang] = useState("English");
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -19,10 +18,7 @@ export default function TopHeader() {
   }, [query]);
 
   useEffect(() => {
-    const close = () => {
-      setOpenNotes(false);
-      setOpenLang(false);
-    };
+    const close = () => setOpenNotes(false);
     window.addEventListener("scroll", close, true);
     return () => window.removeEventListener("scroll", close, true);
   }, []);
@@ -56,14 +52,12 @@ export default function TopHeader() {
         ) : null}
       </div>
       <div className="ml-auto flex items-center gap-3">
+        <ThemeToggle tone="light" />
         <div className="relative">
           <button
             className="relative grid h-10 w-10 place-items-center rounded-full text-white hover:bg-white/10"
             aria-label="Notifications"
-            onClick={() => {
-              setOpenNotes((v) => !v);
-              setOpenLang(false);
-            }}
+            onClick={() => setOpenNotes((v) => !v)}
           >
             <Bell size={18} />
             {unreadCount > 0 ? (
@@ -88,33 +82,6 @@ export default function TopHeader() {
                   </button>
                 ))}
               </div>
-            </div>
-          ) : null}
-        </div>
-        <div className="relative">
-          <button
-            className="flex items-center gap-1 rounded-full px-2 py-1 text-sm text-white"
-            onClick={() => {
-              setOpenLang((v) => !v);
-              setOpenNotes(false);
-            }}
-          >
-            {lang} <ChevronDown size={14} />
-          </button>
-          {openLang ? (
-            <div className="absolute right-0 top-10 z-30 w-36 rounded-xl border border-[#eaecf0] bg-white py-1 text-sm text-[#101828] shadow-xl">
-              {["English", "Hindi"].map((item) => (
-                <button
-                  key={item}
-                  className="block w-full px-3 py-2 text-left hover:bg-slate-50"
-                  onClick={() => {
-                    setLang(item);
-                    setOpenLang(false);
-                  }}
-                >
-                  {item}
-                </button>
-              ))}
             </div>
           ) : null}
         </div>

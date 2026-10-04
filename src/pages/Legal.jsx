@@ -17,7 +17,7 @@ const pages = {
       "2. Pay $10 USDT on BEP-20 to activate your ID.",
       "3. Choose an investment plan. Daily ROI is based on that plan.",
       "4. Open Claim ROI, watch the assigned video to 95%, then claim. Credit lands in your wallet.",
-      "5. Share your referral link. Level 1 earns 20% of $10 ($2). Levels 2–4 earn $1.50, $1.00 and $0.50.",
+      "5. Share your referral link. Level 1 earns 20% of $10 ($2). Levels 2–4 earn $1.50, $1.00 and $0.50. Your own ID must be active to receive it.",
     ],
   },
   "subscription-details": {
@@ -99,7 +99,7 @@ export default function Legal() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title={page.title} subtitle="ADD FLIX information pages for the revised earning model." crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Legal" }, { label: page.title }]} />
+      <PageHeader title={page.title} subtitle="ADD FLIX information pages." crumbs={[{ label: "Home", to: "/" }, { label: page.title }]} />
       <article className="rounded-2xl border border-[#eaecf0] bg-white p-5">
         <div className="space-y-3 text-sm leading-6 text-[#475467]">
           {page.body.map((para) => <p key={para}>{para}</p>)}

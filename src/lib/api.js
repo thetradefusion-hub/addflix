@@ -61,7 +61,6 @@ export function mapSessionUser(user) {
     phone: user.mobile,
     country: user.country || "India",
     joined,
-    language: "English",
     referralLink: user.referralId ? `${window.location.origin}/ref/${user.referralId}` : "",
     pinSet: Boolean(user.transactionPinSet),
   };

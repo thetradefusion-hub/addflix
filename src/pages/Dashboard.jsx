@@ -7,6 +7,7 @@ import { useApp } from "@/context/AppContext";
 import { activationLabel, money } from "@/lib/utils";
 import { incomeByDay, lifetimeFigures, liveTransactions } from "@/lib/ledger";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
+import { useOffDay } from "@/components/common/OffDayBanner";
 
 const txTone = {
   "ROI Credit": ["HandCoins", "bg-emerald-50 text-emerald-500"],
@@ -22,7 +23,8 @@ export default function Dashboard() {
   const guard = useActiveGuard();
   const [hidden, setHidden] = useState(false);
   const progress = taskCompleted ? 100 : taskProgress;
-  const roiStatus = roiClaimed ? "Claimed" : roiUnlocked ? "Available" : "Locked";
+  const { off: offToday, roiDay } = useOffDay();
+  const roiStatus = roiClaimed ? "Claimed" : offToday ? "Off day" : roiUnlocked ? "Available" : "Locked";
   const activeStep = roiClaimed ? 5 : roiUnlocked ? 4 : taskCompleted ? 2 : 1;
 
   const onClaim = () => {
@@ -42,7 +44,7 @@ export default function Dashboard() {
   });
   const share = earned.total > 0 ? `${((earned.referral / earned.total) * 100).toFixed(1)}% of income` : "No referral credits yet";
   const stats = [
-    { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", label: "Today's ROI", value: `$${money(todayRoi)}`, hint: roiClaimed ? "Credited to wallet" : "Complete today's task to unlock", hintClass: "text-[#98a2b3]", badge: roiStatus, to: "/roi" },
+    { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", label: "Today's ROI", value: `$${money(todayRoi)}`, hint: roiClaimed ? "Credited to wallet" : offToday ? `No ROI on ${roiDay?.weekday}` : "Complete today's task to unlock", hintClass: "text-[#98a2b3]", badge: roiStatus, to: "/roi" },
     { icon: "Gift", iconBg: "bg-emerald-50 text-emerald-600", label: "Total ROI Earned", value: `$${money(earned.roi)}`, hint: "Credited ROI", hintClass: "text-emerald-500", to: "/income/roi" },
     { icon: "Users", iconBg: "bg-rose-50 text-rose-500", label: "Referral Income", value: `$${money(earned.referral)}`, hint: share, hintClass: "text-[#98a2b3]", to: "/income/referral" },
     { icon: "Landmark", iconBg: "bg-sky-50 text-sky-500", label: "Active Plan", value: `$${money(activeAmount)}`, hint: activeHint, hintClass: "text-[#98a2b3]", to: "/investment" },
@@ -56,7 +58,7 @@ export default function Dashboard() {
       <section className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-[#667085] lg:hidden">Good Morning <span aria-hidden="true">👋</span></p>
-          <h1 className="truncate text-xl font-black tracking-tight text-[#101828] sm:text-2xl">
+          <h1 className="truncate text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">
             <span className="lg:hidden">{sessionUser?.name || "Member"}</span>
             <span className="hidden lg:inline">Welcome Back, {sessionUser?.name || "Member"} <span aria-hidden="true">👋</span></span>
           </h1>
@@ -99,7 +101,7 @@ export default function Dashboard() {
           <p className="mt-1 text-sm text-white/75">≈ {hidden ? "••••" : `${money(balances.total)} USDT`}</p>
           <div className="mt-6 grid grid-cols-3 gap-2">
             <button onClick={() => navigate("/wallet/deposit")} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#e10600] px-2 text-xs font-bold sm:text-sm"><AppIcon name="ArrowDownToLine" size={15} /> Deposit</button>
-            <button onClick={() => { if (!guard()) return; navigate("/wallet/withdraw"); }} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-white px-2 text-xs font-bold text-[#111827] sm:text-sm"><AppIcon name="ArrowUpFromLine" size={15} /> Withdraw</button>
+            <button onClick={() => { if (!guard()) return; navigate("/wallet/withdraw"); }} className="theme-fixed inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-white px-2 text-xs font-bold text-[#111827] sm:text-sm"><AppIcon name="ArrowUpFromLine" size={15} /> Withdraw</button>
             <button onClick={() => navigate("/wallet/transfer")} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#4c1d95] px-2 text-xs font-bold sm:text-sm"><AppIcon name="ArrowLeftRight" size={15} /> Transfer</button>
           </div>
         </article>
@@ -134,7 +136,7 @@ export default function Dashboard() {
           <div className="flex gap-3">
             <button onClick={() => navigate("/daily-task")} className="relative grid h-[92px] w-[148px] shrink-0 place-items-center overflow-hidden rounded-xl" aria-label="Start watching">
               <img src="/images/video-thumb.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
-              <span className="relative grid h-9 w-9 place-items-center rounded-full bg-white/95 text-[#111] shadow">
+              <span className="theme-fixed relative grid h-9 w-9 place-items-center rounded-full bg-white/95 text-[#111] shadow">
                 <AppIcon name="Play" size={16} className="ml-0.5 fill-[#111]" />
               </span>
               <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">02:30</span>
@@ -182,19 +184,19 @@ export default function Dashboard() {
               <span>
                 <span className="block text-sm font-black">${money(todayRoi)} USDT</span>
                 <span className="block text-[11px] text-[#667085]">
-                  {roiClaimed ? "Today's ROI has been credited." : roiUnlocked ? "Ready to claim." : "Complete today's task to unlock your ROI"}
+                  {roiClaimed ? "Today's ROI has been credited." : offToday ? `${roiDay?.weekday} is an ROI off day.${roiDay?.resumesOn ? ` Back on ${roiDay.resumesOn}.` : ""}` : roiUnlocked ? "Ready to claim." : "Complete today's task to unlock your ROI"}
                 </span>
               </span>
             </div>
             <button
               onClick={() => {
-                if (roiClaimed) navigate("/roi");
+                if (roiClaimed || offToday) navigate("/roi");
                 else if (roiUnlocked) onClaim();
                 else navigate("/daily-task");
               }}
               className="h-9 shrink-0 rounded-lg bg-[#e10600] px-3 text-xs font-bold text-white"
             >
-              {roiClaimed ? "View ROI" : roiUnlocked ? "Claim" : "Go to Task"}
+              {roiClaimed ? "View ROI" : offToday ? "View ROI" : roiUnlocked ? "Claim" : "Go to Task"}
             </button>
           </div>
         </article>
@@ -319,7 +321,7 @@ export default function Dashboard() {
                 </span>
               ))}
             </div>
-            <button onClick={() => navigate("/daily-task")} className="mt-4 h-10 rounded-xl bg-white px-4 text-sm font-bold text-[#e10600]">Start Earning Now →</button>
+            <button onClick={() => navigate("/daily-task")} className="theme-fixed mt-4 h-10 rounded-xl bg-white px-4 text-sm font-bold text-[#e10600]">Start Earning Now →</button>
           </div>
         </article>
       </section>

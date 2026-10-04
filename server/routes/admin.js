@@ -7,7 +7,7 @@ import { notifyUser } from "../utils/notify.js";
 import deskRoutes from "./adminDesk.js";
 import { getSettings } from "../utils/settings.js";
 import { approveWithdrawal, money2, rejectWithdrawal } from "../utils/withdrawal.js";
-import { todayKey } from "../utils/dailyTask.js";
+import { closeTaskDay, normalizeTask, todayKey } from "../utils/dailyTask.js";
 import Plan from "../models/Plan.js";
 import { listPlans, presentPlan } from "../utils/planCatalog.js";
 import { commissionMessage, creditSubscriptionReferral } from "../utils/referralCommission.js";
@@ -17,15 +17,12 @@ import Ticket from "../models/Ticket.js";
 import { presentFlags } from "../utils/fraud.js";
 import { buildPublicUser, signToken } from "./auth.js";
 import { describeClient } from "../utils/clientInfo.js";
+import { ROI_LEVEL_RATES, activeDirects } from "../utils/roiLevelCommission.js";
+import { WEEKDAYS, cleanOffDays, roiDayInfo } from "../utils/plans.js";
+import { APP_TIME_ZONE, istStamp, istStartOfDay } from "../utils/day.js";
 
 function stampNow() {
-  const d = new Date();
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const hour = d.getHours();
-  const hh = hour % 12 || 12;
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const am = hour >= 12 ? "PM" : "AM";
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm} ${am}`;
+  return istStamp();
 }
 
 const router = express.Router();
@@ -62,7 +59,7 @@ router.get("/overview", async (_req, res) => {
   const day = todayKey();
   const [users, accounts, audits, recent] = await Promise.all([
     User.countDocuments({ role: { $ne: "admin" } }),
-    Account.find().select("user subscription subscriptionPayments dailyTask deposits withdrawals balances").lean(),
+    Account.find().select("user subscription subscriptionPayments dailyTask deposits withdrawals balances levelCredits.commission levelCredits.at").lean(),
     AuditLog.find().sort({ createdAt: -1 }).limit(5).lean(),
     User.find({ role: { $ne: "admin" } }).sort({ createdAt: -1 }).limit(5).select("fullName referralId createdAt").lean(),
   ]);
@@ -74,7 +71,15 @@ router.get("/overview", async (_req, res) => {
   let pendingWithdrawals = 0;
   let pendingSubscriptions = 0;
   let walletTotal = 0;
+  let levelPaid = 0;
+  let levelToday = 0;
+  const today = startOfToday();
   for (const account of accounts) {
+    for (const row of account.levelCredits || []) {
+      const amount = Number(row.commission || 0);
+      levelPaid += amount;
+      if (row.at && new Date(row.at) >= today) levelToday += amount;
+    }
     if (account.subscription?.active) subscribers += 1;
     if (account.dailyTask?.day === day && (account.dailyTask.completed || account.dailyTask.watchSeconds > 0)) tasksToday += 1;
     if (account.dailyTask?.day === day && account.dailyTask.roiClaimed) claimsToday += 1;
@@ -94,6 +99,8 @@ router.get("/overview", async (_req, res) => {
       pendingWithdrawals,
       pendingSubscriptions,
       walletTotal,
+      levelPaid: Number(levelPaid.toFixed(4)),
+      levelToday: Number(levelToday.toFixed(4)),
       recentUsers: recent.map((user) => {
         const account = byUser.get(String(user._id));
         return {
@@ -118,7 +125,41 @@ function showDate(value) {
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+  return date.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: APP_TIME_ZONE });
+}
+
+function todayTask(account, today = todayKey()) {
+  const raw = account?.dailyTask;
+  const isToday = raw?.day === today;
+  const task = isToday ? normalizeTask(raw, today) : null;
+  const hasPlan = (account?.investments || []).some((row) => row.status === "Active");
+  let state = "not_started";
+  let label = "Not started";
+  if (!account?.subscription?.active) {
+    state = "locked";
+    label = "ID inactive";
+  } else if (task?.roiClaimed) {
+    state = "claimed";
+    label = "ROI claimed";
+  } else if (roiDayInfo(account?.investments || [], today).allOff) {
+    state = "off";
+    label = "ROI off today";
+  } else if (task?.completed || task?.roiUnlocked) {
+    state = "done";
+    label = hasPlan ? "Done · claim pending" : "Done · no plan";
+  } else if (task?.watchSeconds > 0) {
+    state = "watching";
+    label = `Watching ${task.progress}%`;
+  }
+  return {
+    day: today,
+    state,
+    label,
+    progress: task ? Number(task.progress || 0) : 0,
+    hasPlan,
+    lastDay: isToday ? "" : raw?.day || "",
+    lastStatus: isToday || !raw?.day ? "" : closeTaskDay(raw).status,
+  };
 }
 
 router.get("/users", requireDuty("users"), async (req, res) => {
@@ -141,7 +182,7 @@ router.get("/users", requireDuty("users"), async (req, res) => {
     users: users.map((user) => {
       const account = byUser.get(String(user._id));
       const activePlan = (account?.investments || []).find((row) => row.status === "Active");
-      const task = account?.dailyTask || {};
+      const today = todayTask(account);
       return {
         id: user._id,
         name: user.fullName,
@@ -157,8 +198,7 @@ router.get("/users", requireDuty("users"), async (req, res) => {
         plan: activePlan?.planName || "None",
         wallet: account?.balances?.total || 0,
         locked: account?.balances?.locked || 0,
-        taskStatus: task.status || "Pending",
-        taskProgress: Number(task.progress || 0),
+        todayTask: today,
       };
     }),
   });
@@ -178,13 +218,25 @@ router.get("/users/:id", requireDuty("users"), async (req, res) => {
     Ticket.find({ user: user._id }).sort({ updatedAt: -1 }).limit(8).lean(),
     FraudFlag.find({ $or: [{ user: user._id }, { users: String(user._id) }] }).sort({ updatedAt: -1 }).limit(8).lean(),
   ]);
-  const task = account?.dailyTask || {};
+  const today = todayTask(account);
+  const settings = await getSettings();
+  const task = account?.dailyTask?.day === today.day ? normalizeTask(account.dailyTask, today.day) : {};
+  const levelRows = Array.isArray(account?.levelCredits) ? account.levelCredits : [];
+  const liveDirects = await activeDirects(user.referralId);
   res.json({
     ok: true,
     user: {
       id: user._id,
       name: user.fullName,
       username: user.username,
+      levelIncome: {
+        total: Number(levelRows.reduce((sum, row) => sum + Number(row.commission || 0), 0).toFixed(4)),
+        count: levelRows.length,
+        activeDirects: liveDirects,
+        idActive: Boolean(account?.subscription?.active),
+        eligible: Boolean(account?.subscription?.active) && liveDirects >= 1,
+      },
+      levelCredits: clip(levelRows),
       email: user.email,
       mobile: user.mobile,
       country: user.country || "",
@@ -209,17 +261,22 @@ router.get("/users/:id", requireDuty("users"), async (req, res) => {
       balances: { ...balances, available },
       investments: account?.investments || [],
       dailyTask: {
-        title: task.title || "",
-        subtitle: task.subtitle || "",
-        day: task.day || "",
+        title: task.title || settings.taskTitle || "",
+        subtitle: task.subtitle || settings.taskSubtitle || "",
+        day: today.day,
         progress: Number(task.progress || 0),
         watchSeconds: Number(task.watchSeconds || 0),
-        durationSeconds: Number(task.durationSeconds || 0),
+        durationSeconds: Number(task.durationSeconds || settings.taskDuration || 0),
         completed: Boolean(task.completed),
         roiUnlocked: Boolean(task.roiUnlocked),
         roiClaimed: Boolean(task.roiClaimed),
-        status: task.status || "Pending",
+        status: today.label,
+        state: today.state,
+        hasPlan: today.hasPlan,
+        lastDay: today.lastDay,
+        lastStatus: today.lastStatus,
       },
+      roiDays: (account?.roiDays || []).slice(-7).reverse(),
       transactions: clip(account?.transactions, 15),
       deposits: clip(account?.deposits),
       withdrawals: clip(account?.withdrawals),
@@ -247,6 +304,99 @@ router.get("/users/:id", requireDuty("users"), async (req, res) => {
       })),
       flags: await presentFlags(flags),
     },
+  });
+});
+
+function startOfToday() {
+  return istStartOfDay();
+}
+
+router.get("/level-income", requireDuty("audit"), async (_req, res) => {
+  const [rows, audits] = await Promise.all([
+    Account.aggregate([
+      { $match: { "levelCredits.0": { $exists: true } } },
+      { $project: { user: 1, levelCredits: 1 } },
+      { $unwind: "$levelCredits" },
+    ]),
+    AuditLog.find({ action: "roi.level.credit" }).sort({ createdAt: -1 }).limit(100).lean(),
+  ]);
+  const users = await User.find({ _id: { $in: [...new Set(rows.map((row) => String(row.user)))] } }).select("fullName referralId").lean();
+  const byUser = new Map(users.map((user) => [String(user._id), user]));
+  const today = startOfToday();
+  const byLevel = ROI_LEVEL_RATES.map((rate, index) => ({ level: index + 1, rate, count: 0, amount: 0 }));
+  const receivers = new Set();
+  let paid = 0;
+  let todayPaid = 0;
+  let todayCount = 0;
+
+  const credits = rows.map(({ user, levelCredits: row }) => {
+    const receiver = byUser.get(String(user));
+    const amount = Number(row.commission || 0);
+    const at = row.at ? new Date(row.at) : null;
+    paid += amount;
+    receivers.add(String(user));
+    if (at && at >= today) {
+      todayPaid += amount;
+      todayCount += 1;
+    }
+    const bucket = byLevel[Number(row.level) - 1];
+    if (bucket) {
+      bucket.count += 1;
+      bucket.amount += amount;
+    }
+    return {
+      id: row.id,
+      claimId: row.claimId,
+      date: row.date,
+      at: at ? at.toISOString() : "",
+      receiverId: String(user),
+      receiver: receiver?.fullName || "",
+      receiverCode: receiver?.referralId || "",
+      from: row.user,
+      fromName: row.name,
+      level: row.level,
+      rate: row.rate,
+      roi: row.roi,
+      commission: amount,
+    };
+  }).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+
+  const claims = audits.map((row) => {
+    const meta = row.meta || {};
+    const list = meta.credits || [];
+    return {
+      id: row._id,
+      at: row.createdAt,
+      earner: meta.earner || row.target,
+      earnerName: meta.earnerName || "",
+      roi: Number(meta.roi || 0),
+      paid: Number(list.reduce((sum, item) => sum + Number(item.commission || 0), 0).toFixed(4)),
+      credited: list.length,
+      skipped: (meta.skipped || []).length,
+      note: row.note,
+    };
+  });
+  const skipped = audits.flatMap((row) => (row.meta?.skipped || []).map((item) => ({
+    ...item,
+    at: row.createdAt,
+    earner: row.meta?.earner || row.target,
+    roi: Number(row.meta?.roi || 0),
+  })));
+
+  res.json({
+    ok: true,
+    totals: {
+      paid: Number(paid.toFixed(4)),
+      count: credits.length,
+      receivers: receivers.size,
+      todayPaid: Number(todayPaid.toFixed(4)),
+      todayCount,
+      claims: claims.length,
+    },
+    byLevel: byLevel.map((row) => ({ ...row, amount: Number(row.amount.toFixed(4)) })),
+    credits: credits.slice(0, 500),
+    claims,
+    skipped: skipped.slice(0, 200),
   });
 });
 
@@ -491,6 +641,8 @@ router.post("/plans", async (req, res) => {
   if (![min, dailyRate, maxRoi, validity].every((value) => Number.isFinite(value) && value > 0)) {
     return res.status(400).json({ ok: false, message: "Minimum, daily rate, cap and validity must be greater than 0." });
   }
+  const offDays = cleanOffDays(req.body?.offDays);
+  if (offDays.length > 6) return res.status(400).json({ ok: false, message: "Keep at least one ROI day in the week." });
   const existing = await Plan.findOne({ planId });
   if (existing) return res.status(409).json({ ok: false, message: "That plan id already exists." });
   await Plan.create({
@@ -500,6 +652,7 @@ router.post("/plans", async (req, res) => {
     dailyRate,
     maxRoi,
     validity,
+    offDays,
     accent: String(req.body?.accent || "red"),
     popular: Boolean(req.body?.popular),
     active: req.body?.active !== false,
@@ -522,9 +675,30 @@ router.put("/plans/:planId", async (req, res) => {
   }
   if (typeof body.active === "boolean") plan.active = body.active;
   if (typeof body.popular === "boolean") plan.popular = body.popular;
+  const before = cleanOffDays(plan.offDays).join(",");
+  if (Array.isArray(body.offDays)) {
+    const offDays = cleanOffDays(body.offDays);
+    if (offDays.length > 6) return res.status(400).json({ ok: false, message: "Keep at least one ROI day in the week." });
+    plan.offDays = offDays;
+  }
   await plan.save();
-  await writeAudit(req.user, "plan.update", plan.planId, plan.active ? "Published" : "Hidden");
-  res.json({ ok: true, message: "Plan saved.", plan: presentPlan(plan) });
+  const after = cleanOffDays(plan.offDays);
+  let synced = 0;
+  if (after.join(",") !== before) {
+    const result = await Account.collection.updateMany(
+      { investments: { $elemMatch: { planId: plan.planId, status: "Active" } } },
+      { $set: { "investments.$[inv].offDays": after } },
+      { arrayFilters: [{ "inv.planId": plan.planId, "inv.status": "Active" }] }
+    );
+    synced = result.modifiedCount || 0;
+  }
+  const offLabel = after.length ? `ROI off ${[1, 2, 3, 4, 5, 6, 0].filter((day) => after.includes(day)).map((day) => WEEKDAYS[day].slice(0, 3)).join(", ")}` : "ROI every day";
+  await writeAudit(req.user, "plan.update", plan.planId, `${plan.active ? "Published" : "Hidden"} · ${offLabel}`, { offDays: after, synced });
+  res.json({
+    ok: true,
+    message: synced ? `Plan saved. ${offLabel} now applies to ${synced} member account${synced === 1 ? "" : "s"}.` : "Plan saved.",
+    plan: presentPlan(plan),
+  });
 });
 
 router.get("/subscriptions", async (_req, res) => {

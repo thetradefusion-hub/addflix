@@ -7,14 +7,15 @@ import EmptyState from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
 import AppIcon from "@/components/common/AppIcon";
 import { useApp } from "@/context/AppContext";
-import { money, shortHash } from "@/lib/utils";
+import { fineMoney, money, shortHash } from "@/lib/utils";
 import { formatLedgerDate, incomeByDay, lifetimeFigures, liveIncome, parseLedgerDate } from "@/lib/ledger";
 
-const tabs = ["All Income", "ROI Income", "Referral Income", "Bonus Income", "Other Income"];
+const tabs = ["All Income", "ROI Income", "Referral Income", "Level Income", "Bonus Income", "Other Income"];
 const pageCopy = {
   "All Income": ["Income History", "Every earning credited to this account."],
   "ROI Income": ["ROI Income", "Daily ROI credited after you claim today's task."],
-  "Referral Income": ["Referral Income", "Commission credited when someone in your team activates."],
+  "Referral Income": ["Referral Income", "Commission credited when someone in your team activates. Your own ID must be active."],
+  "Level Income": ["Level Income", "Level 1–15 commission on the daily ROI your team claims. Your ID must be active and you need at least one direct referral."],
   "Bonus Income": ["Bonus", "Video rewards and other bonus credits on this account."],
   "Other Income": ["Other Income", "Any other credit that is not ROI, referral, or bonus."],
 };
@@ -173,7 +174,7 @@ export default function Income({ preset = "All Income" }) {
                       <td>{formatLedgerDate(row.date)}</td>
                       <td>{row.type}</td>
                       <td>{row.description}</td>
-                      <td className="font-semibold text-emerald-600">+{money(row.amount)}</td>
+                      <td className="font-semibold text-emerald-600">+{fineMoney(row.amount)}</td>
                       <td><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
                       <td>{shortHash(row.tx, 8, 4)}</td>
                       <td><button className="text-xs font-semibold text-[#e10600]" onClick={() => toast(`${formatLedgerDate(row.date)} · ${row.description} · ${row.tx}`)}>View</button></td>
@@ -190,7 +191,7 @@ export default function Income({ preset = "All Income" }) {
                       <p className="text-sm font-semibold">{row.type}</p>
                       <p className="text-xs text-[#667085]">{row.description}</p>
                     </div>
-                    <p className="font-bold text-emerald-600">+{money(row.amount)} USDT</p>
+                    <p className="font-bold text-emerald-600">+{fineMoney(row.amount)} USDT</p>
                   </div>
                   <p className="mt-1 text-[11px] text-[#98a2b3]">{formatLedgerDate(row.date)}</p>
                   <div className="mt-1 flex items-center justify-between">

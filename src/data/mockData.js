@@ -5,7 +5,6 @@ export const user = {
   phone: "+91 98765 43210",
   country: "India",
   joined: "15 Jul 2025",
-  language: "English",
 };
 
 export const walletAddress = "0x3A7F9D8e4B2c1F6d5E8a9B0c3D4eF6A7b8C9D0e1";
@@ -301,6 +300,7 @@ export const navItems = [
     children: [
       { to: "/income/roi", label: "ROI Income" },
       { to: "/income/referral", label: "Referral Income" },
+      { to: "/income/level", label: "Level Income" },
       { to: "/income/bonus", label: "Bonus" },
       { to: "/income", label: "Income History" },
     ],

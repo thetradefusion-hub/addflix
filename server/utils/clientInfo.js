@@ -1,3 +1,5 @@
+import { istStamp } from "./day.js";
+
 export function describeClient(req) {
   const ua = String(req.get("user-agent") || "Unknown device");
   let browser = "Browser";
@@ -33,11 +35,5 @@ function maskIp(ip) {
 }
 
 export function formatSessionTime(date) {
-  const d = new Date(date);
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const hour = d.getHours();
-  const hh = hour % 12 || 12;
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const am = hour >= 12 ? "PM" : "AM";
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm} ${am}`;
+  return istStamp(new Date(date));
 }

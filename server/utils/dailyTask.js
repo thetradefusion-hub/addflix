@@ -1,3 +1,6 @@
+import { roiDayInfo } from "./plans.js";
+import { istDayKey } from "./day.js";
+
 export const TASK_DURATION = 120;
 export const TASK_REQUIRED = 95;
 const VIDEO_SPEED = 12;
@@ -5,7 +8,7 @@ const MIN_GAP_MS = 700;
 const MAX_GAP_MS = 2500;
 
 export function todayKey(date = new Date()) {
-  return date.toISOString().slice(0, 10);
+  return istDayKey(date);
 }
 
 export function addUtcDays(day, count) {
@@ -167,6 +170,9 @@ export function rollTask(account, today = todayKey()) {
     closing.push({ day: cursor, status: "Missed", watchSeconds: 0, progress: 0, requiredPercent: TASK_REQUIRED });
     cursor = addUtcDays(cursor, 1);
     guard += 1;
+  }
+  for (const row of closing) {
+    if (row.status !== "Claimed" && roiDayInfo(account.investments || [], row.day).allOff) row.status = "Off";
   }
   for (const row of closing) {
     if (!account.roiDays.some((item) => item.day === row.day)) account.roiDays.push(row);

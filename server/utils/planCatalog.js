@@ -1,4 +1,5 @@
 import Plan from "../models/Plan.js";
+import { cleanOffDays } from "./plans.js";
 
 export const DEFAULT_PLANS = [
   { planId: "starter", name: "Starter Plan", min: 100, dailyRate: 2, maxRoi: 150, validity: 75, accent: "blue", popular: false, sort: 1 },
@@ -16,6 +17,7 @@ export function presentPlan(row) {
     dailyRate: row.dailyRate,
     maxRoi: row.maxRoi,
     validity: row.validity,
+    offDays: cleanOffDays(row.offDays),
     accent: row.accent || "red",
     popular: Boolean(row.popular),
     active: row.active !== false,

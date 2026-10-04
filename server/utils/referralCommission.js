@@ -1,4 +1,4 @@
-import Account, { defaultDailyTask } from "../models/Account.js";
+import Account from "../models/Account.js";
 import User from "../models/User.js";
 import { getSettings, referralRatesFrom } from "./settings.js";
 import AuditLog from "../models/AuditLog.js";
@@ -18,6 +18,7 @@ export async function creditSubscriptionReferral({ activatedUser, payment, when 
   if (!activatedUser || payment?.commissionPaid) return [];
 
   const credits = [];
+  const skipped = [];
   const seen = new Set([String(activatedUser.referralId || "").toUpperCase()]);
   let sponsorCode = String(activatedUser.sponsorId || "").trim().toUpperCase();
   const settings = await getSettings();
@@ -29,8 +30,12 @@ export async function creditSubscriptionReferral({ activatedUser, payment, when 
     const sponsor = await User.findOne({ referralId: sponsorCode });
     if (!sponsor) break;
 
-    let account = await Account.findOne({ user: sponsor._id });
-    if (!account) account = await Account.create({ user: sponsor._id, dailyTask: defaultDailyTask() });
+    const account = await Account.findOne({ user: sponsor._id });
+    if (!account?.subscription?.active) {
+      skipped.push({ level: rate.level, referralId: sponsor.referralId, name: sponsor.fullName, amount: rate.amount, reason: "ID not active" });
+      sponsorCode = String(sponsor.sponsorId || "").trim().toUpperCase();
+      continue;
+    }
     if (!Array.isArray(account.referralCredits)) account.referralCredits = [];
     if (!Array.isArray(account.income)) account.income = [];
     if (!Array.isArray(account.transactions)) account.transactions = [];
@@ -82,18 +87,22 @@ export async function creditSubscriptionReferral({ activatedUser, payment, when 
 
   payment.commissionPaid = true;
   payment.commissions = credits;
-  if (credits.length) {
+  payment.commissionSkipped = skipped;
+  if (credits.length || skipped.length) {
+    const paid = credits.map((row) => `L${row.level} ${row.referralId} $${row.amount.toFixed(2)}`).join(", ");
+    const missed = skipped.map((row) => `L${row.level} ${row.referralId} (${row.reason})`).join(", ");
     await AuditLog.create({
       action: "referral.credit",
       target: activatedUser.referralId,
-      note: credits.map((row) => `L${row.level} ${row.referralId} $${row.amount.toFixed(2)}`).join(", "),
+      note: [paid && `paid ${paid}`, missed && `skipped ${missed}`].filter(Boolean).join(" · "),
+      meta: { paymentId: payment.id, credits, skipped },
     });
   }
   return credits;
 }
 
 export function commissionMessage(credits) {
-  if (!credits?.length) return "Subscription verified. Your ID is active. No upline was found for commission.";
+  if (!credits?.length) return "Subscription verified. Your ID is active. No active upline was found for commission.";
   const parts = credits.map((row) => `L${row.level} ${row.referralId} $${row.amount.toFixed(2)}`);
   return `Subscription verified. Your ID is active. Commission credited: ${parts.join(", ")}.`;
 }

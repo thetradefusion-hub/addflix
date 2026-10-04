@@ -7,7 +7,7 @@ import Modal from "@/components/common/Modal";
 import { Button } from "@/components/ui/button";
 import AppIcon from "@/components/common/AppIcon";
 import { useApp } from "@/context/AppContext";
-import { money } from "@/lib/utils";
+import { money, roiDaysLabel } from "@/lib/utils";
 import Pager, { usePaging } from "@/components/common/Pager";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
 
@@ -108,7 +108,7 @@ export default function Investment() {
               <span className="font-bold">${money(featured?.earnedRoi || 0)} / ${money(featured?.cap || 0)}</span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-white/20">
-              <div className="h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
+              <div className="theme-fixed h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
             </div>
             <p className="mt-2 text-xs text-white/70">{featured ? `${Math.round(progress)}% of the $${money(featured.cap)} cap · ${featured.validityDays} day validity` : "ROI stops when the plan cap is reached."}</p>
           </div>
@@ -159,6 +159,7 @@ export default function Investment() {
                   <ul className="mt-3 space-y-1.5 text-xs text-[#475467]">
                     <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> Maximum ROI {plan.maxRoi}%</li>
                     <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> Validity {plan.validity} days</li>
+                    <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> {roiDaysLabel(plan.offDays)}</li>
                     <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> Watch a video each day</li>
                   </ul>
                   <button
@@ -205,6 +206,7 @@ export default function Investment() {
               ["Daily ROI", `${selected?.dailyRoi || 0}% after the task`],
               ["Maximum ROI", `${selected?.maxRoi || 0}%`],
               ["Validity", `${selected?.validity || 0} days`],
+              ["ROI days", roiDaysLabel(selected?.offDays).replace("ROI ", "")],
               ["Task", "Watch the sponsored video"],
             ].map(([label, value]) => (
               <li key={label} className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fafc] px-3 py-2.5">
@@ -218,7 +220,7 @@ export default function Investment() {
         <article className="rounded-2xl bg-[linear-gradient(165deg,#064e3b_0%,#059669_100%)] p-5 text-white shadow-[0_16px_32px_rgba(5,150,105,0.22)]">
           <p className="text-[11px] font-bold tracking-[0.14em] text-white/75">ESTIMATED EARNING</p>
           <p className="mt-2 text-4xl font-black tracking-tight">${money(projected || 0)}</p>
-          <p className="mt-1 text-sm text-white/80">in {selected?.validity || 0} days if every task is completed</p>
+          <p className="mt-1 text-sm text-white/80">in {selected?.validity || 0} {selected?.offDays?.length ? "ROI days" : "days"} if every task is completed</p>
           <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-xl bg-white/15 px-3 py-3">
               <p className="text-[11px] text-white/70">Amount</p>
