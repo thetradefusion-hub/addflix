@@ -25,24 +25,47 @@ export default function Subscription() {
         crumbs={[{ label: "Home", to: "/dashboard" }, { label: "My Subscription" }]}
       />
 
-      <section className="mb-4 overflow-hidden rounded-2xl bg-[#12080c] p-4 text-white sm:p-5">
-        <div className="grid items-center gap-4 lg:grid-cols-[1.2fr_auto_1fr]">
-          <div>
-            <p className="text-2xl font-black">Activate Your Account</p>
-            <p className="mt-1 max-w-sm text-sm text-white/70">Get full access to earning platform, daily tasks, referral income and investment plans.</p>
+      {subscriptionActive ? (
+        <section className="mb-4 overflow-hidden rounded-2xl bg-[#07140f] p-4 text-white sm:p-5">
+          <div className="grid items-center gap-4 lg:grid-cols-[1.2fr_auto_1fr]">
+            <div>
+              <p className="text-2xl font-black">Account Activated</p>
+              <p className="mt-1 max-w-sm text-sm text-white/70">Your ${subscriptionPrice} USDT subscription is active. Daily tasks, referral income and investment plans are unlocked.</p>
+              <p className="mt-3 text-xs font-semibold text-emerald-300">Activated {activatedAt ? activationLabel(activatedAt) : "for lifetime"}</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-6 py-4 text-center">
+              <CircleCheck className="mx-auto text-emerald-400" size={28} />
+              <p className="mt-1 text-2xl font-black text-emerald-300">Active</p>
+              <p className="text-xs text-white/60">Lifetime access</p>
+            </div>
+            <ul className="space-y-1 text-sm">
+              {["ID is active", "Daily tasks unlocked", "Referral income enabled", "Investment plans open"].map((item) => (
+                <li key={item} className="flex items-center gap-2"><CircleCheck size={14} className="text-emerald-400" />{item}</li>
+              ))}
+            </ul>
           </div>
-          <div className="rounded-2xl border border-red-500/40 bg-black/40 px-6 py-4 text-center">
-            <Crown className="mx-auto text-amber-300" />
-            <p className="text-4xl font-black text-[#ff2a2a]">${subscriptionPrice} <span className="text-lg">USDT</span></p>
+        </section>
+      ) : (
+        <section className="mb-4 overflow-hidden rounded-2xl bg-[#12080c] p-4 text-white sm:p-5">
+          <div className="grid items-center gap-4 lg:grid-cols-[1.2fr_auto_1fr]">
+            <div>
+              <p className="text-2xl font-black">Activate Your Account</p>
+              <p className="mt-1 max-w-sm text-sm text-white/70">Get full access to earning platform, daily tasks, referral income and investment plans.</p>
+            </div>
+            <div className="rounded-2xl border border-red-500/40 bg-black/40 px-6 py-4 text-center">
+              <Crown className="mx-auto text-amber-300" />
+              <p className="text-4xl font-black text-[#ff2a2a]">${subscriptionPrice} <span className="text-lg">USDT</span></p>
+            </div>
+            <ul className="space-y-1 text-sm">
+              {["Activate Your ID", "Start Earning", "Enable Referral Income", "Access All Features"].map((item) => (
+                <li key={item} className="flex items-center gap-2"><CircleCheck size={14} className="text-emerald-400" />{item}</li>
+              ))}
+            </ul>
           </div>
-          <ul className="space-y-1 text-sm">
-            {["Activate Your ID", "Start Earning", "Enable Referral Income", "Access All Features"].map((item) => (
-              <li key={item} className="flex items-center gap-2"><CircleCheck size={14} className="text-emerald-400" />{item}</li>
-            ))}
-          </ul>
-        </div>
-      </section>
+        </section>
+      )}
 
+      {!subscriptionActive ? (
       <section className="mb-4 rounded-2xl border border-[#eaecf0] bg-white p-4">
         <div className="grid grid-cols-4 gap-2 text-center">
           {steps.map((label, index) => (
@@ -53,11 +76,6 @@ export default function Subscription() {
           ))}
         </div>
       </section>
-
-      {subscriptionActive ? (
-        <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-          ACCOUNT ACTIVATED ✓ · Subscription ACTIVE · Activation Date: {activatedAt ? activationLabel(activatedAt) : "—"}
-        </div>
       ) : null}
 
       {paymentState === "pending" && !subscriptionActive ? (
@@ -71,9 +89,9 @@ export default function Subscription() {
         </div>
       ) : null}
 
-      <section className="grid gap-3 lg:grid-cols-3">
+      <section className={`grid gap-3 ${subscriptionActive ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
-          <p className="mb-3 font-bold">Subscription Details <StatusBadge tone="danger">Mandatory</StatusBadge></p>
+          <p className="mb-3 font-bold">Subscription Details <StatusBadge tone={subscriptionActive ? "active" : "danger"}>{subscriptionActive ? "Active" : "Mandatory"}</StatusBadge></p>
           <dl className="space-y-2 text-sm">
             {[
               ["Subscription Amount", `$${subscriptionPrice} USDT`],
@@ -89,12 +107,17 @@ export default function Subscription() {
           </dl>
           <p className="mt-3 text-sm font-semibold">Benefits</p>
           <ul className="mt-2 space-y-1 text-sm text-[#475467]">
-            {["Activate your ID", "Access daily tasks", "Earn referral income (4 Levels)", "Invest in earning plans", "Withdraw your earnings", "Full platform access"].map((item) => (
+            {(subscriptionActive
+              ? ["ID is active", "Daily tasks are open", "Referral income is on", "Investment plans are open", "Withdrawals are open", "Full platform access"]
+              : ["Activate your ID", "Access daily tasks", "Earn referral income (4 Levels)", "Invest in earning plans", "Withdraw your earnings", "Full platform access"]
+            ).map((item) => (
               <li key={item} className="flex gap-2"><CircleCheck size={14} className="text-emerald-500" />{item}</li>
             ))}
           </ul>
         </article>
 
+        {!subscriptionActive ? (
+        <>
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
           <div className="mb-3 flex gap-2">
             {[["qr", "Scan QR Code"], ["address", "Copy Address"]].map(([id, label]) => (
@@ -125,9 +148,12 @@ export default function Subscription() {
             <Button className="mt-2 w-full" variant="dark" onClick={() => submitSubscription(`0xDEMO${Date.now()}`)}>Submit demo hash</Button>
           ) : null}
         </article>
+        </>
+        ) : null}
       </section>
 
-      <section className="mt-3 grid gap-3 lg:grid-cols-3">
+      <section className={`mt-3 grid gap-3 ${subscriptionActive ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+        {!subscriptionActive ? (
         <article className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4 text-sm">
           <p className="font-bold">Important Instructions</p>
           <ol className="mt-2 list-decimal space-y-1 pl-4 text-[#475467]">
@@ -138,6 +164,7 @@ export default function Subscription() {
             <li>Your account will be activated after successful verification.</li>
           </ol>
         </article>
+        ) : null}
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 text-center">
           <Crown className={`mx-auto ${subscriptionActive ? "text-emerald-500" : "text-[#e10600]"}`} />
           <p className="mt-2 text-lg font-black">{subscriptionActive ? "Active" : "Not Active"}</p>

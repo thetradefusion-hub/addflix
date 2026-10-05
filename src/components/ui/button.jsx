@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +27,42 @@ const buttonVariants = cva(
   }
 );
 
-export function Button({ className, variant, size, ...props }) {
-  return <button className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+export function Spinner({ className }) {
+  return <span className={cn("h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent", className)} aria-hidden="true" />;
+}
+
+export function Button({ className, variant, size, loading, disabled, onClick, children, ...props }) {
+  const [running, setRunning] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => () => {
+    mounted.current = false;
+  }, []);
+
+  const handleClick = (event) => {
+    const result = onClick?.(event);
+    if (result && typeof result.then === "function") {
+      setRunning(true);
+      Promise.resolve(result).finally(() => {
+        if (mounted.current) setRunning(false);
+      });
+    }
+    return result;
+  };
+
+  const busy = Boolean(loading || running);
+  return (
+    <button
+      className={cn(buttonVariants({ variant, size }), className)}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
+      data-loading={busy ? "true" : undefined}
+      onClick={onClick ? handleClick : undefined}
+      {...props}
+    >
+      {busy ? <Spinner /> : null}
+      {children}
+    </button>
+  );
 }
 
 export { buttonVariants };

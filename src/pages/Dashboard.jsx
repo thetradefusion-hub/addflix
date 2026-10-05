@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ChevronRight, Eye, EyeOff } from "lucide-react";
+import { Copy, Eye, EyeOff } from "lucide-react";
 import AppIcon from "@/components/common/AppIcon";
 import { useApp } from "@/context/AppContext";
-import { activationLabel, money } from "@/lib/utils";
+import { activationLabel, copyText, money } from "@/lib/utils";
 import { incomeByDay, lifetimeFigures, liveTransactions } from "@/lib/ledger";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
 import { useOffDay } from "@/components/common/OffDayBanner";
@@ -19,7 +19,7 @@ const txTone = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { balances, taskProgress, taskCompleted, roiUnlocked, roiClaimed, subscriptionActive, activatedAt, subscriptionPrice, claimRoi, sessionUser, investments, todayRoi, income, transactions, notes, referralCredits, network } = useApp();
+  const { balances, taskProgress, taskCompleted, roiUnlocked, roiClaimed, subscriptionActive, activatedAt, subscriptionPrice, claimRoi, sessionUser, investments, todayRoi, income, transactions, notes, referralCredits, toast } = useApp();
   const guard = useActiveGuard();
   const [hidden, setHidden] = useState(false);
   const progress = taskCompleted ? 100 : taskProgress;
@@ -35,40 +35,32 @@ export default function Dashboard() {
 
   const activePlans = investments.filter((row) => row.status === "Active");
   const activeAmount = activePlans.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const activeHint = activePlans.length === 0 ? "Buy a plan" : activePlans.length === 1 ? activePlans[0].planName : `${activePlans.length} active plans`;
   const earned = lifetimeFigures(balances, referralCredits, income);
   const week = incomeByDay(income, 7);
   const txRows = liveTransactions(transactions).slice(0, 5).map((row) => {
     const [icon, tone] = txTone[row.type] || ["Coins", "bg-slate-100 text-slate-500"];
     return { ...row, icon, tone };
   });
-  const share = earned.total > 0 ? `${((earned.referral / earned.total) * 100).toFixed(1)}% of income` : "No referral credits yet";
+  const referralLink = sessionUser?.referralLink || "";
+  const copyReferral = async () => {
+    if (!referralLink) return;
+    await copyText(referralLink);
+    toast("Referral link copied.");
+  };
   const stats = [
-    { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", label: "Today's ROI", value: `$${money(todayRoi)}`, hint: roiClaimed ? "Credited to wallet" : offToday ? `No ROI on ${roiDay?.weekday}` : "Complete today's task to unlock", hintClass: "text-[#98a2b3]", badge: roiStatus, to: "/roi" },
-    { icon: "Gift", iconBg: "bg-emerald-50 text-emerald-600", label: "Total ROI Earned", value: `$${money(earned.roi)}`, hint: "Credited ROI", hintClass: "text-emerald-500", to: "/income/roi" },
-    { icon: "Users", iconBg: "bg-rose-50 text-rose-500", label: "Referral Income", value: `$${money(earned.referral)}`, hint: share, hintClass: "text-[#98a2b3]", to: "/income/referral" },
-    { icon: "Landmark", iconBg: "bg-sky-50 text-sky-500", label: "Active Plan", value: `$${money(activeAmount)}`, hint: activeHint, hintClass: "text-[#98a2b3]", to: "/investment" },
-    { icon: "HandCoins", iconBg: "bg-emerald-50 text-emerald-500", label: "Total Income", value: `$${money(earned.total)}`, hint: "ROI, referral and bonus", hintClass: "text-emerald-500", to: "/income" },
-    { icon: "Users", iconBg: "bg-sky-50 text-sky-500", label: "Total Team", value: String(network.total || 0), hint: `${network.active || 0} Active Members`, hintClass: "text-[#98a2b3]", to: "/team" },
+    { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", label: "Today ROI", value: `$${money(todayRoi)}`, badge: roiStatus, to: "/roi" },
+    { icon: "Gift", iconBg: "bg-emerald-50 text-emerald-600", label: "ROI Earned", value: `$${money(earned.roi)}`, to: "/income/roi" },
+    { icon: "Users", iconBg: "bg-rose-50 text-rose-500", label: "Referral", value: `$${money(earned.referral)}`, to: "/income/referral" },
+    { icon: "Landmark", iconBg: "bg-sky-50 text-sky-500", label: "Active Plan", value: `$${money(activeAmount)}`, to: "/investment" },
   ];
 
   return (
     <div className="mx-auto max-w-[1180px] space-y-3">
       <InactiveBanner className="mb-0" />
-      <section className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-[#667085] lg:hidden">Good Morning <span aria-hidden="true">👋</span></p>
-          <h1 className="truncate text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">
-            <span className="lg:hidden">{sessionUser?.name || "Member"}</span>
-            <span className="hidden lg:inline">Welcome Back, {sessionUser?.name || "Member"} <span aria-hidden="true">👋</span></span>
-          </h1>
-          <p className="mt-0.5 text-sm text-[#667085] lg:hidden">ID: {sessionUser?.id || "—"}</p>
-          <p className="mt-0.5 hidden text-sm text-[#667085] lg:block">Watch videos, complete tasks and earn instant rewards.</p>
-        </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-600 lg:hidden">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          {subscriptionActive ? "Active" : "Not Active"}
-        </span>
+      <section className="hidden items-start justify-between gap-3 lg:flex">
+        <h1 className="min-w-0 truncate text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">
+          Welcome Back, {sessionUser?.name || "Member"} <span aria-hidden="true">👋</span>
+        </h1>
         <div className="hidden items-center gap-2 lg:flex">
           <article className="flex items-center gap-2 rounded-2xl border border-[#eaecf0] bg-white px-3 py-2 shadow-sm">
             <span className="grid h-9 w-9 place-items-center rounded-full bg-emerald-50 text-emerald-500"><AppIcon name="BadgeCheck" size={16} /></span>
@@ -89,7 +81,8 @@ export default function Dashboard() {
       </section>
 
       <section className="grid gap-3 lg:grid-cols-12">
-        <article className="relative overflow-hidden rounded-2xl bg-[linear-gradient(125deg,#5b21b6_0%,#7c3aed_42%,#db2777_100%)] p-5 text-white shadow-[0_16px_36px_rgba(91,33,182,0.28)] lg:col-span-5">
+        <div className="flex flex-col gap-3 lg:col-span-5">
+        <article className="relative overflow-hidden rounded-2xl bg-[linear-gradient(125deg,#5b21b6_0%,#7c3aed_42%,#db2777_100%)] p-5 text-white shadow-[0_16px_36px_rgba(91,33,182,0.28)]">
           <img src="/images/wallet-card.png" alt="" className="pointer-events-none absolute -right-8 -top-3 h-32 w-32 object-cover [mask-image:radial-gradient(circle_at_55%_48%,black_42%,transparent_72%)] sm:-right-6 sm:-top-4 sm:h-44 sm:w-44" />
           <p className="text-sm text-white/80">Total Balance (USDT)</p>
           <div className="mt-1 flex items-center gap-2">
@@ -105,58 +98,41 @@ export default function Dashboard() {
             <button onClick={() => navigate("/wallet/transfer")} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#4c1d95] px-2 text-xs font-bold sm:text-sm"><AppIcon name="ArrowLeftRight" size={15} /> Transfer</button>
           </div>
         </article>
-
-        <div className="grid grid-cols-2 gap-3 lg:col-span-7 lg:grid-cols-3">
-          {stats.map((item) => (
-            <button key={item.label} onClick={() => navigate(item.to)} className="flex min-w-0 items-center gap-2 rounded-2xl border border-[#eaecf0] bg-white p-3 text-left shadow-[0_8px_24px_rgba(16,24,40,0.04)]">
-              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${item.iconBg}`}><AppIcon name={item.icon} size={18} /></span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[11px] leading-tight text-[#667085]">{item.label}</span>
-                <span className="mt-0.5 flex flex-wrap items-center gap-1">
-                  <span className="text-base font-black tracking-tight">{item.value}</span>
-                  {item.badge ? <span className="rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-500">{item.badge}</span> : null}
-                </span>
-                <span className={`block text-[11px] leading-tight ${item.hintClass}`}>{item.hint}</span>
-              </span>
-              <ChevronRight size={14} className="shrink-0 text-[#d0d5dd]" />
+        <article className="rounded-2xl border border-[#eaecf0] bg-white p-3 shadow-[0_8px_24px_rgba(16,24,40,0.04)]">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-sm font-bold text-[#101828]">Your referral link</p>
+            <button type="button" onClick={copyReferral} disabled={!referralLink} className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-[#e10600] px-3 text-xs font-bold text-white disabled:opacity-60">
+              <Copy size={13} /> Copy
             </button>
+          </div>
+          <button type="button" onClick={copyReferral} disabled={!referralLink} className="block w-full truncate rounded-xl bg-[#f8fafc] px-3 py-2 text-left text-xs text-[#475467] disabled:opacity-60">
+            {referralLink || "Your link will appear after sign in."}
+          </button>
+        </article>
+        <div className="lg:hidden">
+          <TodayTask progress={progress} taskCompleted={taskCompleted} onOpen={() => navigate("/daily-task")} />
+        </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 lg:hidden">
+          {stats.map((item) => (
+            <StatCard key={item.label} item={item} onOpen={() => navigate(item.to)} />
           ))}
+        </div>
+        <div className="hidden lg:col-span-7 lg:grid lg:grid-cols-[minmax(220px,0.85fr)_minmax(220px,1.15fr)] lg:items-stretch lg:gap-3">
+          <div className="grid h-full grid-rows-4 gap-2.5">
+            {stats.map((item) => (
+              <StatCard key={item.label} item={item} compact onOpen={() => navigate(item.to)} />
+            ))}
+          </div>
+          <QuickActions compact onOpen={(to) => navigate(to)} />
         </div>
       </section>
 
       <section className="grid gap-3 lg:grid-cols-2">
-        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <p className="font-bold">Today's Task</p>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${taskCompleted ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>{taskCompleted ? "Completed" : "Pending"}</span>
-            </div>
-            <button className="text-xs font-semibold text-[#e10600]" onClick={() => navigate("/daily-task")}>View All</button>
-          </div>
-          <div className="flex gap-3">
-            <button onClick={() => navigate("/daily-task")} className="relative grid h-[92px] w-[148px] shrink-0 place-items-center overflow-hidden rounded-xl" aria-label="Start watching">
-              <img src="/images/video-thumb.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
-              <span className="theme-fixed relative grid h-9 w-9 place-items-center rounded-full bg-white/95 text-[#111] shadow">
-                <AppIcon name="Play" size={16} className="ml-0.5 fill-[#111]" />
-              </span>
-              <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">02:30</span>
-            </button>
-            <div className="min-w-0">
-              <p className="font-bold">Watch Sponsored Video</p>
-              <p className="mt-1 text-xs leading-5 text-[#667085]">Watch full video and complete the task to unlock your today's ROI.</p>
-            </div>
-          </div>
-          <div className="mt-3 flex items-center justify-between text-[11px] text-[#667085]">
-            <span>{progress}% Complete</span>
-            <span>{taskCompleted ? "1 / 1" : "0 / 1"}</span>
-          </div>
-          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#f2f4f7]">
-            <div className="h-full rounded-full bg-[#e10600]" style={{ width: `${progress}%` }} />
-          </div>
-          <button onClick={() => navigate("/daily-task")} className="mt-3 h-11 w-full rounded-xl bg-[#e10600] text-sm font-bold text-white">
-            {taskCompleted ? "Task Completed" : "Start Watching →"}
-          </button>
-        </article>
+        <div className="hidden lg:block">
+          <TodayTask progress={progress} taskCompleted={taskCompleted} onOpen={() => navigate("/daily-task")} />
+        </div>
 
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
@@ -202,8 +178,8 @@ export default function Dashboard() {
         </article>
       </section>
 
-      <section className="grid gap-3 xl:grid-cols-3">
-        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm xl:col-span-1">
+      <section className="grid gap-3 lg:grid-cols-2">
+        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
           <div className="mb-2 flex items-center justify-between">
             <p className="font-bold">Earnings Overview</p>
             <span className="rounded-lg border border-[#eaecf0] px-2 py-1 text-[11px] font-semibold text-[#475467]">Last 7 Days</span>
@@ -267,22 +243,8 @@ export default function Dashboard() {
           </ul>
         </article>
 
-        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
-          <p className="mb-3 font-bold">Quick Actions</p>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              ["ArrowDownToLine", "bg-emerald-50 text-emerald-500", "Deposit", "Add funds to wallet", "/wallet/deposit"],
-              ["ArrowUpFromLine", "bg-rose-50 text-rose-500", "Withdraw", "Send to external wallet", "/wallet/withdraw"],
-              ["Play", "bg-violet-50 text-violet-500", "Watch Videos", "Earn instant rewards", "/watch"],
-              ["Gift", "bg-amber-50 text-amber-500", "Refer & Earn", "Share link & earn", "/referral"],
-            ].map(([icon, tone, label, hint, to]) => (
-              <button key={label} onClick={() => navigate(to)} className="rounded-2xl border border-[#f2f4f7] bg-[#fafbfc] p-3 text-left">
-                <span className={`grid h-9 w-9 place-items-center rounded-xl ${tone}`}><AppIcon name={icon} size={16} /></span>
-                <span className="mt-2 block text-sm font-bold">{label}</span>
-                <span className="block text-[11px] text-[#98a2b3]">{hint}</span>
-              </button>
-            ))}
-          </div>
+        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm lg:hidden">
+          <QuickActions onOpen={(to) => navigate(to)} />
         </article>
       </section>
 
@@ -313,9 +275,8 @@ export default function Dashboard() {
           <img src="/images/trophy-earn.png" alt="" className="pointer-events-none absolute -bottom-6 -right-4 hidden h-48 w-48 object-cover [mask-image:radial-gradient(circle_at_50%_45%,black_38%,transparent_72%)] sm:block" />
           <div className="relative max-w-sm">
             <p className="text-xl font-black leading-tight">Complete Daily Tasks & Earn ROI</p>
-            <p className="mt-1 text-sm text-white/80">Watch videos, complete tasks, refer friends and earn daily rewards.</p>
             <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
-              {[["Play", "Watch Videos"], ["ListChecks", "Complete Tasks"], ["LockKeyhole", "Unlock ROI"], ["Gift", "Refer & Earn"], ["Wallet", "Withdraw Earnings"]].map(([icon, label]) => (
+              {[["Play", "Daily Task"], ["ListChecks", "Complete Tasks"], ["LockKeyhole", "Unlock ROI"], ["Gift", "Refer & Earn"], ["Wallet", "Withdraw Earnings"]].map(([icon, label]) => (
                 <span key={label} className="inline-flex items-center gap-1 rounded-full bg-black/25 px-2 py-1">
                   <AppIcon name={icon} size={12} /> {label}
                 </span>
@@ -326,5 +287,91 @@ export default function Dashboard() {
         </article>
       </section>
     </div>
+  );
+}
+
+function StatCard({ item, compact, onOpen }) {
+  if (compact) {
+    return (
+      <button onClick={onOpen} className="flex h-full min-w-0 items-center gap-2.5 rounded-xl border border-[#eaecf0] bg-white px-3 text-left">
+        <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${item.iconBg}`}><AppIcon name={item.icon} size={13} /></span>
+        <span className="min-w-0 flex-1 truncate text-[11px] text-[#667085]">{item.label}</span>
+        <span className="shrink-0 text-xs font-black leading-none tracking-tight">{item.value}</span>
+        {item.badge ? <span className="shrink-0 rounded-full bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold leading-none text-rose-500">{item.badge}</span> : null}
+      </button>
+    );
+  }
+  return (
+    <button onClick={onOpen} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#eaecf0] bg-white px-2.5 py-2 text-left shadow-[0_8px_24px_rgba(16,24,40,0.04)]">
+      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${item.iconBg}`}><AppIcon name={item.icon} size={14} /></span>
+      <span className="min-w-0">
+        <span className="block truncate text-[10px] leading-none text-[#667085]">{item.label}</span>
+        <span className="mt-1 flex items-center gap-1">
+          <span className="text-sm font-black leading-none tracking-tight">{item.value}</span>
+          {item.badge ? <span className="rounded-full bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold leading-none text-rose-500">{item.badge}</span> : null}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+const quickActions = [
+  ["ArrowDownToLine", "bg-emerald-50 text-emerald-500", "Deposit", "Add funds to wallet", "/wallet/deposit"],
+  ["ArrowUpFromLine", "bg-rose-50 text-rose-500", "Withdraw", "Send to external wallet", "/wallet/withdraw"],
+  ["ListChecks", "bg-violet-50 text-violet-500", "Daily Task", "Watch today's video", "/daily-task"],
+  ["Gift", "bg-amber-50 text-amber-500", "Refer & Earn", "Share link & earn", "/referral"],
+];
+
+function QuickActions({ onOpen, compact = false }) {
+  return (
+    <div className={compact ? "flex h-full flex-col rounded-2xl border border-[#eaecf0] bg-white p-3 shadow-sm" : ""}>
+      <p className={compact ? "mb-2 font-bold" : "mb-3 font-bold"}>Quick Actions</p>
+      <div className="grid grid-cols-2 gap-2">
+        {quickActions.map(([icon, tone, label, hint, to]) => (
+          <button key={label} onClick={() => onOpen(to)} className={compact ? "rounded-xl border border-[#f2f4f7] bg-[#fafbfc] p-2.5 text-left" : "rounded-2xl border border-[#f2f4f7] bg-[#fafbfc] p-3 text-left"}>
+            <span className={`grid place-items-center ${tone} ${compact ? "h-8 w-8 rounded-lg" : "h-9 w-9 rounded-xl"}`}><AppIcon name={icon} size={compact ? 15 : 16} /></span>
+            <span className={compact ? "mt-1.5 block text-xs font-bold" : "mt-2 block text-sm font-bold"}>{label}</span>
+            <span className={compact ? "block text-[10px] leading-4 text-[#98a2b3]" : "block text-[11px] text-[#98a2b3]"}>{hint}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TodayTask({ progress, taskCompleted, onOpen }) {
+  return (
+    <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <p className="font-bold">Today's Task</p>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${taskCompleted ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>{taskCompleted ? "Completed" : "Pending"}</span>
+        </div>
+        <button className="text-xs font-semibold text-[#e10600]" onClick={onOpen}>View All</button>
+      </div>
+      <div className="flex gap-3">
+        <button onClick={onOpen} className="relative grid h-[92px] w-[148px] shrink-0 place-items-center overflow-hidden rounded-xl" aria-label="Start watching">
+          <img src="/images/video-thumb.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <span className="theme-fixed relative grid h-9 w-9 place-items-center rounded-full bg-white/95 text-[#111] shadow">
+            <AppIcon name="Play" size={16} className="ml-0.5 fill-[#111]" />
+          </span>
+          <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">02:30</span>
+        </button>
+        <div className="min-w-0">
+          <p className="font-bold">Watch Sponsored Video</p>
+          <p className="mt-1 text-xs leading-5 text-[#667085]">Watch full video and complete the task to unlock your today's ROI.</p>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center justify-between text-[11px] text-[#667085]">
+        <span>{progress}% Complete</span>
+        <span>{taskCompleted ? "1 / 1" : "0 / 1"}</span>
+      </div>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#f2f4f7]">
+        <div className="h-full rounded-full bg-[#e10600]" style={{ width: `${progress}%` }} />
+      </div>
+      <button onClick={onOpen} className="mt-3 h-11 w-full rounded-xl bg-[#e10600] text-sm font-bold text-white">
+        {taskCompleted ? "Task Completed" : "Start Watching →"}
+      </button>
+    </article>
   );
 }

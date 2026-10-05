@@ -1,4 +1,5 @@
 import express from "express";
+import compression from "compression";
 import cors from "cors";
 import mongoose from "mongoose";
 import { env } from "./config/env.js";
@@ -13,6 +14,7 @@ import { ensureAdmin } from "./utils/ensureAdmin.js";
 
 const app = express();
 
+app.use(compression({ threshold: 1024 }));
 app.use(cors({ origin: env.clientOrigin, credentials: true }));
 app.use(express.json());
 

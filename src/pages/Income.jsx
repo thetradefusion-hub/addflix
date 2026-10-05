@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Area, Bar, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell, Pie, PieChart } from "recharts";
+import { Download, Search } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import Pager from "@/components/common/Pager";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -8,9 +8,16 @@ import { Button } from "@/components/ui/button";
 import AppIcon from "@/components/common/AppIcon";
 import { useApp } from "@/context/AppContext";
 import { fineMoney, money, shortHash } from "@/lib/utils";
-import { formatLedgerDate, incomeByDay, lifetimeFigures, liveIncome, parseLedgerDate } from "@/lib/ledger";
+import { formatLedgerDate, lifetimeFigures, liveIncome, parseLedgerDate } from "@/lib/ledger";
 
 const tabs = ["All Income", "ROI Income", "Referral Income", "Level Income", "Bonus Income", "Other Income"];
+const typeIcon = {
+  "ROI Income": "HandCoins",
+  "Referral Income": "Users",
+  "Level Income": "Coins",
+  "Bonus Income": "Gift",
+  "Other Income": "Coins",
+};
 const pageCopy = {
   "All Income": ["Income History", "Every earning credited to this account."],
   "ROI Income": ["ROI Income", "Daily ROI credited after you claim today's task."],
@@ -45,7 +52,6 @@ export default function Income({ preset = "All Income" }) {
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState("date");
-  const [range, setRange] = useState("30");
 
   useEffect(() => {
     setTab(preset);
@@ -71,96 +77,59 @@ export default function Income({ preset = "All Income" }) {
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const view = filtered.slice((page - 1) * pageSize, page * pageSize);
   const earned = lifetimeFigures(balances, referralCredits, income);
-  const slices = [
-    { name: "ROI Income", value: earned.roi, color: "#3b82f6" },
-    { name: "Referral Income", value: earned.referral, color: "#e10600" },
-    { name: "Bonus Income", value: earned.bonus, color: "#f59e0b" },
-    { name: "Other Income", value: earned.other, color: "#a855f7" },
-  ].filter((slice) => slice.value > 0);
-  const chart = incomeByDay(income, range === "7" ? 7 : 30);
   const share = (value) => (earned.total > 0 ? `${((value / earned.total) * 100).toFixed(1)}%` : "0%");
+
+  const openRow = (row) => toast(`${formatLedgerDate(row.date)} · ${row.description} · ${row.tx}`);
 
   return (
     <div className="mx-auto max-w-[1180px]">
-      <PageHeader title={pageCopy[tab]?.[0] || "Income History"} subtitle={pageCopy[tab]?.[1]} crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Income", to: "/income" }, { label: pageCopy[tab]?.[0] || "Income" }]} />
+      <h1 className="mb-3 text-lg font-semibold tracking-tight text-[#101828] lg:hidden">Income</h1>
+      <div className="hidden lg:block">
+        <PageHeader title={pageCopy[tab]?.[0] || "Income History"} crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Income", to: "/income" }, { label: pageCopy[tab]?.[0] || "Income" }]} />
+      </div>
 
-      <section className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <section className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-3">
         {[
           ["Total Income", earned.total, "ROI, referral and bonus", "from-rose-500 to-red-600 text-white", "BadgeDollarSign"],
           ["ROI Income", earned.roi, share(earned.roi), "", "HandCoins"],
           ["Referral Income", earned.referral, share(earned.referral), "", "Users"],
           ["Bonus Income", earned.bonus, share(earned.bonus), "", "Gift"],
-          ["Other Income", earned.other, share(earned.other), "", "Coins"],
         ].map(([label, value, hint, tone, icon], index) => (
-          <article key={label} className={`rounded-2xl border border-[#eaecf0] p-4 ${index === 0 ? `bg-gradient-to-br ${tone}` : "bg-white"}`}>
-            <span className={`mb-2 grid h-9 w-9 place-items-center rounded-full ${index === 0 ? "bg-white/15 text-white" : "bg-red-50 text-[#e10600]"}`}><AppIcon name={icon} size={16} /></span>
-            <p className={`text-xs ${index === 0 ? "text-white/80" : "text-[#667085]"}`}>{label}</p>
-            <p className="text-xl font-black">${money(value)}</p>
-            <p className={`text-[11px] ${index === 0 ? "text-white/70" : "text-emerald-600"}`}>{hint}</p>
+          <article key={label} className={`flex items-center gap-2 rounded-xl border border-[#eaecf0] px-2.5 py-2 lg:block lg:rounded-2xl lg:p-4 ${index === 0 ? `bg-gradient-to-br ${tone}` : "bg-white"}`}>
+            <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg lg:mb-2 lg:h-9 lg:w-9 lg:rounded-full ${index === 0 ? "bg-white/15 text-white" : "bg-red-50 text-[#e10600]"}`}><AppIcon name={icon} size={14} /></span>
+            <span className="min-w-0">
+              <span className={`block text-[11px] leading-tight lg:text-xs ${index === 0 ? "text-white/80" : "text-[#667085]"}`}>{label}</span>
+              <span className="mt-1 block text-sm font-black leading-none lg:text-xl">${money(value)}</span>
+              <span className={`mt-1 hidden text-[11px] lg:block ${index === 0 ? "text-white/70" : "text-emerald-600"}`}>{hint}</span>
+            </span>
           </article>
         ))}
       </section>
 
-      <section className="mb-4 grid gap-3 lg:grid-cols-[1.4fr_0.7fr]">
-        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <p className="font-bold">Income Overview</p>
-            <select value={range} onChange={(e) => setRange(e.target.value)} className="rounded-lg border border-[#eaecf0] px-2 py-1 text-xs" aria-label="Chart range">
-              <option value="30">Last 30 Days</option>
-              <option value="7">Last 7 Days</option>
-            </select>
-          </div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chart}>
-                <CartesianGrid stroke="#f2f4f7" vertical={false} />
-                <XAxis dataKey="day" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={range === "7" ? 0 : 4} />
-                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                <Tooltip />
-                <Area dataKey="roi" stroke="#3b82f6" fill="#3b82f633" />
-                <Bar dataKey="referral" fill="#e10600" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="bonus" fill="#f59e0b" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="other" fill="#a855f7" radius={[3, 3, 0, 0]} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </article>
-        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
-          <p className="font-bold">Income Distribution</p>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={slices.length ? slices : [{ name: "None", value: 1, color: "#e4e7ec" }]} dataKey="value" innerRadius={48} outerRadius={70}>
-                  {(slices.length ? slices : [{ name: "None", value: 1, color: "#e4e7ec" }]).map((slice) => <Cell key={slice.name} fill={slice.color} />)}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <p className="text-center text-sm font-bold">${money(earned.total)} total income</p>
-          <ul className="mt-2 space-y-1 text-xs">
-            {(slices.length ? slices : []).map((slice) => (
-              <li key={slice.name} className="flex justify-between"><span>{slice.name}</span><span>{share(slice.value)}</span></li>
-            ))}
-          </ul>
-        </article>
-      </section>
-
-      <section className="rounded-2xl border border-[#eaecf0] bg-white p-4">
-        <div className="mb-3 flex gap-2 overflow-auto no-scrollbar">
+      <section className="lg:rounded-2xl lg:border lg:border-[#eaecf0] lg:bg-white lg:p-4">
+        <div className="-mx-3 mb-3 flex gap-2 overflow-x-auto px-3 no-scrollbar lg:mx-0 lg:px-0">
           {tabs.map((item) => (
-            <button key={item} onClick={() => { setTab(item); setPage(1); }} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold ${tab === item ? "bg-[#e10600] text-white" : "bg-slate-100"}`}>{item.replace(" Income", "") === "All" ? "All" : item.replace(" Income", "")}</button>
+            <button key={item} onClick={() => { setTab(item); setPage(1); }} className={`h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${tab === item ? "bg-[#e10600] text-white" : "bg-slate-100 text-[#475467]"}`}>{item.replace(" Income", "") === "All" ? "All" : item.replace(" Income", "")}</button>
           ))}
         </div>
-        <div className="mb-3 grid gap-2 sm:grid-cols-4">
-          <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Search description or TX" className="h-10 rounded-xl border border-[#eaecf0] px-3 text-sm" aria-label="Search income" />
-          <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="h-10 rounded-xl border border-[#eaecf0] px-3 text-sm" aria-label="Status">
-            {["All", "Credited", "Pending"].map((item) => <option key={item}>{item}</option>)}
-          </select>
-          <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-10 rounded-xl border border-[#eaecf0] px-3 text-sm" aria-label="Sort">
-            <option value="date">Newest</option>
-            <option value="amount">Highest amount</option>
-          </select>
-          <Button variant="outline" onClick={() => exportRows(filtered, toast)}>Export</Button>
+        <div className="mb-3 space-y-2 lg:grid lg:grid-cols-4 lg:gap-2 lg:space-y-0">
+          <label className="relative block">
+            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98a2b3]" />
+            <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Search income" className="h-10 w-full rounded-full border border-[#eaecf0] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#e10600] lg:rounded-xl" aria-label="Search income" />
+          </label>
+          <div className="flex gap-2 lg:contents">
+            <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="h-10 min-w-0 flex-1 rounded-full border border-[#eaecf0] bg-white px-3 text-xs outline-none focus:border-[#e10600] lg:rounded-xl lg:text-sm" aria-label="Status">
+              {["All", "Credited", "Pending"].map((item) => <option key={item}>{item}</option>)}
+            </select>
+            <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-10 min-w-0 flex-1 rounded-full border border-[#eaecf0] bg-white px-3 text-xs outline-none focus:border-[#e10600] lg:rounded-xl lg:text-sm" aria-label="Sort">
+              <option value="date">Newest</option>
+              <option value="amount">Amount</option>
+            </select>
+            <button type="button" aria-label="Export" onClick={() => exportRows(filtered, toast)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#eaecf0] bg-white text-[#e10600] lg:hidden">
+              <Download size={16} />
+            </button>
+            <Button variant="outline" className="hidden lg:inline-flex" onClick={() => exportRows(filtered, toast)}>Export</Button>
+          </div>
         </div>
         {view.length === 0 ? <EmptyState title="No income found" body="Change the type, status, or search text." /> : (
           <>
@@ -177,28 +146,28 @@ export default function Income({ preset = "All Income" }) {
                       <td className="font-semibold text-emerald-600">+{fineMoney(row.amount)}</td>
                       <td><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
                       <td>{shortHash(row.tx, 8, 4)}</td>
-                      <td><button className="text-xs font-semibold text-[#e10600]" onClick={() => toast(`${formatLedgerDate(row.date)} · ${row.description} · ${row.tx}`)}>View</button></td>
+                      <td><button className="text-xs font-semibold text-[#e10600]" onClick={() => openRow(row)}>View</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="space-y-2 lg:hidden">
+            <div className="overflow-hidden rounded-2xl border border-[#eaecf0] bg-white lg:hidden">
               {view.map((row) => (
-                <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3">
-                  <div className="flex justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-semibold">{row.type}</p>
-                      <p className="text-xs text-[#667085]">{row.description}</p>
-                    </div>
-                    <p className="font-bold text-emerald-600">+{fineMoney(row.amount)} USDT</p>
-                  </div>
-                  <p className="mt-1 text-[11px] text-[#98a2b3]">{formatLedgerDate(row.date)}</p>
-                  <div className="mt-1 flex items-center justify-between">
-                    <StatusBadge tone={row.status}>{row.status}</StatusBadge>
-                    <span className="text-[11px] text-[#98a2b3]">{shortHash(row.tx, 8, 4)}</span>
-                  </div>
-                </article>
+                <button key={row.id} type="button" onClick={() => openRow(row)} className="flex w-full items-center gap-3 border-b border-[#f2f4f7] px-3 py-3 text-left last:border-b-0">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-600"><AppIcon name={typeIcon[row.type] || "Coins"} size={16} /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="truncate text-sm font-semibold text-[#101828]">{row.type.replace(" Income", "")}</span>
+                      <span className="shrink-0 text-sm font-bold text-emerald-600">+{fineMoney(row.amount)}</span>
+                    </span>
+                    <span className="mt-0.5 block truncate text-[11px] text-[#667085]">{row.description}</span>
+                    <span className="mt-1 flex items-center justify-between gap-2">
+                      <span className="text-[10px] text-[#98a2b3]">{formatLedgerDate(row.date)}</span>
+                      <StatusBadge tone={row.status}>{row.status}</StatusBadge>
+                    </span>
+                  </span>
+                </button>
               ))}
             </div>
             <Pager page={page} pages={pages} total={filtered.length} size={pageSize} onChange={setPage} />

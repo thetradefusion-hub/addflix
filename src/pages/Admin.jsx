@@ -24,7 +24,7 @@ const pageMeta = {
   deposits: ["Deposits", "Mark a pending deposit success to credit the wallet, or failed."],
   tickets: ["Tickets", "Reply to members and close resolved requests."],
   fraud: ["Fraud", "Shared devices and skip attempts. Close a flag after review."],
-  videos: ["Videos", "The member Watch Videos page uses this library. Set a reward of 0 to publish without paying."],
+  videos: ["Videos", "Add a link, then choose Use today. Members watch that video on the daily task."],
   pages: ["Pages", "About, rules, FAQ and the other public pages."],
   messages: ["Messages", "Broadcast to members. In-app is delivered. Email, SMS and push stay queued."],
   audit: ["Audit", "Wallet, ROI, commission, withdrawal and admin login history."],
@@ -100,7 +100,7 @@ function AdminConsole({ view, onLogout }) {
         setLevelData(await apiFetch("/api/admin/level-income"));
       }
     } catch (err) {
-      if (String(err.message).includes("Admin")) {
+      if (err.status === 401 || String(err.message).includes("Admin")) {
         onLogout();
         return;
       }
@@ -204,7 +204,7 @@ function AdminConsole({ view, onLogout }) {
               onVerify={(rowId, result) => run(`/api/admin/deposits/${rowId}/verify`, { method: "POST", body: JSON.stringify({ result }) })}
             />
           ) : null}
-          {["audit", "tickets", "fraud", "videos", "pages", "messages"].includes(view) ? <AdminDesk view={view} /> : null}
+          {["audit", "tickets", "fraud", "videos", "pages", "messages"].includes(view) ? <AdminDesk view={view} onSessionExpired={onLogout} /> : null}
           {view === "level" && levelData ? <LevelIncome data={levelData} /> : null}
           {view === "plans" ? (
             <PlansPanel

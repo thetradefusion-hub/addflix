@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/common/StatusBadge";
 import Pager, { usePaging } from "@/components/common/Pager";
 
-export default function AdminDesk({ view }) {
+export default function AdminDesk({ view, onSessionExpired }) {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [rows, setRows] = useState([]);
@@ -37,7 +37,11 @@ export default function AdminDesk({ view }) {
   };
 
   useEffect(() => {
-    load().catch((err) => setError(err.message));
+    setRows([]);
+    load().catch((err) => {
+      if (err.status === 401) onSessionExpired?.();
+      else setError(err.message);
+    });
   }, [view]);
 
   const run = async (path, options, ok) => {

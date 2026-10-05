@@ -175,6 +175,50 @@ export default function Investment() {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="font-bold">My Plans</p>
+            <p className="text-xs text-[#98a2b3]">${money(totalEarned)} earned across {investments.length} plan{investments.length === 1 ? "" : "s"}</p>
+          </div>
+        </div>
+        <ProgressBar value={progress} barClass="bg-emerald-500" />
+        <div className="mt-4 hidden overflow-x-auto lg:block">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs text-[#667085]">
+              <tr>{["#", "Plan Name", "Amount", "Start Date", "Daily ROI", "Total ROI", "Earned ROI", "Status", "Action"].map((h) => <th key={h} className="pb-2 pr-3 font-medium">{h}</th>)}</tr>
+            </thead>
+            <tbody>
+              {investments.length === 0 ? <tr><td colSpan={9} className="py-8 text-center text-sm text-[#98a2b3]">No plans yet. Choose a plan above.</td></tr> : null}
+              {planPage.items.map((row, index) => (
+                <tr key={row.id} className="border-t border-[#f2f4f7]">
+                  <td className="py-3 pr-3">{planPage.start + index + 1}</td>
+                  <td className="pr-3 font-semibold">{row.planName}</td>
+                  <td className="pr-3">${money(row.amount)}</td>
+                  <td className="pr-3">{row.startDate}</td>
+                  <td className="pr-3">{row.dailyRate}%</td>
+                  <td className="pr-3">${money(row.cap)}</td>
+                  <td className="pr-3">${money(row.earnedRoi)}</td>
+                  <td className="pr-3"><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
+                  <td><button className="rounded-lg border border-[#e10600] px-2.5 py-1 text-xs font-semibold text-[#e10600]" onClick={() => setDetail(row)}>View</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-4 space-y-2 lg:hidden">
+          {investments.length === 0 ? <p className="py-6 text-center text-sm text-[#98a2b3]">No plans yet. Choose a plan above.</p> : null}
+          {planPage.items.map((row) => (
+            <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3">
+              <div className="flex items-center justify-between gap-2"><p className="font-semibold">{row.planName}</p><StatusBadge tone={row.status}>{row.status}</StatusBadge></div>
+              <p className="mt-1 text-sm">${money(row.amount)} · Daily {row.dailyRate}%</p>
+              <p className="text-xs text-[#667085]">Earned ${money(row.earnedRoi)} / ${money(row.cap)} · {row.startDate}</p>
+            </article>
+          ))}
+        </div>
+        <Pager page={planPage.page} pages={planPage.pages} total={planPage.total} size={planPage.size} onChange={planPage.setPage} />
+      </section>
+
       <section className="grid gap-3 lg:grid-cols-3">
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm sm:p-5">
           <p className="font-bold">Invest in Plan</p>
@@ -232,50 +276,6 @@ export default function Investment() {
             </div>
           </div>
         </article>
-      </section>
-
-      <section className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="font-bold">My Plans</p>
-            <p className="text-xs text-[#98a2b3]">${money(totalEarned)} earned across {investments.length} plan{investments.length === 1 ? "" : "s"}</p>
-          </div>
-        </div>
-        <ProgressBar value={progress} barClass="bg-emerald-500" />
-        <div className="mt-4 hidden overflow-x-auto lg:block">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs text-[#667085]">
-              <tr>{["#", "Plan Name", "Amount", "Start Date", "Daily ROI", "Total ROI", "Earned ROI", "Status", "Action"].map((h) => <th key={h} className="pb-2 pr-3 font-medium">{h}</th>)}</tr>
-            </thead>
-            <tbody>
-              {investments.length === 0 ? <tr><td colSpan={9} className="py-8 text-center text-sm text-[#98a2b3]">No plans yet. Choose a plan above.</td></tr> : null}
-              {planPage.items.map((row, index) => (
-                <tr key={row.id} className="border-t border-[#f2f4f7]">
-                  <td className="py-3 pr-3">{planPage.start + index + 1}</td>
-                  <td className="pr-3 font-semibold">{row.planName}</td>
-                  <td className="pr-3">${money(row.amount)}</td>
-                  <td className="pr-3">{row.startDate}</td>
-                  <td className="pr-3">{row.dailyRate}%</td>
-                  <td className="pr-3">${money(row.cap)}</td>
-                  <td className="pr-3">${money(row.earnedRoi)}</td>
-                  <td className="pr-3"><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
-                  <td><button className="rounded-lg border border-[#e10600] px-2.5 py-1 text-xs font-semibold text-[#e10600]" onClick={() => setDetail(row)}>View</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-4 space-y-2 lg:hidden">
-          {investments.length === 0 ? <p className="py-6 text-center text-sm text-[#98a2b3]">No plans yet. Choose a plan above.</p> : null}
-          {planPage.items.map((row) => (
-            <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3">
-              <div className="flex items-center justify-between gap-2"><p className="font-semibold">{row.planName}</p><StatusBadge tone={row.status}>{row.status}</StatusBadge></div>
-              <p className="mt-1 text-sm">${money(row.amount)} · Daily {row.dailyRate}%</p>
-              <p className="text-xs text-[#667085]">Earned ${money(row.earnedRoi)} / ${money(row.cap)} · {row.startDate}</p>
-            </article>
-          ))}
-        </div>
-        <Pager page={planPage.page} pages={planPage.pages} total={planPage.total} size={planPage.size} onChange={planPage.setPage} />
       </section>
 
       <Modal

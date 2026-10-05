@@ -17,29 +17,32 @@ export function Hero() {
     <section className="relative isolate min-h-[100svh] overflow-hidden bg-[#07080d]">
       <picture>
         <source media="(max-width: 639px)" srcSet="/landing/hero-mobile.jpg" />
-        <img src="/landing/hero.jpg" alt="" className="landing-zoom absolute inset-0 h-full w-full object-cover object-center sm:object-[72%_center]" />
+        <img src="/landing/hero.jpg" alt="" className="landing-zoom absolute inset-0 h-full w-full object-cover object-center" />
       </picture>
-      <div className="absolute inset-0 bg-gradient-to-b from-[#07080d] via-[#07080d]/35 to-[#07080d]/90 sm:bg-gradient-to-r sm:from-[#07080d] sm:via-[#07080d]/72 sm:to-black/10" />
-      <div aria-hidden className="landing-glow pointer-events-none absolute -left-32 top-1/3 h-80 w-80 rounded-full bg-[#e10600]/20 blur-3xl" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(7,8,13,0.28)_0%,rgba(7,8,13,0.72)_52%,rgba(7,8,13,0.94)_100%)]" />
+      <div aria-hidden className="landing-glow pointer-events-none absolute left-1/2 top-[42%] h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e10600]/25 blur-3xl" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#07080d] to-transparent" />
-      <div className="relative mx-auto flex min-h-[100svh] max-w-[1180px] items-start px-4 pb-20 pt-28 sm:items-center sm:px-6 sm:py-28">
-        <div className="max-w-xl">
+      <div className="relative mx-auto flex min-h-[100svh] max-w-[1180px] items-center justify-center px-4 pb-24 pt-32 text-center sm:px-6">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center">
           <div {...rise(80)}>
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 py-1 pl-1 pr-3 backdrop-blur">
               <span className="grid h-6 w-6 place-items-center rounded-full bg-[#e10600]"><Play size={11} fill="currentColor" /></span>
               <Kicker>Premium entertainment meets opportunity</Kicker>
             </span>
           </div>
-          <h1 {...rise(180)} className="landing-rise mt-6 max-w-[12ch] text-[2.75rem] font-semibold leading-[0.98] tracking-tight text-white sm:text-6xl lg:text-7xl">
-            Watch. Promote. <span className="bg-gradient-to-r from-[#ff3b30] to-[#e10600] bg-clip-text text-transparent">Earn.</span>
+          <h1 className="mt-7 flex max-w-full flex-col items-center gap-1 text-[4.25rem] font-semibold leading-[0.9] tracking-tight text-white sm:text-8xl lg:flex-row lg:flex-wrap lg:justify-center lg:gap-x-5 lg:text-[5.75rem] xl:text-[6.75rem]">
+            <span className="hero-word" style={{ "--d": "160ms" }}>Watch.</span>
+            <span className="hero-word" style={{ "--d": "340ms" }}>Promote.</span>
+            <span className="hero-word hero-earn" style={{ "--d": "520ms" }}>Earn.</span>
           </h1>
-          <p {...rise(300)} className="landing-rise mt-6 text-lg font-medium text-white sm:text-xl">The future of entertainment and smart earning</p>
-          <p {...rise(380)} className="landing-rise mt-3 max-w-md text-sm leading-6 text-white/75 sm:text-base sm:leading-7">Experience entertainment while exploring a business opportunity built around one platform.</p>
-          <div {...rise(480)} className="landing-rise mt-9 flex flex-col gap-3 min-[420px]:flex-row">
-            <Link to={inside ? "/dashboard" : "/auth?join=1"} className={`${joinClass} w-full shadow-[0_10px_28px_rgba(225,6,0,0.4)] min-[420px]:w-auto`}>{inside ? "Open app" : "Join ADD FLIX"}</Link>
-            <a href="#business" className={`${ghostClass} w-full bg-black/20 backdrop-blur min-[420px]:w-auto`}>Explore Business Plan</a>
+          <span aria-hidden className="hero-rule mt-6" />
+          <p {...rise(720)} className="landing-rise mt-6 max-w-2xl text-lg font-medium text-white sm:text-2xl">The future of entertainment and smart earning</p>
+          <p {...rise(820)} className="landing-rise mt-3 max-w-xl text-sm leading-6 text-white/75 sm:text-base sm:leading-7">Experience entertainment while exploring a business opportunity built around one platform.</p>
+          <div {...rise(940)} className="landing-rise mt-9 flex w-full flex-col items-center justify-center gap-3 min-[420px]:w-auto min-[420px]:flex-row">
+            <Link to={inside ? "/dashboard" : "/register"} className={`${joinClass} w-full shadow-[0_10px_28px_rgba(225,6,0,0.4)] min-[420px]:w-auto`}>{inside ? "Open app" : "Join ADD FLIX"}</Link>
+            <a href="#how" className={`${ghostClass} w-full bg-black/20 backdrop-blur min-[420px]:w-auto`}>See how it works</a>
           </div>
-          <p {...rise(580)} className="landing-rise mt-7 text-xs tracking-wide text-white/55">A new way to watch, share and earn with ADD FLIX.</p>
+          <p {...rise(1060)} className="landing-rise mt-7 text-xs tracking-wide text-white/55">A new way to watch, share and earn with ADD FLIX.</p>
         </div>
       </div>
     </section>
@@ -49,9 +52,9 @@ export function Hero() {
 export function ValueStrip() {
   return (
     <section className="relative z-10 mx-auto -mt-10 max-w-[1180px] px-4 sm:px-6" aria-label="What ADD FLIX offers">
-      <ul {...reveal()} className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.45)] min-[480px]:grid-cols-2 lg:grid-cols-5">
+      <ul {...reveal()} className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-5">
         {values.map((item) => (
-          <li key={item.title} className="flex items-center gap-3 bg-[#0e1017]/95 px-5 py-5 text-sm font-medium text-white/85 backdrop-blur transition-colors hover:bg-[#151821]">
+          <li key={item.title} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0e1017]/95 px-4 py-4 text-sm font-medium text-white/85 shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur">
             <FeatureIcon name={item.icon} />
             <span className="leading-5">{item.title}</span>
           </li>
@@ -65,7 +68,7 @@ export function About() {
   return (
     <Section id="about" className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
       <div>
-        <Heading className="mb-0 sm:mb-0" kicker="About ADD FLIX" title="Entertainment beyond limits" text="ADD FLIX puts digital entertainment and a business opportunity on one platform. Members watch content, share a referral link, and follow a published plan for how credit is calculated." />
+        <Heading className="mb-0 sm:mb-0" kicker="About ADD FLIX" title="Entertainment beyond limits" text="ADD FLIX puts films, series and a member community on one platform. Watch the library, share your link, and use the tools inside your account." />
         <div {...reveal(120)}><a href="#how" className={`${joinClass} mt-8 w-full min-[420px]:w-auto`}>Learn more</a></div>
       </div>
       <div className="grid gap-4">

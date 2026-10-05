@@ -22,6 +22,12 @@ const settingsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const saveListeners = new Set();
+export function onSettingsSaved(listener) {
+  saveListeners.add(listener);
+}
+settingsSchema.post("save", () => saveListeners.forEach((listener) => listener()));
+
 const Settings = mongoose.models.Settings || mongoose.model("Settings", settingsSchema);
 
 export default Settings;

@@ -129,12 +129,12 @@ export default function WalletPage({ initialTab = "Overview" }) {
               <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl bg-[#f8fafc] p-3">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-amber-100 text-xs font-black text-amber-600">B</span>
-                  <p className="min-w-0 break-all text-sm text-[#344054]">{walletAddress}</p>
+                  <p className="min-w-0 break-all text-sm text-[#344054]">{walletAddress || "No payout wallet saved yet"}</p>
                 </div>
                 <div className="relative mx-auto w-24 shrink-0 sm:mx-0"><QrCode /></div>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                <Button variant="outline" onClick={() => { copyText(walletAddress); toast("Wallet address copied."); }}><Copy size={14} /> Copy Address</Button>
+                <Button variant="outline" disabled={!walletAddress} onClick={() => { copyText(walletAddress); toast("Wallet address copied."); }}><Copy size={14} /> Copy Address</Button>
                 <p className="max-w-md text-xs leading-5 text-[#667085]">Send only USDT using BEP-20 (BSC) network. Do not send from other network (ERC20, TRC20, etc.).</p>
               </div>
             </article>

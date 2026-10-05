@@ -2,6 +2,8 @@ import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { LoadingState } from "@/components/common/EmptyState";
+import TopLoader, { PendingMark } from "@/components/common/TopLoader";
+import ScrollToTop from "@/components/common/ScrollToTop";
 
 const AuthPage = lazy(() => import("@/pages/Auth"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -11,10 +13,10 @@ const Subscription = lazy(() => import("@/pages/Subscription"));
 const Investment = lazy(() => import("@/pages/Investment"));
 const WalletPage = lazy(() => import("@/pages/Wallet"));
 const Referral = lazy(() => import("@/pages/Referral"));
+const Team = lazy(() => import("@/pages/Team"));
 const Income = lazy(() => import("@/pages/Income"));
 const Transfer = lazy(() => import("@/pages/Transfer"));
 const Reports = lazy(() => import("@/pages/Reports"));
-const WatchVideos = lazy(() => import("@/pages/WatchVideos"));
 const Legal = lazy(() => import("@/pages/Legal"));
 const NotificationsPage = lazy(() => import("@/pages/Secondary").then((m) => ({ default: m.NotificationsPage })));
 const SupportPage = lazy(() => import("@/pages/Secondary").then((m) => ({ default: m.SupportPage })));
@@ -24,7 +26,7 @@ const Admin = lazy(() => import("@/pages/Admin"));
 const Landing = lazy(() => import("@/pages/Landing"));
 
 function Page({ children }) {
-  return <Suspense fallback={<LoadingState label="Loading page" />}>{children}</Suspense>;
+  return <Suspense fallback={<PendingMark><LoadingState label="Loading page" /></PendingMark>}>{children}</Suspense>;
 }
 
 function LevelRoute() {
@@ -47,10 +49,14 @@ function ProtectedRoute({ children }) {
 
 export default function App() {
   return (
+    <>
+    <TopLoader />
+    <ScrollToTop />
     <Routes>
       <Route path="/" element={<Page><Landing /></Page>} />
-      <Route path="/auth" element={<Page><AuthPage /></Page>} />
-      <Route path="/ref/:code" element={<Page><AuthPage /></Page>} />
+      <Route path="/auth" element={<Page><AuthPage key="login" mode="login" /></Page>} />
+      <Route path="/register" element={<Page><AuthPage key="register" mode="register" /></Page>} />
+      <Route path="/ref/:code" element={<Page><AuthPage key="referral" mode="register" /></Page>} />
       <Route path="/legal/:slug" element={<Page><Landing frame><Legal /></Landing></Page>} />
       <Route path="/admin" element={<Page><Admin view="overview" /></Page>} />
       <Route path="/admin/users" element={<Page><Admin view="users" /></Page>} />
@@ -81,13 +87,13 @@ export default function App() {
         <Route path="/referral" element={<Navigate to="/referral/link" replace />} />
         <Route path="/referral/link" element={<Page><Referral view="link" /></Page>} />
         <Route path="/referral/level/:level" element={<LevelRoute />} />
-        <Route path="/team" element={<Page><Referral view="team" /></Page>} />
+        <Route path="/team" element={<Page><Team /></Page>} />
         <Route path="/income" element={<Page><Income preset="All Income" /></Page>} />
         <Route path="/income/roi" element={<Page><Income preset="ROI Income" /></Page>} />
         <Route path="/income/referral" element={<Page><Income preset="Referral Income" /></Page>} />
         <Route path="/income/level" element={<Page><Income preset="Level Income" /></Page>} />
         <Route path="/income/bonus" element={<Page><Income preset="Bonus Income" /></Page>} />
-        <Route path="/watch" element={<Page><WatchVideos /></Page>} />
+        <Route path="/watch" element={<Navigate to="/daily-task" replace />} />
         <Route path="/notifications" element={<Page><NotificationsPage /></Page>} />
         <Route path="/support" element={<Page><SupportPage /></Page>} />
         <Route path="/reports" element={<Page><Reports /></Page>} />
@@ -96,5 +102,6 @@ export default function App() {
         <Route path="*" element={<Page><NotFound /></Page>} />
       </Route>
     </Routes>
+    </>
   );
 }

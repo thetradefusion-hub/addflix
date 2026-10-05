@@ -1,4 +1,20 @@
-import Settings from "../models/Settings.js";
+import Settings, { onSettingsSaved } from "../models/Settings.js";
+
+const CACHE_MS = 10_000;
+let cached = null;
+let cachedAt = 0;
+onSettingsSaved(() => {
+  cached = null;
+});
+
+/** Read-only snapshot for hot paths. Use getSettings() when the document will be saved. */
+export async function readSettings() {
+  if (cached && Date.now() - cachedAt < CACHE_MS) return cached;
+  const settings = await getSettings();
+  cached = settings.toObject();
+  cachedAt = Date.now();
+  return cached;
+}
 
 export async function getSettings() {
   let settings = await Settings.findOne({ key: "platform" });

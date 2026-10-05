@@ -1,3 +1,5 @@
+import { REFERRAL_ID, emailError, mobileError, normalizeReferralId } from '../../shared/contact.js';
+
 export function validateRegistrationInput(payload = {}) {
   const errors = [];
   const fullName = String(payload.fullName ?? '').trim();
@@ -15,28 +17,32 @@ export function validateRegistrationInput(payload = {}) {
     errors.push('Full name is required.');
   }
 
-  if (!/^[+()\d\s-]{8,20}$/.test(mobile)) {
-    errors.push('Enter a valid mobile number.');
+  const badMobile = mobileError(mobile);
+  if (badMobile) {
+    errors.push(badMobile);
   }
 
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errors.push('Enter a valid email address.');
+  const badEmail = emailError(email);
+  if (badEmail) {
+    errors.push(badEmail);
   }
 
   if (!username || username.length < 3) {
     errors.push('Username must be at least 3 characters long.');
   }
 
-  if (!password || password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*]/.test(password)) {
-    errors.push('Password must be at least 8 characters and include uppercase, number and special character.');
+  if (!password || password.length < 8) {
+    errors.push('Password must be at least 8 characters.');
   }
 
   if (password && password !== confirmPassword) {
     errors.push('Passwords do not match.');
   }
 
-  if (!sponsorId || sponsorId.length < 4) {
+  if (!sponsorId) {
     errors.push('Sponsor or referral ID is required.');
+  } else if (!REFERRAL_ID.test(normalizeReferralId(sponsorId))) {
+    errors.push('Enter a valid referral ID, like ADD12568.');
   }
 
   if (!/^\d{6}$/.test(otp)) {

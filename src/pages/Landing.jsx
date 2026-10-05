@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import LandingNav, { LandingFooter, PublicFrame } from "@/components/landing/LandingChrome";
 import { About, Entertainment, Hero, HowItWorks, ValueStrip, Why } from "@/components/landing/LandingStory";
-import { BusinessPlan, Closing, Faq } from "@/components/landing/LandingPlan";
+import { Closing, Faq } from "@/components/landing/LandingPlan";
 
 export { PublicFrame };
 
@@ -59,7 +59,6 @@ export default function Landing({ frame = false, children }) {
         <Why />
         <Entertainment />
         <HowItWorks />
-        <BusinessPlan />
         <Faq />
         <Closing />
       </main>

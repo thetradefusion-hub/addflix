@@ -8,7 +8,7 @@ import { applyPlayback, requiredSeconds, todayKey } from "../utils/dailyTask.js"
 import { parsePlayableUrl } from "../utils/videoUrl.js";
 import { buildNetwork } from "../utils/network.js";
 import { BEP20_ADDRESS, availableBalance, lockFunds, quoteWithdrawal } from "../utils/withdrawal.js";
-import { applyPublishedTask, getSettings } from "../utils/settings.js";
+import { applyPublishedTask, getSettings, readSettings } from "../utils/settings.js";
 import Ticket from "../models/Ticket.js";
 import AuditLog from "../models/AuditLog.js";
 import Video from "../models/Video.js";
@@ -39,8 +39,7 @@ function debitLiquid(account, amount) {
 }
 
 async function ensureInvestments(account) {
-  const raw = await Account.collection.findOne({ _id: account._id }, { projection: { investments: 1 } });
-  if (raw && Object.prototype.hasOwnProperty.call(raw, "investments")) {
+  if (!account.$isDefault("investments")) {
     if (!Array.isArray(account.investments)) account.investments = [];
     return;
   }
@@ -53,13 +52,12 @@ async function ensureInvestments(account) {
 }
 
 async function loadAccount(userId) {
-  let account = await Account.findOne({ user: userId });
+  let [account, settings] = await Promise.all([Account.findOne({ user: userId }), readSettings()]);
   if (!account) {
     account = await Account.create({ user: userId, dailyTask: defaultDailyTask(), investments: [] });
   }
   await ensureInvestments(account);
   const rolled = account.rollTaskDay();
-  const settings = await getSettings();
   const taskUpdated = applyPublishedTask(account.dailyTask, settings);
   if (taskUpdated) account.markModified("dailyTask");
   if (rolled || taskUpdated) await account.save();
@@ -267,13 +265,18 @@ router.post("/invest", async (req, res) => {
   });
 });
 
+function liveTask(account) {
+  const { dailyTask, todayRoi, roiDay } = account.toClient();
+  return { ok: true, partial: true, account: { dailyTask, todayRoi, roiDay } };
+}
+
 router.post("/task", async (req, res) => {
   const account = await loadAccount(req.user._id);
   if (!account.subscription.active) {
     return res.status(403).json({ ok: false, message: "Activate your $10 USDT subscription to use this feature." });
   }
   const action = String(req.body?.action || "");
-  const settings = await getSettings();
+  const settings = await readSettings();
   if (!settings.taskPublished && (action === "heartbeat" || action === "complete")) {
     return res.status(403).json({ ok: false, message: "Today's task is not published." });
   }
@@ -288,7 +291,7 @@ router.post("/task", async (req, res) => {
   }
 
   if (action === "playback") {
-    if (account.dailyTask.completed) return res.json({ ok: true, account: account.toClient() });
+    if (account.dailyTask.completed) return res.json(liveTask(account));
     if (!parsePlayableUrl(account.dailyTask.videoUrl)) {
       return res.status(400).json({ ok: false, message: "Today's task needs a YouTube, Vimeo, or direct video link." });
     }
@@ -299,14 +302,14 @@ router.post("/task", async (req, res) => {
     });
     account.markModified("dailyTask");
     await account.save();
-    return res.json({ ok: true, account: account.toClient() });
+    return res.json(liveTask(account));
   }
 
   if (action === "heartbeat") {
     if (req.body?.progress != null || req.body?.seconds != null) {
       await flagSkip(req.user, "The client tried to set watch progress instead of sending a heartbeat.");
     }
-    return res.json({ ok: true, account: account.toClient() });
+    return res.json(liveTask(account));
   }
 
   if (action === "progress") {

@@ -3,7 +3,6 @@ import Pager, { usePaging } from "@/components/common/Pager";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import PageHeader from "@/components/common/PageHeader";
 import StatusBadge from "@/components/common/StatusBadge";
-import { deposits, withdrawals } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { activationLabel, money } from "@/lib/utils";
 import { formatLedgerDate, lifetimeFigures, liveIncome } from "@/lib/ledger";
@@ -292,7 +291,7 @@ function buildRows(kind, income, transactions, depositRows, withdrawalRows, subs
     };
   }
   if (kind === "deposit") {
-    const rows = depositRows?.length ? depositRows : deposits;
+    const rows = depositRows || [];
     return {
       columns: ["Date", "TX", "Network", "Amount", "Status"],
       items: rows.map((row) => ({
@@ -302,7 +301,7 @@ function buildRows(kind, income, transactions, depositRows, withdrawalRows, subs
     };
   }
   if (kind === "withdrawal") {
-    const rows = withdrawalRows?.length ? withdrawalRows : withdrawals;
+    const rows = withdrawalRows || [];
     return {
       columns: ["Date", "Amount", "Fee", "Receive", "Status"],
       items: rows.map((row) => ({

@@ -293,7 +293,6 @@ export const navItems = [
   { to: "/investment", label: "My Plan / Investment", icon: "PieChart" },
   { to: "/daily-task", label: "Daily Task", icon: "ListChecks" },
   { to: "/roi", label: "Today's ROI", icon: "CircleDollarSign" },
-  { to: "/watch", label: "Watch Videos", icon: "Play" },
   {
     label: "Income",
     icon: "DollarSign",

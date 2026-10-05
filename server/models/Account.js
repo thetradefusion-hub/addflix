@@ -62,6 +62,10 @@ const accountSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+accountSchema.index({ "withdrawals.id": 1 });
+accountSchema.index({ "deposits.id": 1 });
+accountSchema.index({ "subscriptionPayments.id": 1 });
+
 accountSchema.methods.rollTaskDay = function rollTaskDay() {
   return rollTask(this, todayKey());
 };

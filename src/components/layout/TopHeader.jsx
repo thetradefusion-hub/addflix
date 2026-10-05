@@ -4,10 +4,11 @@ import { Bell, Search } from "lucide-react";
 import { searchPages } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import ThemeToggle from "@/components/common/ThemeToggle";
+import ProfileMenu from "@/components/layout/ProfileMenu";
 
 export default function TopHeader() {
   const navigate = useNavigate();
-  const { unreadCount, notes, markNotesRead, sessionUser } = useApp();
+  const { unreadCount, notes, markNotesRead } = useApp();
   const [query, setQuery] = useState("");
   const [openNotes, setOpenNotes] = useState(false);
 
@@ -85,13 +86,7 @@ export default function TopHeader() {
             </div>
           ) : null}
         </div>
-        <button onClick={() => navigate("/profile")} className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 text-left text-white hover:bg-white/5">
-          <img src="/images/avatar-rahul.png" alt="" className="h-9 w-9 rounded-full object-cover" />
-          <span className="leading-tight">
-            <span className="block text-sm font-semibold">{sessionUser?.name || "Member"}</span>
-            <span className="block text-[11px] text-white/55">ID: {sessionUser?.id || "—"}</span>
-          </span>
-        </button>
+        <ProfileMenu onOpen={() => setOpenNotes(false)} />
       </div>
     </header>
   );

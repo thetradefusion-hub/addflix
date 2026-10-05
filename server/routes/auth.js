@@ -8,6 +8,7 @@ import { requireAuth } from '../middleware/requireAuth.js';
 import { describeClient, formatSessionTime } from '../utils/clientInfo.js';
 import { env } from '../config/env.js';
 import { validateLoginInput, validatePasswordChangeInput, validateRegistrationInput } from '../utils/authValidation.js';
+import { normalizeEmail, normalizeMobile } from '../../shared/contact.js';
 import AuditLog from '../models/AuditLog.js';
 import { noteSharedDevice } from '../utils/fraud.js';
 
@@ -62,8 +63,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ ok: false, message: validation.errors[0] || 'Validation failed.', errors: validation.errors });
     }
 
-    const email = String(payload.email).trim().toLowerCase();
-    const mobile = String(payload.mobile).trim();
+    const email = normalizeEmail(payload.email);
+    const mobile = normalizeMobile(payload.mobile);
     const username = String(payload.username).trim().toLowerCase();
     const fullName = String(payload.fullName).trim();
     const sponsorId = String(payload.sponsorId).trim().toUpperCase();

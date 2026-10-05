@@ -16,7 +16,7 @@ function clock(total) {
 }
 
 export default function DailyTask() {
-  const { taskProgress, taskCompleted, roiClaimed, completeTask, reportPlayback, dailyTask, toast } = useApp();
+  const { taskProgress, taskCompleted, roiClaimed, completeTask, reportPlayback, dailyTask, toast, subscriptionActive, accountReady } = useApp();
   const navigate = useNavigate();
   const guard = useActiveGuard();
   const { off: offToday, roiDay } = useOffDay();
@@ -29,9 +29,16 @@ export default function DailyTask() {
   const reportRef = useRef(reportPlayback);
   const completeRef = useRef(completeTask);
   const toastRef = useRef(toast);
+  const warnedRef = useRef(false);
   reportRef.current = reportPlayback;
   completeRef.current = completeTask;
   toastRef.current = toast;
+
+  useEffect(() => {
+    if (!accountReady || subscriptionActive || warnedRef.current) return;
+    warnedRef.current = true;
+    toast("Activate your $10 USDT subscription to use this feature.", "warning");
+  }, [accountReady, subscriptionActive, toast]);
   const [playerNote, setPlayerNote] = useState("");
   const [ahead, setAhead] = useState(false);
   const ready = taskProgress >= required;
@@ -45,7 +52,7 @@ export default function DailyTask() {
   ];
 
   useEffect(() => {
-    if (!playable || taskCompleted || offToday) return undefined;
+    if (!playable || taskCompleted || offToday || !subscriptionActive) return undefined;
     let stopped = false;
     const send = async () => {
       const sample = sampleRef.current;
@@ -67,7 +74,17 @@ export default function DailyTask() {
           if (!ok) finishing.current = false;
         }
       } catch (error) {
-        if (!stopped) toastRef.current(error.message, "warning");
+        if (stopped) return;
+        if (/subscription/i.test(error.message || "")) {
+          stopped = true;
+          clearInterval(id);
+          if (!warnedRef.current) {
+            warnedRef.current = true;
+            toastRef.current(error.message, "warning");
+          }
+          return;
+        }
+        toastRef.current(error.message, "warning");
       }
     };
     const id = setInterval(send, 1000);
@@ -75,7 +92,7 @@ export default function DailyTask() {
       stopped = true;
       clearInterval(id);
     };
-  }, [playable?.kind, playable?.id, playable?.src, taskCompleted, offToday]);
+  }, [playable?.kind, playable?.id, playable?.src, taskCompleted, offToday, subscriptionActive]);
 
   const finish = async () => {
     if (!guard()) return;
@@ -115,6 +132,7 @@ export default function DailyTask() {
       </section>
 
       <section className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.85fr)]">
+        <div className="space-y-3">
         <article className="overflow-hidden rounded-2xl bg-[#07111f] text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
           <div className="relative aspect-video w-full bg-black">
             {offToday ? (
@@ -144,34 +162,6 @@ export default function DailyTask() {
         </article>
 
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <p className="font-bold text-[#101828]">{dailyTask?.title || "Watch Sponsored Video"}</p>
-              <p className="text-xs text-[#667085]">{dailyTask?.subtitle || "Today's ROI video"}</p>
-            </div>
-            <StatusBadge tone="danger">Required</StatusBadge>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              [Clock3, "bg-sky-50 text-sky-500", duration > 0 ? clock(duration) : "Full video", "Duration"],
-              [CircleCheck, "bg-rose-50 text-rose-500", "Unlock ROI", "Reward"],
-              [ShieldCheck, "bg-emerald-50 text-emerald-500", `Minimum ${required}%`, "Required Watch"],
-              [Gauge, "bg-orange-50 text-orange-500", playable ? playable.kind : "Not set", "Video"],
-            ].map(([Icon, color, value, label]) => (
-              <div key={label} className="flex items-center gap-2 rounded-xl bg-[#f8fafc] p-2.5">
-                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${color}`}><Icon size={15} /></span>
-                <span>
-                  <span className="block text-xs font-bold capitalize text-[#101828]">{value}</span>
-                  <span className="block text-[10px] text-[#98a2b3]">{label}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-4 text-sm font-semibold text-[#101828]">Task Description</p>
-          <p className="mt-1 text-sm leading-6 text-[#667085]">Press play and watch the video through. Forward skip is blocked, and the timer follows only the time that actually plays.</p>
-        </article>
-
-        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm lg:col-start-1">
           <div className="mb-2 flex items-center justify-between">
             <p className="font-bold">Watch Progress</p>
             <p className="text-sm font-bold text-[#344054]">{taskProgress}%</p>
@@ -211,8 +201,38 @@ export default function DailyTask() {
             {offToday ? `No task on ${roiDay?.weekday}. Come back on ${roiDay?.resumesOn || "the next ROI day"}.` : taskCompleted ? "Today's task is complete and ROI is unlocked." : ahead ? "Forward skip was pulled back. Watch from the counted time." : ready ? "Required watch reached. Mark the task to unlock today's ROI." : "Forward skip is blocked. Only playback at normal speed is counted."}
           </p>
         </article>
+        </div>
 
-        <article className="rounded-2xl border border-rose-100 bg-[#fff5f5] p-4 lg:col-start-2">
+        <div className="space-y-3">
+        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <p className="font-bold text-[#101828]">{dailyTask?.title || "Watch Sponsored Video"}</p>
+              <p className="text-xs text-[#667085]">{dailyTask?.subtitle || "Today's ROI video"}</p>
+            </div>
+            <StatusBadge tone="danger">Required</StatusBadge>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              [Clock3, "bg-sky-50 text-sky-500", duration > 0 ? clock(duration) : "Full video", "Duration"],
+              [CircleCheck, "bg-rose-50 text-rose-500", "Unlock ROI", "Reward"],
+              [ShieldCheck, "bg-emerald-50 text-emerald-500", `Minimum ${required}%`, "Required Watch"],
+              [Gauge, "bg-orange-50 text-orange-500", playable ? playable.kind : "Not set", "Video"],
+            ].map(([Icon, color, value, label]) => (
+              <div key={label} className="flex items-center gap-2 rounded-xl bg-[#f8fafc] p-2.5">
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${color}`}><Icon size={15} /></span>
+                <span>
+                  <span className="block text-xs font-bold capitalize text-[#101828]">{value}</span>
+                  <span className="block text-[10px] text-[#98a2b3]">{label}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-sm font-semibold text-[#101828]">Task Description</p>
+          <p className="mt-1 text-sm leading-6 text-[#667085]">Press play and watch the video through. Forward skip is blocked, and the timer follows only the time that actually plays.</p>
+        </article>
+
+        <article className="rounded-2xl border border-rose-100 bg-[#fff5f5] p-4">
           <p className="flex items-center gap-2 font-bold text-[#101828]">
             <span className="grid h-6 w-6 place-items-center rounded-full bg-[#e10600] text-xs font-black text-white">!</span>
             Important
@@ -225,6 +245,7 @@ export default function DailyTask() {
             <li>Then mark the task to unlock today's ROI</li>
           </ul>
         </article>
+        </div>
       </section>
     </div>
   );

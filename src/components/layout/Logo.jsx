@@ -8,11 +8,11 @@ export default function Logo({ light = true, compact = false, className = "" }) 
   const src = light || dark ? DARK_LOGO : LIGHT_LOGO;
   const size = className || (compact ? "h-10" : "h-16");
   return (
-    <span className="inline-flex max-w-full">
+    <span className="inline-flex max-w-full items-center justify-center">
       <img
         src={src}
         alt="ADD FLIX"
-        className={`${size} w-auto max-w-full object-contain object-left`}
+        className={`${size} w-auto max-w-full object-contain`}
       />
     </span>
   );

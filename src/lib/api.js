@@ -25,28 +25,51 @@ export function clearAdminSession() {
   localStorage.removeItem(ADMIN_USER_KEY);
 }
 
+let pending = 0;
+const pendingListeners = new Set();
+
+export function setPending(delta) {
+  pending = Math.max(0, pending + delta);
+  pendingListeners.forEach((listener) => listener(pending));
+}
+
+export function subscribePending(listener) {
+  pendingListeners.add(listener);
+  listener(pending);
+  return () => pendingListeners.delete(listener);
+}
+
 export async function apiFetch(path, options = {}) {
+  const { silent, ...fetchOptions } = options;
   const token = path.startsWith("/api/admin")
     ? localStorage.getItem(ADMIN_TOKEN_KEY)
     : localStorage.getItem("addflix_token");
-  const headers = { ...(options.headers || {}) };
-  if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
+  const headers = { ...(fetchOptions.headers || {}) };
+  if (fetchOptions.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  const text = await response.text();
-  let data = {};
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { message: "Server returned an invalid response." };
+  if (!silent) setPending(1);
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { ...fetchOptions, headers });
+    const text = await response.text();
+    let data = {};
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: "Server returned an invalid response." };
+      }
     }
+    if (!response.ok) {
+      const error = new Error(data.message || `Request failed with status ${response.status}`);
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+    return data;
+  } finally {
+    if (!silent) setPending(-1);
   }
-  if (!response.ok) {
-    throw new Error(data.message || `Request failed with status ${response.status}`);
-  }
-  return data;
 }
 
 export function mapSessionUser(user) {

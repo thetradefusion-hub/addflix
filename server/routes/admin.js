@@ -5,7 +5,7 @@ import AuditLog from "../models/AuditLog.js";
 import { requireAdmin, requireDuty } from "../middleware/requireAdmin.js";
 import { notifyUser } from "../utils/notify.js";
 import deskRoutes from "./adminDesk.js";
-import { getSettings } from "../utils/settings.js";
+import { getSettings, readSettings } from "../utils/settings.js";
 import { approveWithdrawal, money2, rejectWithdrawal } from "../utils/withdrawal.js";
 import { closeTaskDay, normalizeTask, todayKey } from "../utils/dailyTask.js";
 import Plan from "../models/Plan.js";
@@ -59,7 +59,7 @@ router.get("/overview", async (_req, res) => {
   const day = todayKey();
   const [users, accounts, audits, recent] = await Promise.all([
     User.countDocuments({ role: { $ne: "admin" } }),
-    Account.find().select("user subscription subscriptionPayments dailyTask deposits withdrawals balances levelCredits.commission levelCredits.at").lean(),
+    Account.find().select("user subscription.active subscriptionPayments.status dailyTask.day dailyTask.completed dailyTask.watchSeconds dailyTask.roiClaimed deposits.status withdrawals.status balances.total levelCredits.commission levelCredits.at").lean(),
     AuditLog.find().sort({ createdAt: -1 }).limit(5).lean(),
     User.find({ role: { $ne: "admin" } }).sort({ createdAt: -1 }).limit(5).select("fullName referralId createdAt").lean(),
   ]);
@@ -174,8 +174,10 @@ router.get("/users", requireDuty("users"), async (req, res) => {
       { referralId: new RegExp(q, "i") },
     ];
   }
-  const users = await User.find(filter).sort({ createdAt: -1 }).limit(50).lean();
-  const accounts = await Account.find({ user: { $in: users.map((user) => user._id) } }).lean();
+  const users = await User.find(filter).sort({ createdAt: -1 }).limit(50)
+    .select("fullName email mobile username referralId sponsorId createdAt active").lean();
+  const accounts = await Account.find({ user: { $in: users.map((user) => user._id) } })
+    .select("user subscription.active subscription.activatedAt investments balances.total balances.locked dailyTask").lean();
   const byUser = new Map(accounts.map((account) => [String(account.user), account]));
   res.json({
     ok: true,
@@ -205,24 +207,27 @@ router.get("/users", requireDuty("users"), async (req, res) => {
 });
 
 router.get("/users/:id", requireDuty("users"), async (req, res) => {
-  const user = await User.findById(req.params.id).lean();
+  if (!/^[a-f0-9]{24}$/i.test(req.params.id)) return res.status(404).json({ ok: false, message: "User not found." });
+  const [user, account] = await Promise.all([
+    User.findById(req.params.id).select("-passwordHash -resetToken").lean(),
+    Account.findOne({ user: req.params.id }).lean(),
+  ]);
   if (!user || user.role === "admin") return res.status(404).json({ ok: false, message: "User not found." });
-  const account = await Account.findOne({ user: user._id }).lean();
   const balances = account?.balances || {};
   const available = money2(Math.max(0, Number(balances.total || 0) - Number(balances.locked || 0)));
-  const [directs, sponsor, teamUsers, sessions, tickets, flags] = await Promise.all([
+  const [directs, sponsor, teamUsers, sessions, tickets, flags, settings, liveDirects] = await Promise.all([
     User.countDocuments({ sponsorId: user.referralId, role: { $ne: "admin" } }),
     user.sponsorId ? User.findOne({ referralId: user.sponsorId }).select("fullName referralId").lean() : null,
     User.find({ sponsorId: user.referralId, role: { $ne: "admin" } }).select("fullName referralId active createdAt").sort({ createdAt: -1 }).limit(20).lean(),
     LoginSession.find({ user: user._id }).sort({ loggedAt: -1 }).limit(8).lean(),
     Ticket.find({ user: user._id }).sort({ updatedAt: -1 }).limit(8).lean(),
     FraudFlag.find({ $or: [{ user: user._id }, { users: String(user._id) }] }).sort({ updatedAt: -1 }).limit(8).lean(),
+    readSettings(),
+    activeDirects(user.referralId),
   ]);
   const today = todayTask(account);
-  const settings = await getSettings();
   const task = account?.dailyTask?.day === today.day ? normalizeTask(account.dailyTask, today.day) : {};
   const levelRows = Array.isArray(account?.levelCredits) ? account.levelCredits : [];
-  const liveDirects = await activeDirects(user.referralId);
   res.json({
     ok: true,
     user: {
@@ -468,7 +473,10 @@ router.post("/users/:id/wallet", requireDuty("wallet"), async (req, res) => {
 });
 
 router.get("/withdrawals", requireDuty("withdrawals"), async (_req, res) => {
-  const accounts = await Account.find().populate("user", "fullName email referralId");
+  const accounts = await Account.find({ "withdrawals.0": { $exists: true } })
+    .select("user withdrawals")
+    .populate("user", "fullName email referralId")
+    .lean();
   const rows = [];
   for (const account of accounts) {
     for (const row of account.withdrawals || []) {
@@ -533,7 +541,10 @@ router.post("/withdrawals/:id/reject", requireDuty("withdrawals"), async (req, r
 });
 
 router.get("/deposits", requireDuty("deposits"), async (_req, res) => {
-  const accounts = await Account.find().populate("user", "fullName referralId");
+  const accounts = await Account.find({ "deposits.0": { $exists: true } })
+    .select("user deposits")
+    .populate("user", "fullName referralId")
+    .lean();
   const rows = [];
   for (const account of accounts) {
     for (const row of account.deposits || []) {
@@ -702,7 +713,10 @@ router.put("/plans/:planId", async (req, res) => {
 });
 
 router.get("/subscriptions", async (_req, res) => {
-  const accounts = await Account.find().populate("user", "fullName referralId email");
+  const accounts = await Account.find({ "subscriptionPayments.0": { $exists: true } })
+    .select("user subscriptionPayments")
+    .populate("user", "fullName referralId email")
+    .lean();
   const rows = [];
   for (const account of accounts) {
     for (const row of account.subscriptionPayments || []) {
@@ -761,31 +775,16 @@ router.post("/subscriptions/:id/review", async (req, res) => {
   res.json({ ok: true, message: "Subscription marked failed." });
 });
 
-async function findSubscription(id) {
-  const accounts = await Account.find();
-  for (const account of accounts) {
-    const row = (account.subscriptionPayments || []).find((item) => String(item.id) === String(id));
-    if (row) return { account, row };
-  }
-  return null;
+async function findRow(field, id) {
+  const ids = [String(id)];
+  if (Number.isFinite(Number(id))) ids.push(Number(id));
+  const account = await Account.findOne({ [`${field}.id`]: { $in: ids } });
+  const row = (account?.[field] || []).find((item) => String(item.id) === String(id));
+  return row ? { account, row } : null;
 }
 
-async function findWithdrawal(id) {
-  const accounts = await Account.find();
-  for (const account of accounts) {
-    const row = (account.withdrawals || []).find((item) => String(item.id) === String(id));
-    if (row) return { account, row };
-  }
-  return null;
-}
-
-async function findDeposit(id) {
-  const accounts = await Account.find();
-  for (const account of accounts) {
-    const row = (account.deposits || []).find((item) => String(item.id) === String(id));
-    if (row) return { account, row };
-  }
-  return null;
-}
+const findSubscription = (id) => findRow("subscriptionPayments", id);
+const findWithdrawal = (id) => findRow("withdrawals", id);
+const findDeposit = (id) => findRow("deposits", id);
 
 export default router;

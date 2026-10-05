@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Copy, Download, Gift, Share2 } from "lucide-react";
+import { Copy, Download, Gift, Share2 } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import QrCode from "@/components/common/QrCode";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -11,28 +11,6 @@ import Pager, { usePaging } from "@/components/common/Pager";
 import { formatLedgerDate } from "@/lib/ledger";
 import { useApp } from "@/context/AppContext";
 import AppIcon from "@/components/common/AppIcon";
-
-function TeamNode({ member, members, onPick, depth = 0 }) {
-  const kids = members.filter((row) => row.parent === member.id);
-  const [open, setOpen] = useState(depth < 1);
-  return (
-    <div>
-      <div className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-[#f8fafc]" style={{ paddingLeft: depth * 16 + 8 }}>
-        {kids.length ? (
-          <button type="button" aria-label={open ? "Collapse" : "Expand"} onClick={() => setOpen((v) => !v)} className="grid h-6 w-6 place-items-center rounded-md bg-[#f2f4f7]">
-            <ChevronDown size={14} className={open ? "rotate-180" : ""} />
-          </button>
-        ) : <span className="w-6" />}
-        <button type="button" onClick={() => onPick(member)} className="min-w-0 flex-1 text-left">
-          <span className="font-semibold">{member.name}</span>
-          <span className="ml-2 text-[11px] text-[#98a2b3]">L{member.level} · {member.id}</span>
-        </button>
-        <StatusBadge tone={member.status}>{member.status}</StatusBadge>
-      </div>
-      {open ? kids.map((child) => <TeamNode key={child.id} member={child} members={members} onPick={onPick} depth={depth + 1} />) : null}
-    </div>
-  );
-}
 
 export default function Referral({ view = "link", level: fixedLevel = 1 }) {
   const { toast, sessionUser, referralCredits, network } = useApp();
@@ -66,13 +44,11 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
   const teamPage = usePaging(rows, 8, level);
   const payoutPage = usePaging(payouts, 8, `${view}:${fixedLevel}`);
   const current = levelRates.find((item) => item.level === fixedLevel) || levelRates[0];
-  const title = view === "team" ? "My Team" : view === "level" ? `Level ${fixedLevel}` : "My Referral Link";
+  const title = view === "level" ? `Level ${fixedLevel}` : "My Referral Link";
   const referralTotal = (referralCredits || []).reduce((sum, row) => sum + Number(row.commission || 0), 0);
-  const subtitle = view === "team"
-    ? `${network.total || 0} members across 4 levels. ${network.active || 0} are active.`
-    : view === "level"
-      ? `${current.members} members · $${money(current.amount)} per $10 subscription`
-      : "Share your link and earn on every $10 USDT activation.";
+  const subtitle = view === "level"
+    ? `${current.members} members · $${money(current.amount)} per $10 subscription`
+    : "Share your link and earn on every $10 USDT activation.";
 
   const share = (name) => {
     const text = `Join ADD FLIX with my link: ${referralLink}`;
@@ -98,7 +74,7 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
       <PageHeader
         title={title}
         subtitle={subtitle}
-        crumbs={[{ label: "Home", to: "/dashboard" }, { label: view === "team" ? "My Team" : "Referral", to: "/referral/link" }, { label: title }]}
+        crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Referral", to: "/referral/link" }, { label: title }]}
       />
 
       <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
@@ -116,24 +92,6 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
           </article>
         ))}
       </section>
-
-      {view === "team" ? (
-        <section className="mb-4 rounded-2xl border border-[#eaecf0] bg-white p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="font-bold">Sponsor tree</p>
-              <p className="text-xs text-[#98a2b3]">Expand a member. Click a name for profile details.</p>
-            </div>
-          </div>
-          <div className="rounded-xl bg-[#f8fafc] px-2 py-2">
-            <p className="px-2 py-1.5 text-sm font-black">You · {memberId}</p>
-            {teamMembers.filter((row) => row.level === 1).length === 0 ? <p className="px-2 py-3 text-sm text-[#98a2b3]">No downline yet. Share your link to grow the tree.</p> : null}
-            {teamMembers.filter((row) => row.level === 1).map((member) => (
-              <TeamNode key={member.id} member={member} members={teamMembers} onPick={setPicked} depth={0} />
-            ))}
-          </div>
-        </section>
-      ) : null}
 
       {view === "level" ? (
         <section className="mb-4 rounded-2xl bg-gradient-to-r from-[#3a0a12] to-[#e10600] p-5 text-white">

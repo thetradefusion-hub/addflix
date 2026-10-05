@@ -21,7 +21,7 @@ function AccountActions({ inside, onNavigate, stacked = false }) {
   return (
     <div className={cn("flex items-center gap-2", stacked && "flex-col items-stretch")}>
       <Link to={inside ? "/dashboard" : "/auth"} onClick={onNavigate} className={loginClass}>{inside ? "Dashboard" : "Login"}</Link>
-      <Link to={inside ? "/dashboard" : "/auth?join=1"} onClick={onNavigate} className={joinClass}>{inside ? "Open app" : "Join Now"}</Link>
+      <Link to={inside ? "/dashboard" : "/register"} onClick={onNavigate} className={joinClass}>{inside ? "Open app" : "Join Now"}</Link>
     </div>
   );
 }
@@ -64,40 +64,39 @@ export default function LandingNav() {
   const solid = scrolled || open;
 
   return (
-    <header className={cn("fixed inset-x-0 top-0 z-50 transition-colors duration-300", solid ? "border-b border-white/10 bg-[#07080d]/88 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl" : "border-b border-transparent bg-gradient-to-b from-black/75 to-transparent")}>
-      <div className="mx-auto flex h-[4.5rem] max-w-[1180px] items-center gap-6 px-4 lg:px-6">
-        <Link to="/" aria-label="ADD FLIX home" onClick={() => setOpen(false)} className="relative shrink-0">
-          <span aria-hidden className="pointer-events-none absolute -inset-x-4 -inset-y-2 rounded-full bg-[#e10600]/30 blur-2xl" />
-          <Logo className="relative h-11 sm:h-12" />
+    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5">
+      <div className={cn("mx-auto flex h-16 max-w-[1180px] items-center gap-3 rounded-2xl border px-3 transition duration-300 sm:px-4", solid ? "border-white/12 bg-[#0b0d12]/92 shadow-[0_16px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl" : "border-white/10 bg-black/35 backdrop-blur-md")}>
+        <Link to="/" aria-label="ADD FLIX home" onClick={() => setOpen(false)} className="shrink-0">
+          <Logo className="h-10 sm:h-11" />
         </Link>
-        <nav className="ml-auto hidden items-center gap-6 lg:flex" aria-label="Landing">
+        <nav className="mx-auto hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 lg:flex" aria-label="Landing">
           {navLinks.map(([to, label]) => {
             const active = isCurrent(hash, to);
             return (
-              <a key={to} href={to} className={cn("group relative py-1 text-[13px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e10600] xl:text-sm", active ? "text-white" : "text-white/65 hover:text-white")}>
+              <a key={to} href={to} className={cn("rounded-full px-3.5 py-1.5 text-[13px] font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e10600]", active ? "theme-fixed bg-white text-[#111] shadow-sm" : "text-white/70 hover:bg-white/10 hover:text-white")}>
                 {label}
-                <span className={cn("absolute -bottom-1 left-0 h-0.5 rounded-full bg-[#e10600] transition-all duration-200", active ? "w-full" : "w-0 group-hover:w-full")} />
               </a>
             );
           })}
         </nav>
-        <div className="hidden lg:block"><AccountActions inside={inside} /></div>
-        <button type="button" className="ml-auto grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/5 text-white backdrop-blur hover:bg-white/10 lg:hidden" aria-expanded={open} aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen((value) => !value)}>
+        <div className="ml-auto hidden lg:block"><AccountActions inside={inside} /></div>
+        <Link to={inside ? "/dashboard" : "/auth"} className={`${joinClass} ml-auto h-9 px-3.5 lg:hidden`}>{inside ? "App" : "Login"}</Link>
+        <button type="button" className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10 lg:hidden" aria-expanded={open} aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen((value) => !value)}>
           {open ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
       {open ? (
-        <nav className="border-t border-white/10 bg-[#07080d]/95 px-4 py-4 backdrop-blur-xl lg:hidden" aria-label="Mobile">
+        <nav className="mx-auto mt-2 max-w-[1180px] rounded-2xl border border-white/10 bg-[#0b0d12]/95 p-3 shadow-[0_16px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:hidden" aria-label="Mobile">
           {navLinks.map(([to, label]) => {
             const active = isCurrent(hash, to);
             return (
-              <a key={to} href={to} onClick={() => setOpen(false)} className={cn("flex items-center justify-between rounded-xl px-3 py-3 text-sm", active ? "bg-white/5 font-semibold text-white" : "text-white/75 hover:bg-white/5")}>
+              <a key={to} href={to} onClick={() => setOpen(false)} className={cn("flex items-center justify-between rounded-xl px-3 py-3.5 text-base", active ? "theme-fixed bg-white font-semibold text-[#111]" : "text-white/80 hover:bg-white/5")}>
                 {label}
                 {active ? <span className="h-1.5 w-1.5 rounded-full bg-[#e10600]" /> : null}
               </a>
             );
           })}
-          <div className="mt-3 border-t border-white/10 pt-4"><AccountActions inside={inside} stacked onNavigate={() => setOpen(false)} /></div>
+          <div className="mt-2 border-t border-white/10 pt-3"><AccountActions inside={inside} stacked onNavigate={() => setOpen(false)} /></div>
         </nav>
       ) : null}
     </header>
@@ -144,7 +143,7 @@ export function LandingFooter() {
             <p className="mt-4 text-sm leading-6 text-white/55">A global platform where entertainment and opportunity come together.</p>
           </div>
           <div className="flex flex-col gap-3 min-[420px]:flex-row">
-            <Link to={inside ? "/dashboard" : "/auth?join=1"} className={`${joinClass} h-12 px-6`}>{inside ? "Open app" : "Join ADD FLIX"}</Link>
+            <Link to={inside ? "/dashboard" : "/register"} className={`${joinClass} h-12 px-6`}>{inside ? "Open app" : "Join ADD FLIX"}</Link>
             <Link to={inside ? "/dashboard" : "/auth"} className={`${loginClass} h-12 px-6`}>{inside ? "Dashboard" : "Login"}</Link>
           </div>
         </div>
