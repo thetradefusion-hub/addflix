@@ -328,6 +328,21 @@ html.landing-smooth {
   animation: claim-icon 1.2s ease-in-out infinite;
 }
 
+@keyframes install-banner-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.install-banner {
+  animation: install-banner-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html.landing-smooth {
     scroll-behavior: auto;
@@ -350,7 +365,8 @@ html.landing-smooth {
   }
   .claim-roi,
   .claim-roi::after,
-  .claim-roi-icon {
+  .claim-roi-icon,
+  .install-banner {
     animation: none;
   }
   .landing-lift:hover {
