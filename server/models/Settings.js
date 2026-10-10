@@ -4,6 +4,7 @@ const settingsSchema = new mongoose.Schema(
   {
     key: { type: String, default: "platform", unique: true },
     subscriptionAmount: { type: Number, default: 10 },
+    signupBonus: { type: Number, default: 0 },
     level1: { type: Number, default: 2 },
     level2: { type: Number, default: 1.5 },
     level3: { type: Number, default: 1 },

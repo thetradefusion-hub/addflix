@@ -20,6 +20,7 @@ import { describeClient } from "../utils/clientInfo.js";
 import { ROI_LEVEL_RATES, activeDirects } from "../utils/roiLevelCommission.js";
 import { WEEKDAYS, cleanOffDays, roiDayInfo } from "../utils/plans.js";
 import { APP_TIME_ZONE, istStamp, istStartOfDay } from "../utils/day.js";
+import { buildAdminReport, reportCatalog } from "../utils/adminReports.js";
 
 function stampNow() {
   return istStamp();
@@ -34,6 +35,7 @@ const TX_HASH = /^0x[a-fA-F0-9]{64}$/;
 function publicSettings(settings) {
   return {
     subscriptionAmount: settings.subscriptionAmount,
+    signupBonus: Number(settings.signupBonus) || 0,
     level1: settings.level1,
     level2: settings.level2,
     level3: settings.level3,
@@ -611,7 +613,7 @@ router.get("/settings", requireDuty("settings"), async (_req, res) => {
 router.put("/settings", requireDuty("settings"), async (req, res) => {
   const settings = await getSettings();
   const body = req.body || {};
-  const numbers = ["subscriptionAmount", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
+  const numbers = ["subscriptionAmount", "signupBonus", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
   for (const key of numbers) {
     if (body[key] == null || body[key] === "") continue;
     const value = Number(body[key]);
@@ -782,6 +784,19 @@ async function findRow(field, id) {
   const row = (account?.[field] || []).find((item) => String(item.id) === String(id));
   return row ? { account, row } : null;
 }
+
+router.get("/reports", requireDuty("audit"), (_req, res) => {
+  res.json({ ok: true, reports: reportCatalog });
+});
+
+router.get("/reports/:type", requireDuty("audit"), async (req, res) => {
+  const report = await buildAdminReport(req.params.type, {
+    from: String(req.query.from || ""),
+    to: String(req.query.to || ""),
+  });
+  if (!report) return res.status(404).json({ ok: false, message: "That report is not available." });
+  res.json({ ok: true, report });
+});
 
 const findSubscription = (id) => findRow("subscriptionPayments", id);
 const findWithdrawal = (id) => findRow("withdrawals", id);

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CircleCheck, Clock3, Gauge, ShieldCheck } from "lucide-react";
+import { CircleCheck, Clock3, Gauge, HandCoins, ShieldCheck } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import ProgressBar from "@/components/common/ProgressBar";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -192,8 +192,11 @@ export default function DailyTask() {
             <button
               type="button"
               onClick={() => navigate("/roi")}
-              className="mt-2 flex h-12 w-full items-center justify-center rounded-xl border border-[#e10600] bg-white text-sm font-bold text-[#e10600] transition hover:bg-[#fff5f5]"
+              className={roiClaimed
+                ? "theme-fixed mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#e10600] bg-white text-sm font-bold text-[#e10600] transition hover:bg-[#fff5f5]"
+                : "claim-roi theme-fixed mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(100deg,#ff5a36_0%,#e10600_48%,#ff2d55_100%)] text-base font-black tracking-wide text-white"}
             >
+              <HandCoins size={18} className={roiClaimed ? "" : "claim-roi-icon"} />
               {roiClaimed ? "View today's ROI" : "Claim ROI reward"}
             </button>
           ) : null}

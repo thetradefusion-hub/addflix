@@ -121,6 +121,7 @@ function AuthScreen({ routeMode }) {
   const [login, setLogin] = useState(defaultLogin);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [signupBonus, setSignupBonus] = useState(0);
   const [resetMode, setResetMode] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [otpStep, setOtpStep] = useState(false);
@@ -131,6 +132,19 @@ function AuthScreen({ routeMode }) {
     if (!sponsorCode) return;
     setRegister((prev) => ({ ...prev, sponsorId: sponsorCode }));
   }, [sponsorCode]);
+
+  useEffect(() => {
+    if (mode !== 'register') return undefined;
+    let live = true;
+    apiFetch('/api/platform')
+      .then((data) => {
+        if (live) setSignupBonus(Number(data.signupBonus) || 0);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [mode]);
 
   useEffect(() => {
     if (mode !== 'register') return undefined;
@@ -239,7 +253,7 @@ function AuthScreen({ routeMode }) {
       });
 
       startSession(data.token, data.user).catch(() => {});
-      setMessage('Registration successful. Redirecting...');
+      setMessage(data.message || 'Registration successful. Redirecting...');
       navigate('/dashboard');
     } catch (error) {
       const text = error.message || 'Registration failed.';
@@ -299,7 +313,9 @@ function AuthScreen({ routeMode }) {
       ? 'Enter the email on your account. We will send a reset link.'
       : mode === 'login'
         ? 'Use your email, mobile, or username.'
-        : 'A few details, then your account is ready.';
+        : signupBonus > 0
+          ? `A few details, then your account is ready. New accounts receive a $${signupBonus.toFixed(2)} signup bonus.`
+          : 'A few details, then your account is ready.';
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden overflow-y-auto bg-[#f4f6f8] px-4 py-8 text-[#101828]">

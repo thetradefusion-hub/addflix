@@ -67,6 +67,7 @@ export default function App() {
       <Route path="/admin/plans" element={<Page><Admin view="plans" /></Page>} />
       <Route path="/admin/subscriptions" element={<Page><Admin view="subscriptions" /></Page>} />
       <Route path="/admin/level-income" element={<Page><Admin view="level" /></Page>} />
+      <Route path="/admin/reports" element={<Page><Admin view="reports" /></Page>} />
       <Route path="/admin/audit" element={<Page><Admin view="audit" /></Page>} />
       <Route path="/admin/tickets" element={<Page><Admin view="tickets" /></Page>} />
       <Route path="/admin/fraud" element={<Page><Admin view="fraud" /></Page>} />

@@ -11,6 +11,8 @@ import { validateLoginInput, validatePasswordChangeInput, validateRegistrationIn
 import { normalizeEmail, normalizeMobile } from '../../shared/contact.js';
 import AuditLog from '../models/AuditLog.js';
 import { noteSharedDevice } from '../utils/fraud.js';
+import { readSettings } from '../utils/settings.js';
+import { istStamp } from '../utils/day.js';
 
 const router = express.Router();
 const JWT_SECRET = env.jwtSecret;
@@ -106,12 +108,50 @@ router.post('/register', async (req, res) => {
       transactionPin: '',
     });
 
-    await Account.create({ user: user._id, dailyTask: defaultDailyTask(), subscription: { active: false, paymentState: 'idle', txHash: '', amount: 10, network: 'BEP-20' } });
+    const settings = await readSettings();
+    const signupBonus = Number(Number(settings.signupBonus || 0).toFixed(2));
+    const account = {
+      user: user._id,
+      dailyTask: defaultDailyTask(),
+      subscription: { active: false, paymentState: 'idle', txHash: '', amount: Number(settings.subscriptionAmount) || 10, network: 'BEP-20' },
+    };
+    if (signupBonus > 0) {
+      const when = istStamp();
+      account.balances = { total: signupBonus, roi: 0, referral: 0, bonus: signupBonus, locked: 0 };
+      account.income = [{
+        id: `SIGNUP-${referralId}`,
+        date: when,
+        type: 'Bonus Income',
+        description: 'Signup bonus',
+        amount: signupBonus,
+        status: 'Credited',
+        tx: `SIGNUP-${referralId}`,
+      }];
+      account.transactions = [{
+        id: `SIGNUP-${referralId}-tx`,
+        date: when,
+        type: 'Signup Bonus',
+        amount: signupBonus,
+        status: 'Success',
+        direction: 'credit',
+        description: 'Signup bonus',
+      }];
+      account.notifications = [{
+        id: `SIGNUP-${referralId}-note`,
+        title: 'Signup bonus',
+        body: `$${signupBonus.toFixed(2)} was added to your wallet.`,
+        kind: 'wallet',
+        unread: true,
+        time: new Date().toISOString(),
+      }];
+    }
+    await Account.create(account);
     const session = await openSession(user, req);
 
     res.status(201).json({
       ok: true,
-      message: 'Account created successfully.',
+      message: signupBonus > 0 ? `Account created. $${signupBonus.toFixed(2)} signup bonus was added to your wallet.` : 'Account created successfully.',
+      signupBonus,
       token: signToken(user, session._id),
       user: buildPublicUser(user),
     });

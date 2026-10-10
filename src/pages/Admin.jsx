@@ -13,6 +13,7 @@ import AppIcon from "@/components/common/AppIcon";
 import AdminShell from "@/components/layout/AdminShell";
 import AdminLogin from "@/pages/AdminLogin";
 import AdminDesk from "@/pages/AdminDesk";
+import AdminReports from "@/pages/AdminReports";
 
 const card = "rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-[0_8px_24px_rgba(16,24,40,0.04)]";
 
@@ -29,6 +30,7 @@ const pageMeta = {
   messages: ["Messages", "Broadcast to members. In-app is delivered. Email, SMS and push stay queued."],
   audit: ["Audit", "Wallet, ROI, commission, withdrawal and admin login history."],
   level: ["Level Income", "Level 1–15 commission on claimed daily ROI. Every credit and every skipped upline is listed."],
+  reports: ["Reports", "Member, wallet, payout and income statements. Export the current view to Excel or PDF."],
   settings: ["Settings", "Subscription price, deposit address, referral rates, withdrawal rules and today's task."],
   plans: ["Plans", "Daily rate, minimum, cap and whether members can buy the plan."],
   subscriptions: ["Subscriptions", "Approve a $10 payment to activate the ID, or mark it failed."],
@@ -204,6 +206,7 @@ function AdminConsole({ view, onLogout }) {
               onVerify={(rowId, result) => run(`/api/admin/deposits/${rowId}/verify`, { method: "POST", body: JSON.stringify({ result }) })}
             />
           ) : null}
+          {view === "reports" ? <AdminReports onSessionExpired={onLogout} /> : null}
           {["audit", "tickets", "fraud", "videos", "pages", "messages"].includes(view) ? <AdminDesk view={view} onSessionExpired={onLogout} /> : null}
           {view === "level" && levelData ? <LevelIncome data={levelData} /> : null}
           {view === "plans" ? (
@@ -1352,6 +1355,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
   };
   const fields = [
     ["subscriptionAmount", "Subscription USDT"],
+    ["signupBonus", "Signup bonus USDT"],
     ["level1", "Level 1 commission"],
     ["level2", "Level 2 commission"],
     ["level3", "Level 3 commission"],
@@ -1368,7 +1372,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
   return (
     <form onSubmit={onSave} className={card}>
       <p className="font-bold">Platform settings</p>
-      <p className="text-xs text-[#98a2b3]">Commission, withdrawal limits and the published daily task use these values. The RPC URL is stored for a later chain check.</p>
+      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Commission, withdrawal limits and the published daily task use these values too.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {fields.map(([key, label]) => (
           <label key={key} className="text-xs text-[#667085]">

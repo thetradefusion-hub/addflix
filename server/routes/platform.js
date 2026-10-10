@@ -10,6 +10,7 @@ router.get("/", async (_req, res) => {
     ok: true,
     depositAddress: settings.depositAddress || FALLBACK_ADDRESS,
     subscriptionAmount: Number(settings.subscriptionAmount) || 10,
+    signupBonus: Number(settings.signupBonus) || 0,
     plans,
   });
 });
