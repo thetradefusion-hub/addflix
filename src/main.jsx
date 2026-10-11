@@ -4,12 +4,11 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import InstallPrompt from "./components/pwa/InstallPrompt";
 import { AppProvider } from "./context/AppContext";
+import "./lib/pwaInstall";
 import "./index.css";
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
 }
 
 createRoot(document.getElementById("root")).render(
