@@ -13,6 +13,7 @@ import AuditLog from '../models/AuditLog.js';
 import { noteSharedDevice } from '../utils/fraud.js';
 import { readSettings } from '../utils/settings.js';
 import { istStamp } from '../utils/day.js';
+import { creditSignupReferral, signupSharePercent } from '../utils/referralCommission.js';
 
 const router = express.Router();
 const JWT_SECRET = env.jwtSecret;
@@ -100,7 +101,7 @@ router.post('/register', async (req, res) => {
       passwordHash,
       sponsorId: sponsor.referralId,
       referralId,
-      country: 'India',
+      country: String(payload.country).trim(),
       otpVerified: true,
       termsAccepted: true,
       privacyAccepted: true,
@@ -146,6 +147,13 @@ router.post('/register', async (req, res) => {
       }];
     }
     await Account.create(account);
+    if (signupBonus > 0) {
+      try {
+        await creditSignupReferral({ sponsor, member: user, signupBonus, percent: signupSharePercent(settings) });
+      } catch (error) {
+        console.error('Signup referral credit error:', error);
+      }
+    }
     const session = await openSession(user, req);
 
     res.status(201).json({
@@ -344,24 +352,24 @@ router.post('/reset-transaction-pin', requireAuth, async (req, res) => {
     const currentPin = String(req.body?.currentPin ?? '').trim();
     const password = String(req.body?.password ?? '');
     if (!/^\d{6}$/.test(pin)) {
-      return res.status(400).json({ ok: false, message: 'Withdrawal PIN must be exactly 6 digits.' });
+      return res.status(400).json({ ok: false, message: 'Transaction password must be exactly 6 digits.' });
     }
     if (pin !== confirm) {
-      return res.status(400).json({ ok: false, message: 'New PIN and confirm PIN do not match.' });
+      return res.status(400).json({ ok: false, message: 'New password and confirm password do not match.' });
     }
     const user = req.user;
     if (password) {
       const match = await bcrypt.compare(password, user.passwordHash);
       if (!match) return res.status(400).json({ ok: false, message: 'Login password is incorrect.' });
     } else if (user.transactionPin && currentPin !== user.transactionPin) {
-      return res.status(400).json({ ok: false, message: 'Current withdrawal PIN is incorrect.' });
+      return res.status(400).json({ ok: false, message: 'Current transaction password is incorrect.' });
     }
     user.transactionPin = pin;
     await user.save();
-    return res.json({ ok: true, message: 'Withdrawal PIN updated.', user: buildPublicUser(user) });
+    return res.json({ ok: true, message: 'Transaction password updated.', user: buildPublicUser(user) });
   } catch (error) {
     console.error('Reset transaction pin error:', error);
-    return res.status(500).json({ ok: false, message: 'Unable to update withdrawal PIN.' });
+    return res.status(500).json({ ok: false, message: 'Unable to update transaction password.' });
   }
 });
 
@@ -432,17 +440,9 @@ router.patch('/profile', async (req, res) => {
     if (!user) return res.status(404).json({ ok: false, message: 'User not found.' });
 
     const fullName = String(req.body?.fullName ?? '').trim();
-    const mobile = String(req.body?.mobile ?? '').trim();
-    const country = String(req.body?.country ?? '').trim();
     if (fullName.length < 2) return res.status(400).json({ ok: false, message: 'Enter your full name.' });
-    if (mobile.length < 8) return res.status(400).json({ ok: false, message: 'Enter a valid mobile number.' });
-
-    const clash = await User.findOne({ mobile, _id: { $ne: user._id } });
-    if (clash) return res.status(409).json({ ok: false, message: 'This mobile number is already in use.' });
 
     user.fullName = fullName;
-    user.mobile = mobile;
-    if (country) user.country = country;
     await user.save();
     return res.json({ ok: true, message: 'Profile saved.', user: buildPublicUser(user) });
   } catch (error) {

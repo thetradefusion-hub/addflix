@@ -22,7 +22,7 @@ export default function WalletPage({ initialTab = "Overview" }) {
 
   useEffect(() => setTab(initialTab), [initialTab]);
   const slices = [
-    { name: "ROI Balance", value: balances.roi, color: "#22c55e" },
+    { name: "AdView Balance", value: balances.roi, color: "#22c55e" },
     { name: "Referral Income", value: balances.referral, color: "#60a5fa" },
     { name: "Bonus Balance", value: balances.bonus, color: "#f59e0b" },
     { name: "Locked Balance", value: balances.locked, color: "#a855f7" },
@@ -33,7 +33,7 @@ export default function WalletPage({ initialTab = "Overview" }) {
     <div className="mx-auto max-w-[1180px]">
       <PageHeader
         title={tab === "Transactions" ? "Transactions" : "Balance"}
-        subtitle={tab === "Transactions" ? "Credits and debits across ROI, referral, deposit and withdrawal." : "Your USDT balances, deposit address and withdrawal limits."}
+        subtitle={tab === "Transactions" ? "Credits and debits across AdView, referral, deposit and withdrawal." : "Your USDT balances, deposit address and withdrawal limits."}
         crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Wallet", to: "/wallet" }, { label: tab === "Transactions" ? "Transactions" : "Balance" }]}
       />
 
@@ -62,7 +62,7 @@ export default function WalletPage({ initialTab = "Overview" }) {
         </article>
 
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
-          <BalanceTile icon={<AppIcon name="HandCoins" size={20} />} iconClass="bg-emerald-50 text-emerald-500" label="ROI Balance" amount={`$${money(balances.roi)}`} hint={`${money(balances.roi)} USDT`} />
+          <BalanceTile icon={<AppIcon name="HandCoins" size={20} />} iconClass="bg-emerald-50 text-emerald-500" label="AdView Balance" amount={`$${money(balances.roi)}`} hint={`${money(balances.roi)} USDT`} />
           <BalanceTile icon={<AppIcon name="Users" size={20} />} iconClass="bg-sky-50 text-sky-500" label="Referral Balance" amount={`$${money(balances.referral)}`} hint={`${money(balances.referral)} USDT`} />
           <BalanceTile icon={<AppIcon name="Gift" size={20} />} iconClass="bg-orange-50 text-orange-500" label="Bonus Balance" amount={`$${money(balances.bonus)}`} hint={`${money(balances.bonus)} USDT`} />
           <BalanceTile icon={<AppIcon name="LockKeyhole" size={20} />} iconClass="bg-violet-50 text-violet-500" label="Locked Balance" amount={`$${money(balances.locked)}`} hint={`${money(balances.locked)} USDT`} />
@@ -191,10 +191,10 @@ function TransactionList({ rows, toast }) {
               <tr key={row.id} className="border-t border-[#f2f4f7]">
                 <td className="py-3">{list.start + index + 1}</td>
                 <td className="whitespace-nowrap">{row.date}</td>
-                <td>{row.type}</td>
+                <td>{String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</td>
                 <td className={row.amount > 0 ? "font-semibold text-emerald-600" : "font-semibold text-[#e10600]"}>{row.amount > 0 ? "+" : ""}{money(row.amount)}</td>
                 <td><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
-                <td><button className="rounded-lg border border-[#fda4a4] px-2.5 py-1 text-xs font-semibold text-[#e10600]" onClick={() => toast(`${row.type} · ${row.date}`)}>View</button></td>
+                <td><button className="rounded-lg border border-[#fda4a4] px-2.5 py-1 text-xs font-semibold text-[#e10600]" onClick={() => toast(`${String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")} · ${row.date}`)}>View</button></td>
               </tr>
             ))}
           </tbody>
@@ -207,7 +207,7 @@ function TransactionList({ rows, toast }) {
             <article key={row.id} className="flex items-center gap-3 rounded-xl border border-[#f2f4f7] bg-white p-3">
               <IconBubble className={meta.color} size="sm"><AppIcon name={meta.name} size={16} /></IconBubble>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{row.type}</p>
+                <p className="truncate text-sm font-semibold">{String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</p>
                 <p className="text-[11px] text-[#98a2b3]">{row.date}</p>
               </div>
               <div className="text-right">

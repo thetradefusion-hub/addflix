@@ -19,7 +19,7 @@ export default function InactiveBanner({ className = "mb-4" }) {
   if (subscriptionActive) return null;
   return (
     <div className={`flex flex-col gap-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${className}`}>
-      <p className="text-sm text-[#9f1239]">Your ID is not active. Pay $10 USDT to unlock daily task, ROI claim, investment and withdrawals.</p>
+      <p className="text-sm text-[#9f1239]">Your ID is not active. Pay $10 USDT to unlock daily task, AdView claim, investment and withdrawals.</p>
       <Button size="sm" onClick={() => navigate("/subscription")}>Activate Subscription</Button>
     </div>
   );

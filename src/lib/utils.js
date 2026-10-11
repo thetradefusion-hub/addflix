@@ -21,10 +21,10 @@ const weekNames = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [
 
 export function roiDaysLabel(offDays) {
   const off = Array.isArray(offDays) ? offDays : [];
-  if (!off.length) return "ROI every day";
+  if (!off.length) return "AdView every day";
   const on = weekNames.filter(([day]) => !off.includes(day)).map(([, name]) => name);
   const closed = weekNames.filter(([day]) => off.includes(day)).map(([, name]) => name);
-  return `ROI ${on.join(", ")} · off ${closed.join(", ")}`;
+  return `AdView ${on.join(", ")} · off ${closed.join(", ")}`;
 }
 
 export function activationLabel(value) {

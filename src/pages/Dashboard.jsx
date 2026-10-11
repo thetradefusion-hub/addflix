@@ -5,6 +5,7 @@ import { Copy, Eye, EyeOff } from "lucide-react";
 import AppIcon from "@/components/common/AppIcon";
 import { useApp } from "@/context/AppContext";
 import { activationLabel, copyText, money } from "@/lib/utils";
+import { WhatsAppIcon, whatsappShareUrl } from "@/lib/whatsappShare.jsx";
 import { incomeByDay, lifetimeFigures, liveTransactions } from "@/lib/ledger";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
 import { useOffDay } from "@/components/common/OffDayBanner";
@@ -47,11 +48,15 @@ export default function Dashboard() {
     await copyText(referralLink);
     toast("Referral link copied.");
   };
+  const shareWhatsApp = () => {
+    if (!referralLink) return;
+    window.open(whatsappShareUrl(referralLink), "_blank", "noopener,noreferrer");
+  };
   const stats = [
-    { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", label: "Today ROI", value: `$${money(todayRoi)}`, badge: roiStatus, to: "/roi" },
-    { icon: "Gift", iconBg: "bg-emerald-50 text-emerald-600", label: "ROI Earned", value: `$${money(earned.roi)}`, to: "/income/roi" },
-    { icon: "Users", iconBg: "bg-rose-50 text-rose-500", label: "Referral", value: `$${money(earned.referral)}`, to: "/income/referral" },
-    { icon: "Landmark", iconBg: "bg-sky-50 text-sky-500", label: "Active Plan", value: `$${money(activeAmount)}`, to: "/investment" },
+    { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", accent: "#34d399", label: "Today AdView", value: `$${money(todayRoi)}`, badge: roiStatus, to: "/roi" },
+    { icon: "Gift", iconBg: "bg-emerald-50 text-emerald-600", accent: "#4ade80", label: "AdView Earned", value: `$${money(earned.roi)}`, to: "/income/roi" },
+    { icon: "Users", iconBg: "bg-rose-50 text-rose-500", accent: "#fb7185", label: "Referral", value: `$${money(earned.referral)}`, to: "/income/referral" },
+    { icon: "Landmark", iconBg: "bg-sky-50 text-sky-500", accent: "#38bdf8", label: "Active Plan", value: `$${money(activeAmount)}`, to: "/investment" },
   ];
 
   return (
@@ -99,11 +104,16 @@ export default function Dashboard() {
           </div>
         </article>
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-3 shadow-[0_8px_24px_rgba(16,24,40,0.04)]">
-          <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-bold text-[#101828]">Your referral link</p>
-            <button type="button" onClick={copyReferral} disabled={!referralLink} className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg bg-[#e10600] px-3 text-xs font-bold text-white disabled:opacity-60">
-              <Copy size={13} /> Copy
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button type="button" onClick={shareWhatsApp} disabled={!referralLink} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#25D366] px-2.5 text-xs font-bold text-white disabled:opacity-60">
+                <WhatsAppIcon size={14} /> WhatsApp
+              </button>
+              <button type="button" onClick={copyReferral} disabled={!referralLink} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#e10600] px-3 text-xs font-bold text-white disabled:opacity-60">
+                <Copy size={13} /> Copy
+              </button>
+            </div>
           </div>
           <button type="button" onClick={copyReferral} disabled={!referralLink} className="block w-full truncate rounded-xl bg-[#f8fafc] px-3 py-2 text-left text-xs text-[#475467] disabled:opacity-60">
             {referralLink || "Your link will appear after sign in."}
@@ -114,7 +124,7 @@ export default function Dashboard() {
         </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 lg:hidden">
+        <div className="grid grid-cols-2 gap-2.5 lg:hidden">
           {stats.map((item) => (
             <StatCard key={item.label} item={item} onOpen={() => navigate(item.to)} />
           ))}
@@ -136,11 +146,11 @@ export default function Dashboard() {
 
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <p className="font-bold">Today's ROI Progress</p>
+            <p className="font-bold">Today's AdView Progress</p>
             <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${roiClaimed ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500"}`}>{roiStatus}</span>
           </div>
           <ol className="grid grid-cols-4 gap-1">
-            {["Complete Today's Task", "Task Verification", "Unlock ROI", "Claim ROI"].map((label, index) => {
+            {["Complete Today's Task", "Task Verification", "Unlock AdView", "Claim AdView"].map((label, index) => {
               const n = index + 1;
               const current = n === activeStep;
               const done = n < activeStep;
@@ -160,7 +170,7 @@ export default function Dashboard() {
               <span>
                 <span className="block text-sm font-black">${money(todayRoi)} USDT</span>
                 <span className="block text-[11px] text-[#667085]">
-                  {roiClaimed ? "Today's ROI has been credited." : offToday ? `${roiDay?.weekday} is an ROI off day.${roiDay?.resumesOn ? ` Back on ${roiDay.resumesOn}.` : ""}` : roiUnlocked ? "Ready to claim." : "Complete today's task to unlock your ROI"}
+                  {roiClaimed ? "Today's AdView has been credited." : offToday ? `${roiDay?.weekday} is an AdView off day.${roiDay?.resumesOn ? ` Back on ${roiDay.resumesOn}.` : ""}` : roiUnlocked ? "Ready to claim." : "Complete today's task to unlock your AdView"}
                 </span>
               </span>
             </div>
@@ -172,7 +182,7 @@ export default function Dashboard() {
               }}
               className="h-9 shrink-0 rounded-lg bg-[#e10600] px-3 text-xs font-bold text-white"
             >
-              {roiClaimed ? "View ROI" : offToday ? "View ROI" : roiUnlocked ? "Claim" : "Go to Task"}
+              {roiClaimed ? "View AdView" : offToday ? "View AdView" : roiUnlocked ? "Claim" : "Go to Task"}
             </button>
           </div>
         </article>
@@ -185,7 +195,7 @@ export default function Dashboard() {
             <span className="rounded-lg border border-[#eaecf0] px-2 py-1 text-[11px] font-semibold text-[#475467]">Last 7 Days</span>
           </div>
           <div className="mb-2 flex gap-3 text-[11px] text-[#667085]">
-            <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#3b82f6]" /> ROI Income</span>
+            <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#3b82f6]" /> AdView income</span>
             <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#ef4444]" /> Referral Income</span>
           </div>
           <div className="h-44">
@@ -195,7 +205,7 @@ export default function Dashboard() {
                 <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#98a2b3" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: "#98a2b3" }} axisLine={false} tickLine={false} />
                 <Tooltip />
-                <Line type="monotone" dataKey="roi" name="ROI Income" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3 }} />
+                <Line type="monotone" dataKey="roi" name="AdView income" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="referral" name="Referral Income" stroke="#ef4444" strokeWidth={2.5} dot={{ r: 3 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -218,7 +228,7 @@ export default function Dashboard() {
                   <tr key={row.id} className="border-t border-[#f8fafc]">
                     <td className="py-2 pr-2 text-[#98a2b3]">{row.id}</td>
                     <td className="whitespace-nowrap pr-2">{row.date}</td>
-                    <td className="pr-2">{row.type}</td>
+                    <td className="pr-2">{String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</td>
                     <td className={`pr-2 font-bold ${row.amount < 0 ? "text-rose-500" : "text-emerald-600"}`}>{row.amount < 0 ? "-" : "+"}${money(Math.abs(row.amount))}</td>
                     <td><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${row.status === "Pending" ? "bg-amber-50 text-amber-600" : "bg-emerald-50 text-emerald-600"}`}>{row.status}</span></td>
                   </tr>
@@ -231,7 +241,7 @@ export default function Dashboard() {
               <li key={row.id} className="flex items-center gap-2">
                 <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${row.tone}`}><AppIcon name={row.icon} size={15} /></span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">{row.type}</span>
+                  <span className="block truncate text-sm font-semibold">{String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</span>
                   <span className="block truncate text-[11px] text-[#98a2b3]">{row.date}</span>
                 </span>
                 <span className="text-right">
@@ -261,10 +271,10 @@ export default function Dashboard() {
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-sky-50 text-sky-500"><AppIcon name="Bell" size={15} /></span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-start justify-between gap-2">
-                    <span className="text-sm font-semibold">{note.title}</span>
+                    <span className="text-sm font-semibold">{String(note.title).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</span>
                     <span className="shrink-0 text-[11px] text-[#98a2b3]">{note.time}</span>
                   </span>
-                  <span className="block text-xs text-[#667085]">{note.body}</span>
+                  <span className="block text-xs text-[#667085]">{String(note.body).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</span>
                 </span>
               </li>
             ))}
@@ -274,9 +284,9 @@ export default function Dashboard() {
         <article className="relative overflow-hidden rounded-2xl bg-[linear-gradient(105deg,#7f1020_0%,#e10600_46%,#4c0519_100%)] p-5 text-white shadow-[0_16px_32px_rgba(225,6,0,0.22)]">
           <img src="/images/trophy-earn.png" alt="" className="pointer-events-none absolute -bottom-6 -right-4 hidden h-48 w-48 object-cover [mask-image:radial-gradient(circle_at_50%_45%,black_38%,transparent_72%)] sm:block" />
           <div className="relative max-w-sm">
-            <p className="text-xl font-black leading-tight">Complete Daily Tasks & Earn ROI</p>
+            <p className="text-xl font-black leading-tight">Complete Daily Tasks & Earn AdView</p>
             <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold">
-              {[["Play", "Daily Task"], ["ListChecks", "Complete Tasks"], ["LockKeyhole", "Unlock ROI"], ["Gift", "Refer & Earn"], ["Wallet", "Withdraw Earnings"]].map(([icon, label]) => (
+              {[["Play", "Daily Task"], ["ListChecks", "Complete Tasks"], ["LockKeyhole", "Unlock AdView"], ["Gift", "Refer & Earn"], ["Wallet", "Withdraw Earnings"]].map(([icon, label]) => (
                 <span key={label} className="inline-flex items-center gap-1 rounded-full bg-black/25 px-2 py-1">
                   <AppIcon name={icon} size={12} /> {label}
                 </span>
@@ -290,27 +300,44 @@ export default function Dashboard() {
   );
 }
 
+function StatBadge({ badge }) {
+  if (!badge) return null;
+  const tone = badge === "Claimed" || badge === "Available"
+    ? "bg-emerald-50 text-emerald-600"
+    : badge === "Off day"
+      ? "bg-amber-50 text-amber-700"
+      : "bg-rose-50 text-[#e10600]";
+  return <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold leading-none ${tone}`}>{badge}</span>;
+}
+
 function StatCard({ item, compact, onOpen }) {
-  if (compact) {
-    return (
-      <button onClick={onOpen} className="flex h-full min-w-0 items-center gap-2.5 rounded-xl border border-[#eaecf0] bg-white px-3 text-left">
-        <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${item.iconBg}`}><AppIcon name={item.icon} size={13} /></span>
-        <span className="min-w-0 flex-1 truncate text-[11px] text-[#667085]">{item.label}</span>
-        <span className="shrink-0 text-xs font-black leading-none tracking-tight">{item.value}</span>
-        {item.badge ? <span className="shrink-0 rounded-full bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold leading-none text-rose-500">{item.badge}</span> : null}
-      </button>
-    );
-  }
   return (
-    <button onClick={onOpen} className="flex min-w-0 items-center gap-2 rounded-xl border border-[#eaecf0] bg-white px-2.5 py-2 text-left shadow-[0_8px_24px_rgba(16,24,40,0.04)]">
-      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${item.iconBg}`}><AppIcon name={item.icon} size={14} /></span>
-      <span className="min-w-0">
-        <span className="block truncate text-[10px] leading-none text-[#667085]">{item.label}</span>
-        <span className="mt-1 flex items-center gap-1">
-          <span className="text-sm font-black leading-none tracking-tight">{item.value}</span>
-          {item.badge ? <span className="rounded-full bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold leading-none text-rose-500">{item.badge}</span> : null}
-        </span>
+    <button
+      type="button"
+      onClick={onOpen}
+      style={{ "--stat-accent": item.accent }}
+      className={compact ? "dash-stat dash-stat-row" : "dash-stat dash-stat-tile"}
+    >
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${item.iconBg}`}>
+        <AppIcon name={item.icon} size={15} />
       </span>
+      {compact ? (
+        <>
+          <span className="dash-stat-label min-w-0 flex-1">{item.label}</span>
+          <span className="flex shrink-0 flex-col items-end gap-1">
+            <span className="dash-stat-value">{item.value}</span>
+            <StatBadge badge={item.badge} />
+          </span>
+        </>
+      ) : (
+        <span className="min-w-0">
+          <span className="dash-stat-label block truncate">{item.label}</span>
+          <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span className="dash-stat-value">{item.value}</span>
+            <StatBadge badge={item.badge} />
+          </span>
+        </span>
+      )}
     </button>
   );
 }
@@ -341,16 +368,16 @@ function QuickActions({ onOpen, compact = false }) {
 
 function TodayTask({ progress, taskCompleted, onOpen }) {
   return (
-    <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <p className="font-bold">Today's Task</p>
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${taskCompleted ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>{taskCompleted ? "Completed" : "Pending"}</span>
+    <article className={`dash-task ${taskCompleted ? "is-done" : ""}`}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <p className="dash-task-title truncate text-base">Today's Task</p>
+          <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold leading-none ${taskCompleted ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-700"}`}>{taskCompleted ? "Completed" : "Pending"}</span>
         </div>
-        <button className="text-xs font-semibold text-[#e10600]" onClick={onOpen}>View All</button>
+        <button type="button" className="shrink-0 text-xs font-semibold text-[#e10600]" onClick={onOpen}>View All</button>
       </div>
       <div className="flex gap-3">
-        <button onClick={onOpen} className="relative grid h-[92px] w-[148px] shrink-0 place-items-center overflow-hidden rounded-xl" aria-label="Start watching">
+        <button type="button" onClick={onOpen} className="dash-task-thumb relative grid h-[92px] w-[120px] shrink-0 place-items-center overflow-hidden rounded-xl sm:w-[148px]" aria-label="Start watching">
           <img src="/images/video-thumb.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
           <span className="theme-fixed relative grid h-9 w-9 place-items-center rounded-full bg-white/95 text-[#111] shadow">
             <AppIcon name="Play" size={16} className="ml-0.5 fill-[#111]" />
@@ -358,18 +385,18 @@ function TodayTask({ progress, taskCompleted, onOpen }) {
           <span className="absolute bottom-1.5 right-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">02:30</span>
         </button>
         <div className="min-w-0">
-          <p className="font-bold">Watch Sponsored Video</p>
-          <p className="mt-1 text-xs leading-5 text-[#667085]">Watch full video and complete the task to unlock your today's ROI.</p>
+          <p className="dash-task-title text-sm sm:text-base">Watch Sponsored Video</p>
+          <p className="dash-task-copy mt-1 text-xs leading-5">Watch the full video to unlock today's AdView.</p>
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between text-[11px] text-[#667085]">
+      <div className="dash-task-copy mt-3 flex items-center justify-between text-[11px] font-semibold">
         <span>{progress}% Complete</span>
         <span>{taskCompleted ? "1 / 1" : "0 / 1"}</span>
       </div>
-      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[#f2f4f7]">
-        <div className="h-full rounded-full bg-[#e10600]" style={{ width: `${progress}%` }} />
+      <div className="dash-task-track mt-1.5">
+        <div className="dash-task-fill" style={{ width: `${progress}%` }} />
       </div>
-      <button onClick={onOpen} className="mt-3 h-11 w-full rounded-xl bg-[#e10600] text-sm font-bold text-white">
+      <button type="button" onClick={onOpen} className="dash-task-go mt-3">
         {taskCompleted ? "Task Completed" : "Start Watching →"}
       </button>
     </article>

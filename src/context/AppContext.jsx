@@ -44,7 +44,6 @@ export function AppProvider({ children }) {
   const [sessionUser, setSessionUser] = useState(() => (storedUser?.role === "admin" ? null : mapSessionUser(storedUser)));
   const [accountReady, setAccountReady] = useState(false);
   const [sessionError, setSessionError] = useState("");
-  const [loginHistory, setLoginHistory] = useState([]);
   const [walletAddress, setWalletAddress] = useState("");
   const [plans, setPlans] = useState([]);
   const [depositAddress, setDepositAddress] = useState("");
@@ -131,7 +130,6 @@ export function AppProvider({ children }) {
 
   const resetAccount = () => {
     setAccountReady(false);
-    setLoginHistory([]);
     setNetwork(EMPTY_NETWORK);
     setWatching(false);
     applyAccount({ balances: EMPTY_BALANCES }, { cache: false });
@@ -150,9 +148,6 @@ export function AppProvider({ children }) {
   };
 
   const loadExtras = (seq) => {
-    apiFetch("/api/auth/login-history")
-      .then((data) => { if (seq === sessionSeq.current) setLoginHistory(data.sessions || []); })
-      .catch(() => {});
     apiFetch("/api/account/network")
       .then((data) => { if (seq === sessionSeq.current) setNetwork(data.network || EMPTY_NETWORK); })
       .catch(() => {});
@@ -258,7 +253,7 @@ export function AppProvider({ children }) {
 
   const dismissToast = (id) => setToasts((list) => list.filter((item) => item.id !== id));
 
-  const offDayMessage = () => `${roiDay?.weekday || "Today"} is an ROI off day for your plan. No task or ROI today${roiDay?.resumesOn ? ` — it resumes on ${roiDay.resumesOn}` : ""}.`;
+  const offDayMessage = () => `${roiDay?.weekday || "Today"} is an AdView off day for your plan. No task or AdView today${roiDay?.resumesOn ? ` — it resumes on ${roiDay.resumesOn}` : ""}.`;
 
   const startTask = () => {
     if (roiDay?.allOff && !roiClaimed) {
@@ -291,7 +286,7 @@ export function AppProvider({ children }) {
       });
       applyAccount(data.account);
       setWatching(false);
-      toast(data.message || "Task completed. Today's ROI is unlocked.");
+      toast(String(data.message || "Task completed. Today's AdView is unlocked.").replaceAll("ROI", "AdView"));
       return true;
     } catch (error) {
       toast(error.message, "warning");
@@ -301,7 +296,7 @@ export function AppProvider({ children }) {
 
   const claimRoi = async () => {
     if (roiClaimed) {
-      toast("Today's ROI is already credited.");
+      toast("Today's AdView is already credited.");
       return { ok: false, reason: "claimed" };
     }
     if (roiDay?.allOff) {
@@ -309,7 +304,7 @@ export function AppProvider({ children }) {
       return { ok: false, reason: "off" };
     }
     if (!roiUnlocked) {
-      toast("Complete today's activity to unlock your ROI.", "warning");
+      toast("Complete today's activity to unlock your AdView.", "warning");
       return { ok: false, reason: "locked" };
     }
     try {
@@ -318,7 +313,7 @@ export function AppProvider({ children }) {
         body: JSON.stringify({ action: "claim" }),
       });
       applyAccount(data.account);
-      toast(data.message || "Today's ROI of 2.50 USDT has been credited.");
+      toast(String(data.message || "Today's AdView of 2.50 USDT has been credited.").replaceAll("ROI", "AdView"));
       return { ok: true };
     } catch (error) {
       toast(error.message, "warning");
@@ -444,7 +439,7 @@ export function AppProvider({ children }) {
     const mapped = mapSessionUser(data.user);
     setSessionUser(mapped);
     localStorage.setItem("addflix_user", JSON.stringify(data.user));
-    toast(data.message || "Withdrawal PIN updated.");
+    toast(data.message || "Transaction password updated.");
     return mapped;
   };
 
@@ -461,7 +456,7 @@ export function AppProvider({ children }) {
   const saveProfile = async (form) => {
     const data = await apiFetch("/api/auth/profile", {
       method: "PATCH",
-      body: JSON.stringify({ fullName: form.name, mobile: form.phone, country: form.country }),
+      body: JSON.stringify({ fullName: form.name }),
     });
     const mapped = mapSessionUser(data.user);
     setSessionUser(mapped);
@@ -529,7 +524,6 @@ export function AppProvider({ children }) {
       accountReady,
       sessionError,
       logout,
-      loginHistory,
       sessionUser,
       walletAddress,
       markNotesRead,
@@ -564,7 +558,6 @@ export function AppProvider({ children }) {
       sessionUser,
       accountReady,
       sessionError,
-      loginHistory,
       walletAddress,
       plans,
       depositAddress,

@@ -343,6 +343,196 @@ html.landing-smooth {
   animation: install-banner-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.signup-bonus {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(100deg, #ff5a36, #e10600 48%, #ff2d55);
+  box-shadow: 0 10px 24px rgba(225, 6, 0, 0.35);
+  animation: claim-glow 1.7s ease-in-out infinite;
+}
+
+.signup-bonus::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
+  animation: claim-shimmer 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.dash-stat {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e4e7ec;
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--stat-accent, #e10600) 14%, transparent), transparent 48%),
+    #fff;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.07);
+  text-align: left;
+}
+
+.dash-stat::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: 99px;
+  background: var(--stat-accent, #e10600);
+}
+
+.dash-stat-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  border-radius: 16px;
+  padding: 12px 12px 13px 14px;
+}
+
+.dash-stat-row {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: 10px;
+  border-radius: 14px;
+  padding: 8px 12px 8px 14px;
+}
+
+.dash-stat-label {
+  color: #667085;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.dash-stat-value {
+  color: #101828;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.dash-stat-row .dash-stat-value {
+  font-size: 1.05rem;
+}
+
+html.dark .dash-stat {
+  border-color: #3d4b63;
+  background:
+    linear-gradient(100deg, color-mix(in srgb, var(--stat-accent, #e10600) 22%, transparent), transparent 55%),
+    linear-gradient(180deg, #222b3b, #171d28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 14px 28px rgba(0, 0, 0, 0.32);
+}
+
+html.dark .dash-stat-label {
+  color: #d5dbe3;
+}
+
+html.dark .dash-stat-value {
+  color: #fff;
+}
+
+.dash-task {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e4e7ec;
+  border-radius: 16px;
+  background:
+    linear-gradient(115deg, color-mix(in srgb, #e10600 14%, transparent), transparent 46%),
+    #fff;
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.07);
+  padding: 16px;
+}
+
+.dash-task::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 0;
+  width: 3px;
+  border-radius: 99px;
+  background: #e10600;
+}
+
+.dash-task.is-done::before {
+  background: #34d399;
+}
+
+.dash-task-title {
+  color: #101828;
+  font-weight: 800;
+}
+
+.dash-task-copy {
+  color: #667085;
+}
+
+.dash-task-thumb {
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.dash-task-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #eceff3;
+}
+
+.dash-task-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #ff5a36, #e10600);
+}
+
+.dash-task-go {
+  display: flex;
+  height: 44px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(100deg, #ff5a36, #e10600 55%, #ff2d55);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(225, 6, 0, 0.34);
+}
+
+html.dark .dash-task {
+  border-color: #3d4b63;
+  background:
+    linear-gradient(115deg, color-mix(in srgb, #e10600 26%, transparent), transparent 52%),
+    linear-gradient(180deg, #222b3b, #171d28);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 14px 28px rgba(0, 0, 0, 0.32);
+}
+
+html.dark .dash-task.is-done {
+  background:
+    linear-gradient(115deg, color-mix(in srgb, #34d399 22%, transparent), transparent 52%),
+    linear-gradient(180deg, #222b3b, #171d28);
+}
+
+html.dark .dash-task-title {
+  color: #fff;
+}
+
+html.dark .dash-task-copy {
+  color: #d5dbe3;
+}
+
+html.dark .dash-task-track {
+  background: #2c3548;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html.landing-smooth {
     scroll-behavior: auto;
@@ -366,7 +556,9 @@ html.landing-smooth {
   .claim-roi,
   .claim-roi::after,
   .claim-roi-icon,
-  .install-banner {
+  .install-banner,
+  .signup-bonus,
+  .signup-bonus::after {
     animation: none;
   }
   .landing-lift:hover {

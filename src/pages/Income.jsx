@@ -18,13 +18,17 @@ const typeIcon = {
   "Bonus Income": "Gift",
   "Other Income": "Coins",
 };
+function incomeText(value) {
+  return String(value ?? "").replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView income");
+}
+
 const pageCopy = {
   "All Income": ["Income History", "Every earning credited to this account."],
-  "ROI Income": ["ROI Income", "Daily ROI credited after you claim today's task."],
+  "ROI Income": ["AdView income", "Daily AdView income credited after you claim today's task."],
   "Referral Income": ["Referral Income", "Commission credited when someone in your team activates. Your own ID must be active."],
-  "Level Income": ["Level Income", "Level 1–15 commission on the daily ROI your team claims. Your ID must be active and you need at least one direct referral."],
+  "Level Income": ["Level Income", "Level 1–15 commission on the daily AdView income your team claims. Your ID must be active and you need at least one direct referral."],
   "Bonus Income": ["Bonus", "Video rewards and other bonus credits on this account."],
-  "Other Income": ["Other Income", "Any other credit that is not ROI, referral, or bonus."],
+  "Other Income": ["Other Income", "Any other credit that is not AdView income, referral, or bonus."],
 };
 
 function exportRows(rows, toast) {
@@ -33,7 +37,7 @@ function exportRows(rows, toast) {
     return;
   }
   const header = ["Date", "Type", "Description", "Amount", "Status", "TX"];
-  const lines = [header, ...rows.map((row) => [formatLedgerDate(row.date), row.type, row.description, row.amount, row.status, row.tx])];
+  const lines = [header, ...rows.map((row) => [formatLedgerDate(row.date), incomeText(row.type), incomeText(row.description), row.amount, row.status, row.tx])];
   const csv = lines.map((cols) => cols.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
   const link = document.createElement("a");
@@ -79,7 +83,7 @@ export default function Income({ preset = "All Income" }) {
   const earned = lifetimeFigures(balances, referralCredits, income);
   const share = (value) => (earned.total > 0 ? `${((value / earned.total) * 100).toFixed(1)}%` : "0%");
 
-  const openRow = (row) => toast(`${formatLedgerDate(row.date)} · ${row.description} · ${row.tx}`);
+  const openRow = (row) => toast(`${formatLedgerDate(row.date)} · ${incomeText(row.description)} · ${row.tx}`);
 
   return (
     <div className="mx-auto max-w-[1180px]">
@@ -90,8 +94,8 @@ export default function Income({ preset = "All Income" }) {
 
       <section className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-3">
         {[
-          ["Total Income", earned.total, "ROI, referral and bonus", "from-rose-500 to-red-600 text-white", "BadgeDollarSign"],
-          ["ROI Income", earned.roi, share(earned.roi), "", "HandCoins"],
+          ["Total Income", earned.total, "AdView income, referral and bonus", "from-rose-500 to-red-600 text-white", "BadgeDollarSign"],
+          ["AdView income", earned.roi, share(earned.roi), "", "HandCoins"],
           ["Referral Income", earned.referral, share(earned.referral), "", "Users"],
           ["Bonus Income", earned.bonus, share(earned.bonus), "", "Gift"],
         ].map(([label, value, hint, tone, icon], index) => (
@@ -109,7 +113,7 @@ export default function Income({ preset = "All Income" }) {
       <section className="lg:rounded-2xl lg:border lg:border-[#eaecf0] lg:bg-white lg:p-4">
         <div className="-mx-3 mb-3 flex gap-2 overflow-x-auto px-3 no-scrollbar lg:mx-0 lg:px-0">
           {tabs.map((item) => (
-            <button key={item} onClick={() => { setTab(item); setPage(1); }} className={`h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${tab === item ? "bg-[#e10600] text-white" : "bg-slate-100 text-[#475467]"}`}>{item.replace(" Income", "") === "All" ? "All" : item.replace(" Income", "")}</button>
+            <button key={item} onClick={() => { setTab(item); setPage(1); }} className={`h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${tab === item ? "bg-[#e10600] text-white" : "bg-slate-100 text-[#475467]"}`}>{item === "ROI Income" ? "AdView income" : item.replace(" Income", "") === "All" ? "All" : item.replace(" Income", "")}</button>
           ))}
         </div>
         <div className="mb-3 space-y-2 lg:grid lg:grid-cols-4 lg:gap-2 lg:space-y-0">
@@ -141,8 +145,8 @@ export default function Income({ preset = "All Income" }) {
                     <tr key={row.id} className="border-t border-[#f2f4f7]">
                       <td className="py-3">{(page - 1) * pageSize + index + 1}</td>
                       <td>{formatLedgerDate(row.date)}</td>
-                      <td>{row.type}</td>
-                      <td>{row.description}</td>
+                      <td>{incomeText(row.type)}</td>
+                      <td>{incomeText(row.description)}</td>
                       <td className="font-semibold text-emerald-600">+{fineMoney(row.amount)}</td>
                       <td><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
                       <td>{shortHash(row.tx, 8, 4)}</td>
@@ -158,10 +162,10 @@ export default function Income({ preset = "All Income" }) {
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-600"><AppIcon name={typeIcon[row.type] || "Coins"} size={16} /></span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-start justify-between gap-2">
-                      <span className="truncate text-sm font-semibold text-[#101828]">{row.type.replace(" Income", "")}</span>
+                      <span className="truncate text-sm font-semibold text-[#101828]">{row.type === "ROI Income" ? "AdView income" : row.type.replace(" Income", "")}</span>
                       <span className="shrink-0 text-sm font-bold text-emerald-600">+{fineMoney(row.amount)}</span>
                     </span>
-                    <span className="mt-0.5 block truncate text-[11px] text-[#667085]">{row.description}</span>
+                    <span className="mt-0.5 block truncate text-[11px] text-[#667085]">{incomeText(row.description)}</span>
                     <span className="mt-1 flex items-center justify-between gap-2">
                       <span className="text-[10px] text-[#98a2b3]">{formatLedgerDate(row.date)}</span>
                       <StatusBadge tone={row.status}>{row.status}</StatusBadge>

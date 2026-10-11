@@ -5,7 +5,9 @@ import Logo from '@/components/layout/Logo';
 import ThemeToggle from '@/components/common/ThemeToggle';
 import { useApp } from '@/context/AppContext';
 import { deviceId } from '@/lib/device';
+import { isStandalone } from '@/lib/pwaInstall';
 import { REFERRAL_ID, emailError, mobileError, normalizeReferralId } from '../../shared/contact.js';
+import { COUNTRIES } from '../../shared/countries.js';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
@@ -39,6 +41,7 @@ const defaultRegister = {
   password: '',
   confirmPassword: '',
   sponsorId: '',
+  country: '',
   otp: '',
   termsAccepted: false,
   privacyAccepted: false,
@@ -184,6 +187,12 @@ function AuthScreen({ routeMode }) {
     if (key === 'sponsorId') value = String(value).toUpperCase().replace(/\s+/g, '');
     if (key === 'mobile') value = String(value).replace(/[^\d+\s()-]/g, '');
     if (key === 'email') value = String(value).replace(/\s+/g, '');
+    if (key === 'termsAccepted') {
+      const checked = Boolean(value);
+      stateSetter((prev) => ({ ...prev, termsAccepted: checked, privacyAccepted: checked }));
+      setFormErrors((prev) => ({ ...prev, terms: '' }));
+      return;
+    }
     stateSetter((prev) => ({ ...prev, [key]: value }));
     setFormErrors((prev) => ({
       ...prev,
@@ -200,6 +209,7 @@ function AuthScreen({ routeMode }) {
     else if (status === 'missing') errors.sponsorId = 'This referral ID was not found.';
     else if (status !== 'found') errors.sponsorId = 'Referral ID could not be verified. Check it and try again.';
     if (String(values.fullName).trim().length < 2) errors.fullName = 'Enter your full name.';
+    if (!COUNTRIES.includes(values.country)) errors.country = 'Select your country.';
     const badMobile = mobileError(values.mobile);
     if (badMobile) errors.mobile = badMobile;
     const badEmail = emailError(values.email);
@@ -313,24 +323,30 @@ function AuthScreen({ routeMode }) {
       ? 'Enter the email on your account. We will send a reset link.'
       : mode === 'login'
         ? 'Use your email, mobile, or username.'
-        : signupBonus > 0
-          ? `A few details, then your account is ready. New accounts receive a $${signupBonus.toFixed(2)} signup bonus.`
-          : 'A few details, then your account is ready.';
+        : 'A few details, then your account is ready.';
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-hidden overflow-y-auto bg-[#f4f6f8] px-4 py-8 text-[#101828]">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(ellipse_at_top,rgba(225,6,0,0.18),transparent_70%)]" />
       <div className="fixed inset-x-4 top-4 z-20 flex items-center justify-between">
-        <Link to="/" className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#eaecf0] bg-white px-3 text-sm font-semibold text-[#344054] shadow-sm hover:text-[#e10600]">
-          <ArrowLeft size={16} /> Back to home
-        </Link>
+        {isStandalone() ? <span /> : (
+          <Link to="/" className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#eaecf0] bg-white px-3 text-sm font-semibold text-[#344054] shadow-sm hover:text-[#e10600]">
+            <ArrowLeft size={16} /> Back to home
+          </Link>
+        )}
         <ThemeToggle />
       </div>
       <main className="relative mx-auto flex w-full max-w-[440px] flex-1 flex-col items-center justify-center pt-12">
         <Logo light={false} className="h-24" />
         <section className="mt-7 w-full rounded-3xl border border-[#eaecf0] bg-white p-6 shadow-[0_24px_60px_rgba(16,24,40,0.08)] sm:p-7">
         <h1 className="text-2xl font-semibold tracking-tight">{heading}</h1>
-        <p className="mt-1 text-sm text-[#667085]">{subheading}</p>
+        {mode === 'register' && !otpStep && !resetMode && signupBonus > 0 ? (
+          <p className="signup-bonus theme-fixed mt-3 rounded-xl px-3 py-2.5 text-center text-sm font-semibold tracking-tight text-white">
+            Join and get ${signupBonus.toFixed(2)} instantly
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-[#667085]">{subheading}</p>
+        )}
 
         {message ? <div className="mt-5 rounded-lg border border-[#f4d5d4] bg-[#fff1ef] px-3 py-2 text-sm text-[#7a1d17]">{message}</div> : null}
 
@@ -442,6 +458,19 @@ function AuthScreen({ routeMode }) {
             <Field label="Full name" required error={formErrors.fullName}>
               <input value={register.fullName} onChange={setField(setRegister, 'fullName')} onBlur={() => blurRegister('fullName')} className={`${inputClass} ${formErrors.fullName ? 'border-red-500' : ''}`} autoComplete="name" required />
             </Field>
+            <Field label="Country" required error={formErrors.country}>
+              <select
+                value={register.country}
+                onChange={setField(setRegister, 'country')}
+                onBlur={() => blurRegister('country')}
+                className={`${inputClass} ${formErrors.country ? 'border-red-500' : ''}`}
+                autoComplete="country-name"
+                required
+              >
+                <option value="">Select country</option>
+                {COUNTRIES.map((name) => <option key={name} value={name}>{name}</option>)}
+              </select>
+            </Field>
             <Field label="Mobile" required error={formErrors.mobile}>
               <input
                 value={register.mobile}
@@ -473,16 +502,12 @@ function AuthScreen({ routeMode }) {
             <Field label="Confirm password" required error={formErrors.confirmPassword}>
               <PasswordInput value={register.confirmPassword} onChange={setField(setRegister, 'confirmPassword')} onBlur={() => blurRegister('confirmPassword')} autoComplete="new-password" required className={formErrors.confirmPassword ? 'border-red-500' : ''} />
             </Field>
-            <div className="space-y-2.5 pt-1 text-sm text-[#475467]">
+            <div className="pt-1 text-sm text-[#475467]">
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={register.termsAccepted} onChange={setField(setRegister, 'termsAccepted')} className="mt-0.5 h-4 w-4 rounded border-slate-300" required />
-                <span>I accept the <Link to="/legal/terms" className="font-medium text-[#e10600]">Terms</Link> <span className="text-[#e10600]">*</span></span>
+                <span>I accept the <Link to="/legal/terms" className="font-medium text-[#e10600]">Terms</Link> and <Link to="/legal/privacy" className="font-medium text-[#e10600]">Privacy Policy</Link> <span className="text-[#e10600]">*</span></span>
               </label>
-              <label className="flex items-start gap-2">
-                <input type="checkbox" checked={register.privacyAccepted} onChange={setField(setRegister, 'privacyAccepted')} className="mt-0.5 h-4 w-4 rounded border-slate-300" required />
-                <span>I accept the <Link to="/legal/privacy" className="font-medium text-[#e10600]">Privacy Policy</Link> <span className="text-[#e10600]">*</span></span>
-              </label>
-              {formErrors.terms ? <p className="text-[12px] font-medium text-red-600">{formErrors.terms}</p> : null}
+              {formErrors.terms ? <p className="mt-1.5 text-[12px] font-medium text-red-600">{formErrors.terms}</p> : null}
             </div>
             <button type="submit" disabled={isSubmitDisabled} className={submitClass}>
               {loading ? 'Creating account...' : 'Create account'}

@@ -11,6 +11,50 @@ import Pager, { usePaging } from "@/components/common/Pager";
 import { formatLedgerDate } from "@/lib/ledger";
 import { useApp } from "@/context/AppContext";
 import AppIcon from "@/components/common/AppIcon";
+import { WhatsAppIcon, whatsappShareUrl } from "@/lib/whatsappShare.jsx";
+
+const shareMarks = {
+  Telegram: {
+    color: "#26A5E4",
+    path: "M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12a12 12 0 0 0 12-12A12 12 0 0 0 12 0zm4.962 7.224c.1-.002.321.023.465.14a.5.5 0 0 1 .171.325c.016.093.036.306.02.472c-.18 1.898-.962 6.502-1.36 8.627c-.168.9-.499 1.201-.82 1.23c-.696.065-1.225-.46-1.9-.902c-1.056-.693-1.653-1.124-2.678-1.8c-1.185-.78-.417-1.21.258-1.91c.177-.184 3.247-2.977 3.307-3.23c.007-.032.014-.15-.056-.212s-.174-.041-.249-.024q-.159.037-5.061 3.345q-.72.495-1.302.48c-.428-.008-1.252-.241-1.865-.44c-.752-.245-1.349-.374-1.297-.789q.04-.324.893-.663q5.247-2.286 6.998-3.014c3.332-1.386 4.025-1.627 4.476-1.635",
+  },
+  Facebook: {
+    color: "#1877F2",
+    path: "M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978c.401 0 .955.042 1.468.103a9 9 0 0 1 1.141.195v3.325a9 9 0 0 0-.653-.036a27 27 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.7 1.7 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103l-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647",
+  },
+};
+
+function ShareIcon({ name }) {
+  if (name === "More") {
+    return (
+      <span className="theme-fixed grid h-6 w-6 place-items-center rounded-full bg-white text-[#111827]">
+        <Share2 size={13} />
+      </span>
+    );
+  }
+  if (name === "WhatsApp") {
+    return (
+      <span className="grid h-6 w-6 place-items-center rounded-full text-white" style={{ backgroundColor: "#25D366" }}>
+        <WhatsAppIcon size={14} />
+      </span>
+    );
+  }
+  const mark = shareMarks[name];
+  if (name === "Telegram") {
+    return (
+      <svg viewBox="0 0 24 24" className="h-6 w-6" aria-hidden="true">
+        <path fill={mark.color} d={mark.path} />
+      </svg>
+    );
+  }
+  return (
+    <span className="grid h-6 w-6 place-items-center rounded-full text-white" style={{ backgroundColor: mark.color }}>
+      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
+        <path fill="currentColor" d={mark.path} />
+      </svg>
+    </span>
+  );
+}
 
 export default function Referral({ view = "link", level: fixedLevel = 1 }) {
   const { toast, sessionUser, referralCredits, network } = useApp();
@@ -51,10 +95,10 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
     : "Share your link and earn on every $10 USDT activation.";
 
   const share = (name) => {
-    const text = `Join ADD FLIX with my link: ${referralLink}`;
+    const invite = "Join ADD FLIX with my link and get free signup bonus";
     const urls = {
-      WhatsApp: `https://wa.me/?text=${encodeURIComponent(text)}`,
-      Telegram: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent("Join ADD FLIX")}`,
+      WhatsApp: whatsappShareUrl(referralLink),
+      Telegram: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(invite)}`,
       Facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}`,
     };
     if (!referralLink) {
@@ -114,7 +158,10 @@ export default function Referral({ view = "link", level: fixedLevel = 1 }) {
           <Button className="theme-fixed mt-3 bg-white text-[#e10600] hover:bg-white" onClick={() => { copyText(referralLink); toast("Referral link copied."); }}>Copy Link</Button>
           <div className="mt-3 flex flex-wrap gap-2">
             {["WhatsApp", "Telegram", "Facebook", "More"].map((name) => (
-              <button key={name} onClick={() => share(name)} className="rounded-lg bg-white/15 px-3 py-2 text-xs font-semibold">{name}</button>
+              <button key={name} onClick={() => share(name)} className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-2.5 py-1.5 text-xs font-semibold">
+                <ShareIcon name={name} />
+                {name}
+              </button>
             ))}
           </div>
         </article>

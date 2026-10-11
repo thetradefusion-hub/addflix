@@ -78,7 +78,7 @@ router.patch("/wallet-address", async (req, res) => {
     return res.status(400).json({ ok: false, message: "Enter a valid BEP-20 wallet address." });
   }
   if (!/^\d{6}$/.test(pin) || pin !== req.user.transactionPin) {
-    return res.status(400).json({ ok: false, message: "Withdrawal PIN is incorrect." });
+    return res.status(400).json({ ok: false, message: "Transaction password is incorrect." });
   }
   const account = await loadAccount(req.user._id);
   account.walletAddress = address;

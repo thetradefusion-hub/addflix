@@ -208,7 +208,7 @@ export default function Transfer({ mode = "Deposit" }) {
         <section className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
           <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
             <p className="font-bold">Deposit USDT to Your Wallet</p>
-            <p className="text-sm text-[#667085]">Send USDT to the address below, then enter the amount. Admin confirms it before the balance can be used on an ROI plan.</p>
+            <p className="text-sm text-[#667085]">Send USDT to the address below, then enter the amount. Admin confirms it before the balance can be used on an AdView plan.</p>
             <label className="mt-3 block text-xs font-semibold text-[#667085]">Amount (USDT)</label>
             <input
               type="number"

@@ -18,11 +18,11 @@ export default function OffDayBanner({ className = "mb-4" }) {
     <div className={`flex items-start gap-3 rounded-2xl border border-violet-300 bg-white p-3 text-sm shadow-sm ${className}`}>
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-500 text-white"><CalendarOff size={18} /></span>
       <span>
-        <span className="block font-bold text-[#101828]">{off ? `${roiDay.weekday} is an ROI off day` : `${plans} ${roiDay.offPlans.length === 1 ? "has" : "have"} no ROI on ${roiDay.weekday}`}</span>
+        <span className="block font-bold text-[#101828]">{off ? `${roiDay.weekday} is an AdView off day` : `${plans} ${roiDay.offPlans.length === 1 ? "has" : "have"} no AdView on ${roiDay.weekday}`}</span>
         <span className="block text-xs text-[#667085]">
           {off
-            ? `Your plan does not pay ROI today, so there is no task to watch.${roiDay.resumesOn ? ` Task and ROI resume on ${roiDay.resumesOn}.` : ""}`
-            : "Today's ROI comes only from your other active plans."}
+            ? `Your plan does not pay AdView today, so there is no task to watch.${roiDay.resumesOn ? ` Task and AdView resume on ${roiDay.resumesOn}.` : ""}`
+            : "Today's AdView comes only from your other active plans."}
         </span>
       </span>
     </div>

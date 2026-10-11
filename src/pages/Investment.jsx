@@ -52,7 +52,7 @@ export default function Investment() {
   const statIcons = [
     ["Active Plan", featured ? featured.planName : "None", featured ? "Active" : "", "Crown", "bg-violet-50 text-violet-500"],
     ["Total Investment", `$${money(totalInvested)}`, "", "Landmark", "bg-sky-50 text-sky-500"],
-    ["Total ROI Earned", `$${money(totalEarned)}`, "", "HandCoins", "bg-emerald-50 text-emerald-500"],
+    ["Total AdView Earned", `$${money(totalEarned)}`, "", "HandCoins", "bg-emerald-50 text-emerald-500"],
     ["Total Plans", String(investments.length), "", "PieChart", "bg-amber-50 text-amber-500"],
   ];
 
@@ -80,7 +80,7 @@ export default function Investment() {
     <div className="mx-auto max-w-[1180px] space-y-4">
       <PageHeader
         title="My Plan / Investment"
-        subtitle="Choose the best plan and start earning daily ROI with ad watching tasks."
+        subtitle="Choose the best plan and start earning daily AdView with ad watching tasks."
         crumbs={[{ label: "Home", to: "/dashboard" }, { label: "My Plan" }]}
       />
       <InactiveBanner />
@@ -98,19 +98,19 @@ export default function Investment() {
             </div>
             <p className="mt-2 text-sm text-white/80">
               {featured
-                ? `$${money(featured.amount)} USDT · Started ${featured.startDate} · Daily ROI $${money(featured.dailyAmount)}${activeRows.length > 1 ? ` · ${activeRows.length} active plans` : ""}`
-                : "Buy a plan to start daily ROI. The amount is debited from your wallet."}
+                ? `$${money(featured.amount)} USDT · Started ${featured.startDate} · Daily AdView $${money(featured.dailyAmount)}${activeRows.length > 1 ? ` · ${activeRows.length} active plans` : ""}`
+                : "Buy a plan to start daily AdView. The amount is debited from your wallet."}
             </p>
           </div>
           <div className="w-full max-w-sm rounded-2xl bg-black/20 p-4">
             <div className="mb-2 flex items-end justify-between text-sm">
-              <span className="text-white/75">ROI progress</span>
+              <span className="text-white/75">AdView progress</span>
               <span className="font-bold">${money(featured?.earnedRoi || 0)} / ${money(featured?.cap || 0)}</span>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-white/20">
               <div className="theme-fixed h-full rounded-full bg-white" style={{ width: `${progress}%` }} />
             </div>
-            <p className="mt-2 text-xs text-white/70">{featured ? `${Math.round(progress)}% of the $${money(featured.cap)} cap · ${featured.validityDays} day validity` : "ROI stops when the plan cap is reached."}</p>
+            <p className="mt-2 text-xs text-white/70">{featured ? `${Math.round(progress)}% of the $${money(featured.cap)} cap · ${featured.validityDays} day validity` : "AdView stops when the plan cap is reached."}</p>
           </div>
         </div>
       </article>
@@ -130,7 +130,7 @@ export default function Investment() {
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-bold">Available Plans</p>
-            <p className="text-xs text-[#98a2b3]">Daily ROI is credited after the video task.</p>
+            <p className="text-xs text-[#98a2b3]">Daily AdView is credited after the video task.</p>
           </div>
           <div className="flex gap-1">
             {["All", "Active", "Completed"].map((item) => (
@@ -155,9 +155,9 @@ export default function Investment() {
                   </div>
                   <p className="mt-3 font-bold">{plan.name}</p>
                   <p className="text-3xl font-black tracking-tight">{plan.dailyRoi}%</p>
-                  <p className="text-xs text-[#667085]">Daily ROI · from ${plan.min}</p>
+                  <p className="text-xs text-[#667085]">Daily AdView · from ${plan.min}</p>
                   <ul className="mt-3 space-y-1.5 text-xs text-[#475467]">
-                    <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> Maximum ROI {plan.maxRoi}%</li>
+                    <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> Maximum AdView {plan.maxRoi}%</li>
                     <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> Validity {plan.validity} days</li>
                     <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> {roiDaysLabel(plan.offDays)}</li>
                     <li className="flex items-center gap-1.5"><CircleCheck size={14} className="text-emerald-500" /> Watch a video each day</li>
@@ -186,7 +186,7 @@ export default function Investment() {
         <div className="mt-4 hidden overflow-x-auto lg:block">
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-[#667085]">
-              <tr>{["#", "Plan Name", "Amount", "Start Date", "Daily ROI", "Total ROI", "Earned ROI", "Status", "Action"].map((h) => <th key={h} className="pb-2 pr-3 font-medium">{h}</th>)}</tr>
+              <tr>{["#", "Plan Name", "Amount", "Start Date", "Daily AdView", "Total AdView", "Earned AdView", "Status", "Action"].map((h) => <th key={h} className="pb-2 pr-3 font-medium">{h}</th>)}</tr>
             </thead>
             <tbody>
               {investments.length === 0 ? <tr><td colSpan={9} className="py-8 text-center text-sm text-[#98a2b3]">No plans yet. Choose a plan above.</td></tr> : null}
@@ -247,10 +247,10 @@ export default function Investment() {
           <ul className="space-y-2 text-sm text-[#475467]">
             {[
               ["Minimum", `$${selected?.min || 0} USDT`],
-              ["Daily ROI", `${selected?.dailyRoi || 0}% after the task`],
-              ["Maximum ROI", `${selected?.maxRoi || 0}%`],
+              ["Daily AdView", `${selected?.dailyRoi || 0}% after the task`],
+              ["Maximum AdView", `${selected?.maxRoi || 0}%`],
               ["Validity", `${selected?.validity || 0} days`],
-              ["ROI days", roiDaysLabel(selected?.offDays).replace("ROI ", "")],
+              ["AdView days", roiDaysLabel(selected?.offDays).replace(/^(?:ROI|AdView) /, "")],
               ["Task", "Watch the sponsored video"],
             ].map(([label, value]) => (
               <li key={label} className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fafc] px-3 py-2.5">
@@ -264,14 +264,14 @@ export default function Investment() {
         <article className="rounded-2xl bg-[linear-gradient(165deg,#064e3b_0%,#059669_100%)] p-5 text-white shadow-[0_16px_32px_rgba(5,150,105,0.22)]">
           <p className="text-[11px] font-bold tracking-[0.14em] text-white/75">ESTIMATED EARNING</p>
           <p className="mt-2 text-4xl font-black tracking-tight">${money(projected || 0)}</p>
-          <p className="mt-1 text-sm text-white/80">in {selected?.validity || 0} {selected?.offDays?.length ? "ROI days" : "days"} if every task is completed</p>
+          <p className="mt-1 text-sm text-white/80">in {selected?.validity || 0} {selected?.offDays?.length ? "AdView days" : "days"} if every task is completed</p>
           <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-xl bg-white/15 px-3 py-3">
               <p className="text-[11px] text-white/70">Amount</p>
               <p className="font-bold">${money(amount || 0)}</p>
             </div>
             <div className="rounded-xl bg-white/15 px-3 py-3">
-              <p className="text-[11px] text-white/70">Daily ROI</p>
+              <p className="text-[11px] text-white/70">Daily AdView</p>
               <p className="font-bold">${money(daily || 0)}</p>
             </div>
           </div>
@@ -289,14 +289,14 @@ export default function Investment() {
           </>
         }
       >
-        <p>Invest <b>${money(amount || 0)} USDT</b> in <b>{selected?.name}</b>? This amount leaves your wallet now. Daily ROI is ${money(daily || 0)} after each completed task, and it stops at the ${money(cap || 0)} cap.</p>
+        <p>Invest <b>${money(amount || 0)} USDT</b> in <b>{selected?.name}</b>? This amount leaves your wallet now. Daily AdView is ${money(daily || 0)} after each completed task, and it stops at the ${money(cap || 0)} cap.</p>
       </Modal>
       <Modal open={Boolean(detail)} title={detail?.planName || "Plan"} onClose={() => setDetail(null)}>
         {detail ? (
           <ul className="space-y-2 text-sm text-[#475467]">
             {[
               ["Amount", `$${money(detail.amount)}`],
-              ["Daily ROI", `${detail.dailyRate}% · $${money(detail.dailyAmount)}`],
+              ["Daily AdView", `${detail.dailyRate}% · $${money(detail.dailyAmount)}`],
               ["Earned", `$${money(detail.earnedRoi)} / $${money(detail.cap)}`],
               ["Started", detail.startDate],
               ["Status", detail.status],

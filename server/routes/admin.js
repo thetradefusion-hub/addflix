@@ -10,7 +10,7 @@ import { approveWithdrawal, money2, rejectWithdrawal } from "../utils/withdrawal
 import { closeTaskDay, normalizeTask, todayKey } from "../utils/dailyTask.js";
 import Plan from "../models/Plan.js";
 import { listPlans, presentPlan } from "../utils/planCatalog.js";
-import { commissionMessage, creditSubscriptionReferral } from "../utils/referralCommission.js";
+import { commissionMessage, creditSubscriptionReferral, signupSharePercent } from "../utils/referralCommission.js";
 import LoginSession from "../models/LoginSession.js";
 import FraudFlag from "../models/FraudFlag.js";
 import Ticket from "../models/Ticket.js";
@@ -36,6 +36,7 @@ function publicSettings(settings) {
   return {
     subscriptionAmount: settings.subscriptionAmount,
     signupBonus: Number(settings.signupBonus) || 0,
+    signupReferralPercent: signupSharePercent(settings),
     level1: settings.level1,
     level2: settings.level2,
     level3: settings.level3,
@@ -613,12 +614,15 @@ router.get("/settings", requireDuty("settings"), async (_req, res) => {
 router.put("/settings", requireDuty("settings"), async (req, res) => {
   const settings = await getSettings();
   const body = req.body || {};
-  const numbers = ["subscriptionAmount", "signupBonus", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
+  const numbers = ["subscriptionAmount", "signupBonus", "signupReferralPercent", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
   for (const key of numbers) {
     if (body[key] == null || body[key] === "") continue;
     const value = Number(body[key]);
     if (!Number.isFinite(value) || value < 0) {
       return res.status(400).json({ ok: false, message: `${key} must be a positive number.` });
+    }
+    if (key === "signupReferralPercent" && value > 100) {
+      return res.status(400).json({ ok: false, message: "Direct referral percent must be from 0 to 100." });
     }
     settings[key] = value;
   }

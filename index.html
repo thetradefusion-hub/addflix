@@ -16,9 +16,89 @@
     <meta property="og:title" content="ADD FLIX — Watch, Promote & Earn" />
     <meta property="og:description" content="Discover ADD FLIX, a premium entertainment platform combining digital content with a global business opportunity." />
     <meta property="og:type" content="website" />
+    <style>
+      #pwa-splash { display: none; }
+      html.pwa-app,
+      html.pwa-app body { background: #07080d; }
+      html.pwa-app #pwa-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 200;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: #07080d;
+        color: #fff;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        transition: opacity 0.4s ease;
+      }
+      html.pwa-app #pwa-splash.is-done { opacity: 0; pointer-events: none; }
+      #pwa-splash img {
+        width: 96px;
+        height: 96px;
+        border-radius: 22px;
+        box-shadow: 0 18px 48px rgba(225, 6, 0, 0.32);
+        animation: pwa-mark 0.7s ease both;
+      }
+      #pwa-splash strong {
+        margin-top: 6px;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: 0.2em;
+      }
+      #pwa-splash em {
+        font-style: normal;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.55);
+      }
+      #pwa-splash .pwa-splash-bar {
+        position: absolute;
+        left: 22%;
+        right: 22%;
+        bottom: max(12%, 48px);
+        height: 3px;
+        overflow: hidden;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.12);
+      }
+      #pwa-splash .pwa-splash-bar::after {
+        content: "";
+        display: block;
+        height: 100%;
+        transform-origin: left center;
+        background: #e10600;
+        animation: pwa-bar 1.45s ease forwards;
+      }
+      @keyframes pwa-mark {
+        from { opacity: 0; transform: scale(0.88); }
+        to { opacity: 1; transform: none; }
+      }
+      @keyframes pwa-bar {
+        from { transform: scaleX(0); }
+        to { transform: scaleX(1); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #pwa-splash img,
+        #pwa-splash .pwa-splash-bar::after { animation: none; }
+      }
+    </style>
     <script>
       try {
         if (localStorage.getItem("addflix_theme") === "light") document.documentElement.classList.remove("dark");
+        var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+        if (standalone) {
+          document.documentElement.classList.add("pwa-app");
+          var path = location.pathname.replace(/\/+$/, "") || "/";
+          if (path === "/") {
+            var token = localStorage.getItem("addflix_token");
+            history.replaceState(null, "", token ? "/dashboard" : "/auth");
+          }
+        }
       } catch (e) {}
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -29,6 +109,12 @@
     />
   </head>
   <body>
+    <div id="pwa-splash" aria-hidden="true">
+      <img src="/icons/icon-192.png" alt="" />
+      <strong>ADD FLIX</strong>
+      <em>Watch · Promote · Earn</em>
+      <div class="pwa-splash-bar"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

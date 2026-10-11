@@ -1356,6 +1356,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
   const fields = [
     ["subscriptionAmount", "Subscription USDT"],
     ["signupBonus", "Signup bonus USDT"],
+    ["signupReferralPercent", "Direct referral % of signup bonus"],
     ["level1", "Level 1 commission"],
     ["level2", "Level 2 commission"],
     ["level3", "Level 3 commission"],
@@ -1372,7 +1373,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
   return (
     <form onSubmit={onSave} className={card}>
       <p className="font-bold">Platform settings</p>
-      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Commission, withdrawal limits and the published daily task use these values too.</p>
+      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Direct referral % is the share of that bonus paid to the sponsor who shared the link. Set the percent to 0 to turn that share off. It applies only to new registrations.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {fields.map(([key, label]) => (
           <label key={key} className="text-xs text-[#667085]">

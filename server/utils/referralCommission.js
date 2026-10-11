@@ -2,6 +2,7 @@ import Account from "../models/Account.js";
 import User from "../models/User.js";
 import { getSettings, referralRatesFrom } from "./settings.js";
 import AuditLog from "../models/AuditLog.js";
+import { istStamp } from "./day.js";
 
 export const REFERRAL_RATES = [
   { level: 1, amount: 2 },
@@ -99,6 +100,79 @@ export async function creditSubscriptionReferral({ activatedUser, payment, when 
     });
   }
   return credits;
+}
+
+export function signupSharePercent(settings) {
+  const value = Number(settings?.signupReferralPercent);
+  if (!Number.isFinite(value)) return 50;
+  return Math.min(100, Math.max(0, value));
+}
+
+export async function creditSignupReferral({ sponsor, member, signupBonus, percent = 50 }) {
+  const bonus = money2(signupBonus);
+  const rate = Math.min(100, Math.max(0, Number(percent) || 0));
+  const share = money2((bonus * rate) / 100);
+  if (!(share > 0) || !sponsor || sponsor.role === "admin" || !member) return 0;
+
+  const account = await Account.findOne({ user: sponsor._id });
+  if (!account) return 0;
+
+  const id = `SIGNUP-REF-${member.referralId}`;
+  if (!Array.isArray(account.income)) account.income = [];
+  if (account.income.some((row) => row.id === id)) return 0;
+  if (!Array.isArray(account.transactions)) account.transactions = [];
+  if (!Array.isArray(account.referralCredits)) account.referralCredits = [];
+  if (!Array.isArray(account.notifications)) account.notifications = [];
+  if (!account.balances) account.balances = { total: 0, roi: 0, referral: 0, bonus: 0, locked: 0 };
+
+  const when = istStamp();
+  account.balances.referral = money2((account.balances.referral || 0) + share);
+  account.balances.total = money2((account.balances.total || 0) + share);
+  account.income.unshift({
+    id,
+    date: when,
+    type: "Referral Income",
+    description: `Signup bonus · ${member.fullName} · ${member.referralId}`,
+    amount: share,
+    status: "Credited",
+    tx: id,
+  });
+  account.transactions.unshift({
+    id: `${id}-tx`,
+    date: when,
+    type: "Referral Income",
+    amount: share,
+    status: "Success",
+    direction: "credit",
+    description: `Signup bonus · ${member.referralId}`,
+  });
+  account.referralCredits.unshift({
+    id,
+    paymentId: id,
+    date: when,
+    user: member.referralId,
+    name: member.fullName,
+    level: 1,
+    amount: bonus,
+    commission: share,
+    status: "Credited",
+    tx: id,
+  });
+  account.notifications.unshift({
+    id: `${id}-note`,
+    title: "Referral signup bonus",
+    body: `${member.fullName} joined with your link. $${share.toFixed(2)} was added, ${rate}% of the $${bonus.toFixed(2)} signup bonus.`,
+    kind: "wallet",
+    unread: true,
+    time: new Date().toISOString(),
+  });
+  account.markModified("balances");
+  account.markModified("income");
+  account.markModified("transactions");
+  account.markModified("referralCredits");
+  account.markModified("notifications");
+  await account.save();
+  return share;
 }
 
 export function commissionMessage(credits) {

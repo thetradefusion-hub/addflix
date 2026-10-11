@@ -1,4 +1,4 @@
-﻿import { Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import PageHeader from "@/components/common/PageHeader";
 import StatusBadge from "@/components/common/StatusBadge";
 import { useApp } from "@/context/AppContext";
@@ -21,19 +21,19 @@ export default function ROI() {
   const watched = taskCompleted || roiClaimed ? (duration || Number(dailyTask?.watchSeconds) || 0) : Number(dailyTask?.watchSeconds) || 0;
   const taskPage = usePaging(tasks, 8, tasks.length);
   const progressNote = roiClaimed
-    ? "Today's ROI has been credited."
+    ? "Today's AdView has been credited."
     : offToday
       ? `No task on ${roiDay?.weekday || "today"}.`
       : progress >= (dailyTask?.requiredPercent || 95)
-        ? "Required watch is done. Claim today's ROI."
-        : "Keep watching until the video completes to unlock your ROI.";
+        ? "Required watch is done. Claim today's AdView."
+        : "Keep watching until the video completes to unlock your AdView.";
 
   return (
     <div className="mx-auto max-w-[1180px]">
       <PageHeader
-        title="Daily ROI / Claim"
-        subtitle="Claim today's ROI after the task is complete."
-        crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Daily ROI" }]}
+        title="Daily AdView / Claim"
+        subtitle="Claim today's AdView after the task is complete."
+        crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Daily AdView" }]}
       />
       <InactiveBanner />
       <OffDayBanner />
@@ -50,14 +50,14 @@ export default function ROI() {
         </article>
 
         <article className="flex flex-col justify-center rounded-2xl bg-gradient-to-br from-[#3a0d14] to-[#e10600] p-5 text-center text-white">
-          <p className="text-sm font-semibold">Today's ROI Status</p>
+          <p className="text-sm font-semibold">Today's AdView Status</p>
           <p className="mt-2 text-4xl font-black">${money(todayRoi)}</p>
           <p className="mt-3 inline-flex items-center justify-center gap-1 self-center rounded-full bg-black/20 px-3 py-1 text-xs font-bold">
             <Lock size={12} /> {roiClaimed ? "CLAIMED" : offToday ? "OFF DAY" : roiUnlocked ? "UNLOCKED" : "LOCKED"}
           </p>
-          <p className="mt-3 text-xs text-white/80">{roiClaimed ? "Today's ROI has been credited to your wallet." : offToday ? `No ROI on ${roiDay?.weekday}.${roiDay?.resumesOn ? ` It resumes on ${roiDay.resumesOn}.` : ""}` : roiUnlocked ? "Your ROI is ready to claim." : "Complete today's activity to unlock your ROI."}</p>
+          <p className="mt-3 text-xs text-white/80">{roiClaimed ? "Today's AdView has been credited to your wallet." : offToday ? `No AdView on ${roiDay?.weekday}.${roiDay?.resumesOn ? ` It resumes on ${roiDay.resumesOn}.` : ""}` : roiUnlocked ? "Your AdView is ready to claim." : "Complete today's activity to unlock your AdView."}</p>
           <button onClick={() => { if (!guard()) return; claimRoi(); }} disabled={roiClaimed || offToday || !roiUnlocked} className="theme-fixed mt-4 h-11 w-full rounded-xl bg-white font-bold text-[#e10600] disabled:opacity-70">
-            {roiClaimed ? "CLAIMED" : offToday ? "ROI OFF TODAY" : "CLAIM TODAY'S ROI"}
+            {roiClaimed ? "CLAIMED" : offToday ? "ADVIEW OFF TODAY" : "CLAIM TODAY'S ADVIEW"}
           </button>
         </article>
       </section>
@@ -69,7 +69,7 @@ export default function ROI() {
             <div className="hidden overflow-x-auto lg:block">
               <table className="w-full text-left text-sm">
                 <thead className="text-xs text-[#667085]">
-                  <tr>{["Date", "Task Title", "Duration", "Completion", "Status", "ROI", "Claim Status"].map((h) => <th key={h} className="pb-2 font-medium">{h}</th>)}</tr>
+                  <tr>{["Date", "Task Title", "Duration", "Completion", "Status", "AdView", "Claim Status"].map((h) => <th key={h} className="pb-2 font-medium">{h}</th>)}</tr>
                 </thead>
                 <tbody>
                   {taskPage.items.map((row) => (

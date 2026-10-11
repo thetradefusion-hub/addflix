@@ -1,92 +1,62 @@
 import { Link } from "react-router-dom";
 import Pager, { usePaging } from "@/components/common/Pager";
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import PageHeader from "@/components/common/PageHeader";
 import StatusBadge from "@/components/common/StatusBadge";
 import { useApp } from "@/context/AppContext";
-import { activationLabel, money } from "@/lib/utils";
-import { formatLedgerDate, lifetimeFigures, liveIncome } from "@/lib/ledger";
+import { money } from "@/lib/utils";
+import { formatLedgerDate, liveIncome } from "@/lib/ledger";
 import AppIcon from "@/components/common/AppIcon";
 
 const kinds = {
   roi: {
-    title: "ROI Report",
-    subtitle: "Daily ROI credited after you claim the task.",
+    title: "AdView Report",
+    subtitle: "Daily AdView credited after you claim the task.",
     icon: "HandCoins",
-    stats: [],
   },
   investment: {
     title: "Investment Report",
     icon: "Landmark",
     subtitle: "Active and completed plans on this account.",
-    stats: [],
   },
   referral: {
     title: "Referral Report",
     icon: "Users",
     subtitle: "4-level subscription commission.",
-    stats: [],
   },
   income: {
     title: "Income Report",
     icon: "BadgeDollarSign",
-    subtitle: "ROI, referral, bonus and other credits.",
-    stats: [],
+    subtitle: "AdView, referral, bonus and other credits.",
   },
   wallet: {
     title: "Wallet Statement",
     icon: "Wallet",
     subtitle: "Deposits, withdrawals and wallet credits.",
-    stats: [
-      ["Balance", "Live"],
-      ["Network", "BEP-20"],
-      ["Min withdraw", "$10"],
-      ["Fee", "10%"],
-    ],
   },
   subscription: {
     title: "Subscription Report",
     icon: "CreditCard",
     subtitle: "Your $10 USDT ID activation.",
-    stats: [
-      ["Price", "$10 USDT"],
-      ["Network", "BEP-20"],
-      ["Status", "Active"],
-      ["Date", "24 Sep 2026"],
-    ],
   },
   team: {
     title: "Team Report",
     icon: "Users",
     subtitle: "Direct and downline members on your sponsor tree.",
-    stats: [],
   },
   deposit: {
     title: "Deposit Report",
     icon: "ArrowDownToLine",
     subtitle: "USDT received on BEP-20 and other networks.",
-    stats: [
-      ["Records", "Live"],
-      ["Min", "$10"],
-      ["Network", "BEP-20"],
-      ["Confirmations", "3–10 min"],
-    ],
   },
   withdrawal: {
     title: "Withdrawal Report",
     icon: "ArrowUpFromLine",
     subtitle: "Payout requests, 10% fee, pending review.",
-    stats: [
-      ["Min", "$10"],
-      ["Fee", "10%"],
-      ["PIN", "Required"],
-      ["Status", "Queued"],
-    ],
   },
 };
 
 export default function Reports({ kind }) {
-  const { income, transactions, balances, depositRows, withdrawalRows, subscriptionPayments, investments, todayRoi, network, referralCredits, subscriptionActive, activatedAt, subscriptionPrice } = useApp();
+  const { income, transactions, depositRows, withdrawalRows, subscriptionPayments, investments, network, referralCredits } = useApp();
   const meta = kinds[kind];
   const rows = buildRows(kind, liveIncome(income), transactions, depositRows, withdrawalRows, subscriptionPayments, investments, network.members || [], referralCredits || []);
   const statement = usePaging(rows.items, 8, kind);
@@ -108,82 +78,9 @@ export default function Reports({ kind }) {
     );
   }
 
-  const earned = lifetimeFigures(balances, referralCredits, income);
-  const activePlan = investments.find((row) => row.status === "Active");
-  const investedTotal = investments.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const earnedTotal = investments.reduce((sum, row) => sum + Number(row.earnedRoi || 0), 0);
-  const liveStats = {
-    roi: [
-      ["Total ROI", `$${money(earned.roi)}`],
-      ["Today", `$${money(todayRoi)}`],
-      ["Plan cap", activePlan ? `$${money(activePlan.cap)}` : "$0.00"],
-      ["Progress", activePlan && activePlan.cap ? `${Math.round((activePlan.earnedRoi / activePlan.cap) * 100)}%` : "0%"],
-    ],
-    investment: [
-      ["Invested", `$${money(investedTotal)}`],
-      ["Active plan", activePlan ? activePlan.planName.replace(" Plan", "") : "None"],
-      ["Daily ROI", activePlan ? `${activePlan.dailyRate}%` : "—"],
-      ["Earned", `$${money(earnedTotal)}`],
-    ],
-    referral: [
-      ["Referral income", `$${money(earned.referral)}`],
-      ["Direct", String(network.direct || 0)],
-      ["Team", String(network.total || 0)],
-      ["Active", String(network.active || 0)],
-    ],
-    income: [
-      ["Total income", `$${money(earned.total)}`],
-      ["ROI", `$${money(earned.roi)}`],
-      ["Referral", `$${money(earned.referral)}`],
-      ["Bonus + other", `$${money(earned.bonus + earned.other)}`],
-    ],
-    team: [
-      ["Team", String(network.total || 0)],
-      ["Active", String(network.active || 0)],
-      ["Direct", String(network.direct || 0)],
-      ["Listed here", String((network.members || []).length)],
-    ],
-    subscription: [
-      ["Price", `$${subscriptionPrice} USDT`],
-      ["Network", "BEP-20"],
-      ["Status", subscriptionActive ? "Active" : "Inactive"],
-      ["Date", activatedAt ? activationLabel(activatedAt) : "—"],
-    ],
-  };
-  const reportStats = liveStats[kind] || meta.stats;
-  const chart = kind === "referral" || kind === "team"
-    ? (network.levels || []).map((item) => ({ name: `L${item.level}`, value: item.members }))
-    : [
-        { name: "ROI", value: earned.roi },
-        { name: "Referral", value: earned.referral },
-        { name: "Bonus", value: earned.bonus },
-        { name: "Other", value: earned.other },
-      ];
-
   return (
     <div className="mx-auto max-w-[1180px]">
       <PageHeader title={meta.title} subtitle={meta.subtitle} crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Reports", to: "/reports" }, { label: meta.title }]} />
-      <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {reportStats.map(([label, value]) => (
-          <article key={label} className="rounded-2xl border border-[#eaecf0] bg-white p-4">
-            <span className="mb-2 grid h-9 w-9 place-items-center rounded-full bg-red-50 text-[#e10600]"><AppIcon name={meta.icon} size={16} /></span>
-            <p className="text-xs text-[#667085]">{label}</p>
-            <p className="text-xl font-black">{label === "Balance" ? `$${money(balances.total)}` : value}</p>
-          </article>
-        ))}
-      </section>
-      <section className="mb-4 rounded-2xl border border-[#eaecf0] bg-white p-4">
-        <p className="mb-2 font-bold">{kind === "referral" ? "Members by level" : "Income mix"}</p>
-        <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chart}>
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-              <Tooltip />
-              <Bar dataKey="value" fill="#e10600" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
       <section className="rounded-2xl border border-[#eaecf0] bg-white p-4">
         <div className="mb-3 flex items-center justify-between">
           <p className="font-bold">Statement</p>
@@ -268,7 +165,7 @@ function buildRows(kind, income, transactions, depositRows, withdrawalRows, subs
       columns: ["Date", "Type", "Amount", "Status"],
       items: transactions.map((row) => ({
         id: row.id,
-        cells: [row.date, row.type, `${row.amount > 0 ? "+" : ""}${money(row.amount)}`, <StatusBadge key={row.id} tone={row.status}>{row.status}</StatusBadge>],
+        cells: [row.date, String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView"), `${row.amount > 0 ? "+" : ""}${money(row.amount)}`, <StatusBadge key={row.id} tone={row.status}>{row.status}</StatusBadge>],
       })),
     };
   }
@@ -315,7 +212,7 @@ function buildRows(kind, income, transactions, depositRows, withdrawalRows, subs
     columns: ["Date", "Type", "Description", "Amount", "Status"],
     items: source.map((row) => ({
       id: row.id,
-      cells: [formatLedgerDate(row.date), row.type, row.description, `+${money(row.amount)}`, <StatusBadge key={row.id} tone={row.status}>{row.status}</StatusBadge>],
+      cells: [formatLedgerDate(row.date), String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView income"), String(row.description).replaceAll("ROI", "AdView income"), `+${money(row.amount)}`, <StatusBadge key={row.id} tone={row.status}>{row.status}</StatusBadge>],
     })),
   };
 }

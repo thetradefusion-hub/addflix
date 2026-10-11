@@ -13,6 +13,7 @@ test('valid registration payload passes validation', () => {
     confirmPassword: 'Password@123',
     sponsorId: 'ADD1000',
     otp: '123456',
+    country: 'India',
     termsAccepted: true,
     privacyAccepted: true,
   });

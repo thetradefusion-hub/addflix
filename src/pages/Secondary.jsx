@@ -15,17 +15,17 @@ export function NotificationsPage() {
   const list = usePaging(notes, 8, notes.length);
   return (
     <div className="mx-auto max-w-3xl">
-      <PageHeader title="Notifications" subtitle="Updates about ROI, tasks, team and wallet." crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Notifications" }]} />
+      <PageHeader title="Notifications" subtitle="Updates about AdView, tasks, team and wallet." crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Notifications" }]} />
       <div className="mb-3 text-right"><Button variant="outline" onClick={markNotesRead}>Mark all read</Button></div>
       <div className="space-y-2">
         {list.total === 0 ? <p className="rounded-2xl border border-[#eaecf0] bg-white p-4 text-sm text-[#98a2b3]">No notifications yet. Ticket replies, deposits and withdrawals show up here. Email, SMS and push stay in the admin demo queue.</p> : null}
         {list.items.map((note) => (
           <article key={note.id} className="rounded-2xl border border-[#eaecf0] bg-white p-4">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-semibold">{note.title}</p>
+              <p className="font-semibold">{String(note.title).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</p>
               {note.unread ? <StatusBadge tone="danger">New</StatusBadge> : <StatusBadge tone="inactive">Read</StatusBadge>}
             </div>
-            <p className="mt-1 text-sm text-[#667085]">{note.body}</p>
+            <p className="mt-1 text-sm text-[#667085]">{String(note.body).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</p>
             <p className="mt-1 text-xs text-[#98a2b3]">{note.time}</p>
           </article>
         ))}
@@ -162,13 +162,13 @@ export function ReportsPage() {
   );
 }
 
-function Field({ icon, label, value, onChange, type = "text", inputMode, autoComplete = "off", placeholder }) {
+function Field({ icon, label, value, onChange, type = "text", inputMode, autoComplete = "off", placeholder, locked = false }) {
   return (
     <label className="block min-w-0">
       <span className="text-xs font-semibold text-[#667085]">{label}</span>
-      <span className="mt-1.5 flex h-12 items-center gap-2 rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 focus-within:border-[#e10600] focus-within:bg-white">
+      <span className={`mt-1.5 flex h-12 items-center gap-2 rounded-xl border border-[#eaecf0] px-3 ${locked ? "bg-[#f2f4f7]" : "bg-[#f8fafc] focus-within:border-[#e10600] focus-within:bg-white"}`}>
         <AppIcon name={icon} size={16} className="shrink-0 text-[#98a2b3]" />
-        <input value={value} onChange={onChange} type={type} inputMode={inputMode} autoComplete={autoComplete} placeholder={placeholder} className="h-full w-full min-w-0 bg-transparent text-sm text-[#101828] outline-none" />
+        <input value={value} onChange={locked ? undefined : onChange} readOnly={locked} type={type} inputMode={inputMode} autoComplete={autoComplete} placeholder={placeholder} className={`h-full w-full min-w-0 bg-transparent text-sm outline-none ${locked ? "cursor-default text-[#475467]" : "text-[#101828]"}`} />
       </span>
     </label>
   );
@@ -176,8 +176,7 @@ function Field({ icon, label, value, onChange, type = "text", inputMode, autoCom
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { toast, subscriptionActive, balances, sessionUser, walletAddress, saveProfile, resetTransactionPin, savePayoutWallet, loginHistory, investments, network } = useApp();
-  const logins = usePaging(loginHistory, 8, loginHistory.length);
+  const { toast, subscriptionActive, balances, sessionUser, walletAddress, saveProfile, resetTransactionPin, savePayoutWallet, investments, network } = useApp();
   const [form, setForm] = useState({ name: "", email: "", phone: "", country: "India" });
   const [alerts, setAlerts] = useState(true);
   const [photo, setPhoto] = useState("/images/avatar-rahul.png");
@@ -208,7 +207,7 @@ export function ProfilePage() {
     ["Wallet", "Wallet", `$${money(balances.total)}`, "Available USDT"],
     ["Coins", "Investment", `$${money(activeAmount)}`, planHint],
     ["Users", "Team", String(network.total || 0), `${network.active || 0} active`],
-    ["HandCoins", "Total ROI", `$${money(balances.roi || 0)}`, "Lifetime earned"],
+    ["HandCoins", "Total AdView", `$${money(balances.roi || 0)}`, "Lifetime earned"],
   ];
 
   const shortcuts = [
@@ -281,15 +280,15 @@ export function ProfilePage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <p className="font-bold">Personal details</p>
-              <p className="text-xs text-[#98a2b3]">Saved to your account.</p>
+              <p className="text-xs text-[#98a2b3]">Only your name can be changed.</p>
             </div>
             <AppIcon name="UserRound" className="text-[#e10600]" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field icon="UserRound" label="Full name" value={form.name} onChange={set("name")} />
-            <Field icon="Mail" label="Email" value={form.email} onChange={set("email")} />
-            <Field icon="Phone" label="Phone" value={form.phone} onChange={set("phone")} />
-            <Field icon="Globe" label="Country" value={form.country} onChange={set("country")} />
+            <Field icon="Mail" label="Email" value={form.email} locked />
+            <Field icon="Phone" label="Phone" value={form.phone} locked />
+            <Field icon="Globe" label="Country" value={form.country} locked />
           </div>
           <Button className="mt-4" onClick={async () => {
             try {
@@ -305,7 +304,7 @@ export function ProfilePage() {
             <p className="mb-3 font-bold">Preferences</p>
             <button type="button" onClick={() => setAlerts((v) => !v)} className="flex w-full items-center justify-between rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 py-3 text-left">
               <span>
-                <span className="block text-sm font-semibold">ROI & task alerts</span>
+                <span className="block text-sm font-semibold">AdView & task alerts</span>
                 <span className="text-xs text-[#98a2b3]">Reminders for daily video and claim</span>
               </span>
               <span className={`relative h-6 w-11 rounded-full transition ${alerts ? "bg-[#e10600]" : "bg-[#d0d5dd]"}`}>
@@ -320,20 +319,20 @@ export function ProfilePage() {
               <div className="rounded-xl bg-[#f8fafc] px-3 py-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-xs text-[#667085]">Withdrawal PIN</p>
+                    <p className="text-xs text-[#667085]">Transaction Password</p>
                     <p className="font-semibold tracking-[0.3em]">{sessionUser?.pinSet ? "••••••" : "Not set"}</p>
                   </div>
-                  <Button type="button" size="sm" variant="outline" onClick={() => { setPinOpen((open) => !open); setWalletOpen(false); }}>Change PIN</Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => { setPinOpen((open) => !open); setWalletOpen(false); }}>{sessionUser?.pinSet ? "Change password" : "Set password"}</Button>
                 </div>
                 {pinOpen ? (
                   <form className="mt-3 space-y-3" onSubmit={async (event) => {
                     event.preventDefault();
                     if (!/^\d{6}$/.test(pinForm.pin)) {
-                      toast("Withdrawal PIN must be exactly 6 digits.", "warning");
+                      toast("Transaction password must be exactly 6 digits.", "warning");
                       return;
                     }
                     if (pinForm.pin !== pinForm.confirm) {
-                      toast("New PIN and confirm PIN do not match.", "warning");
+                      toast("New password and confirm password do not match.", "warning");
                       return;
                     }
                     setSavingPin(true);
@@ -356,12 +355,12 @@ export function ProfilePage() {
                     {forgotPin ? (
                       <Field icon="LockKeyhole" label="Login password" type="password" value={pinForm.password} onChange={setPin("password")} />
                     ) : (
-                      <Field icon="LockKeyhole" label="Current PIN" type="password" inputMode="numeric" value={pinForm.currentPin} onChange={setPin("currentPin")} />
+                      <Field icon="LockKeyhole" label="Current password" type="password" inputMode="numeric" value={pinForm.currentPin} onChange={setPin("currentPin")} />
                     )}
-                    <Field icon="LockKeyhole" label="New PIN" type="password" inputMode="numeric" value={pinForm.pin} onChange={setPin("pin")} />
-                    <Field icon="LockKeyhole" label="Confirm new PIN" type="password" inputMode="numeric" value={pinForm.confirm} onChange={setPin("confirm")} />
-                    <button type="button" onClick={() => setForgotPin((value) => !value)} className="text-xs font-semibold text-[#e10600]">{forgotPin ? "I know my current PIN" : "Forgot PIN? Use login password"}</button>
-                    <Button type="submit" className="w-full" disabled={savingPin}>{savingPin ? "Saving..." : "Update PIN"}</Button>
+                    <Field icon="LockKeyhole" label="New password" type="password" inputMode="numeric" value={pinForm.pin} onChange={setPin("pin")} />
+                    <Field icon="LockKeyhole" label="Confirm new password" type="password" inputMode="numeric" value={pinForm.confirm} onChange={setPin("confirm")} />
+                    <button type="button" onClick={() => setForgotPin((value) => !value)} className="text-xs font-semibold text-[#e10600]">{forgotPin ? "I know my current password" : "Forgot password? Use login password"}</button>
+                    <Button type="submit" className="w-full" disabled={savingPin}>{savingPin ? "Saving..." : "Update password"}</Button>
                   </form>
                 ) : null}
               </div>
@@ -381,7 +380,7 @@ export function ProfilePage() {
                       return;
                     }
                     if (!/^\d{6}$/.test(walletForm.pin)) {
-                      toast("Enter your 6 digit withdrawal PIN.", "warning");
+                      toast("Enter your 6 digit transaction password.", "warning");
                       return;
                     }
                     setSavingWallet(true);
@@ -396,7 +395,7 @@ export function ProfilePage() {
                     }
                   }}>
                     <Field icon="Wallet" label="New BEP-20 address" value={walletForm.address} onChange={(e) => setWalletForm((prev) => ({ ...prev, address: e.target.value.trim() }))} placeholder="0x and 40 hex characters" />
-                    <Field icon="LockKeyhole" label="Withdrawal PIN" type="password" inputMode="numeric" value={walletForm.pin} onChange={(e) => setWalletForm((prev) => ({ ...prev, pin: e.target.value.replace(/\D/g, "").slice(0, 6) }))} />
+                    <Field icon="LockKeyhole" label="Transaction Password" type="password" inputMode="numeric" value={walletForm.pin} onChange={(e) => setWalletForm((prev) => ({ ...prev, pin: e.target.value.replace(/\D/g, "").slice(0, 6) }))} />
                     <Button type="submit" className="w-full" disabled={savingWallet}>{savingWallet ? "Saving..." : "Save payout wallet"}</Button>
                   </form>
                 ) : null}
@@ -411,40 +410,6 @@ export function ProfilePage() {
             </div>
           </article>
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
-        <p className="mb-3 font-bold">Login history</p>
-        {loginHistory.length ? (
-        <>
-        <div className="hidden overflow-x-auto lg:block">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs text-[#667085]"><tr>{["Device", "IP", "Location", "Time", "Session"].map((h) => <th key={h} className="pb-2 font-medium">{h}</th>)}</tr></thead>
-            <tbody>
-              {logins.items.map((row) => (
-                <tr key={row.id} className="border-t border-[#f2f4f7]">
-                  <td className="py-3">{row.device}</td>
-                  <td>{row.ip}</td>
-                  <td>{row.location}</td>
-                  <td>{row.time}</td>
-                  <td>{row.current ? <StatusBadge tone="active">This device</StatusBadge> : <StatusBadge tone="inactive">Ended</StatusBadge>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="space-y-2 lg:hidden">
-          {logins.items.map((row) => (
-            <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3 text-sm">
-              <p className="font-semibold">{row.device}</p>
-              <p className="text-xs text-[#667085]">{row.location} · {row.ip}</p>
-              <p className="text-xs text-[#98a2b3]">{row.time}</p>
-            </article>
-          ))}
-        </div>
-        <Pager page={logins.page} pages={logins.pages} total={logins.total} size={logins.size} onChange={logins.setPage} />
-        </>
-        ) : <p className="text-sm text-[#98a2b3]">No logins recorded yet.</p>}
       </section>
 
       <section className="grid grid-cols-2 gap-2 lg:grid-cols-4">

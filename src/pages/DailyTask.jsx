@@ -48,7 +48,7 @@ export default function DailyTask() {
     ["Watch Video", duration > 0 ? `Play the full video (${clock(duration)})` : "Play the full video", "Watch"],
     ["Completion", `Reach ${required}% watched`, "Complete"],
     ["Verification", "Skipped time is not counted", "Verify"],
-    ["Task Complete", "Unlock ROI", "Unlock ROI"],
+    ["Task Complete", "Unlock AdView", "Unlock AdView"],
   ];
 
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function DailyTask() {
     <div className="mx-auto max-w-[1180px]">
       <PageHeader
         title="Daily Task"
-        subtitle="Play today's video through to the end. ROI unlocks only after the required watch time."
+        subtitle="Play today's video through to the end. AdView unlocks only after the required watch time."
         crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Daily Task", to: "/daily-task" }, { label: "Watch Video" }]}
       />
       <InactiveBanner />
@@ -139,14 +139,14 @@ export default function DailyTask() {
               <div className="grid h-full place-items-center px-6 text-center">
                 <div>
                   <p className="text-lg font-black">No task today</p>
-                  <p className="mt-1 text-sm text-white/70">{roiDay?.weekday} is an ROI off day for your plan.{roiDay?.resumesOn ? ` The next task opens on ${roiDay.resumesOn}.` : ""}</p>
+                  <p className="mt-1 text-sm text-white/70">{roiDay?.weekday} is an AdView off day for your plan.{roiDay?.resumesOn ? ` The next task opens on ${roiDay.resumesOn}.` : ""}</p>
                 </div>
               </div>
             ) : taskCompleted ? (
               <div className="grid h-full place-items-center px-6 text-center">
                 <div>
                   <p className="text-lg font-black">Today's task is complete</p>
-                  <p className="mt-1 text-sm text-white/70">ROI is unlocked. A new video opens with tomorrow's task.</p>
+                  <p className="mt-1 text-sm text-white/70">AdView is unlocked. A new video opens with tomorrow's task.</p>
                 </div>
               </div>
             ) : playable ? <TaskVideo url={dailyTask.videoUrl} allowedSeconds={watched} onSample={(sample) => { sampleRef.current = sample; }} /> : (
@@ -186,7 +186,7 @@ export default function DailyTask() {
             className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#e10600] text-sm font-bold text-white shadow-[0_8px_18px_rgba(225,6,0,0.28)] transition hover:bg-[#c10500] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <CircleCheck size={16} />
-            {offToday ? "ROI OFF TODAY" : taskCompleted ? "TASK COMPLETED ✓" : ready ? "MARK AS COMPLETE" : "WATCH THE VIDEO TO UNLOCK ROI"}
+            {offToday ? "ADVIEW OFF TODAY" : taskCompleted ? "TASK COMPLETED ✓" : ready ? "MARK AS COMPLETE" : "WATCH THE VIDEO TO UNLOCK ADVIEW"}
           </button>
           {taskCompleted ? (
             <button
@@ -197,11 +197,11 @@ export default function DailyTask() {
                 : "claim-roi theme-fixed mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-[linear-gradient(100deg,#ff5a36_0%,#e10600_48%,#ff2d55_100%)] text-base font-black tracking-wide text-white"}
             >
               <HandCoins size={18} className={roiClaimed ? "" : "claim-roi-icon"} />
-              {roiClaimed ? "View today's ROI" : "Claim ROI reward"}
+              {roiClaimed ? "View today's AdView" : "Claim AdView reward"}
             </button>
           ) : null}
           <p className="mt-2 text-center text-xs text-[#98a2b3]">
-            {offToday ? `No task on ${roiDay?.weekday}. Come back on ${roiDay?.resumesOn || "the next ROI day"}.` : taskCompleted ? "Today's task is complete and ROI is unlocked." : ahead ? "Forward skip was pulled back. Watch from the counted time." : ready ? "Required watch reached. Mark the task to unlock today's ROI." : "Forward skip is blocked. Only playback at normal speed is counted."}
+            {offToday ? `No task on ${roiDay?.weekday}. Come back on ${roiDay?.resumesOn || "the next AdView day"}.` : taskCompleted ? "Today's task is complete and AdView is unlocked." : ahead ? "Forward skip was pulled back. Watch from the counted time." : ready ? "Required watch reached. Mark the task to unlock today's AdView." : "Forward skip is blocked. Only playback at normal speed is counted."}
           </p>
         </article>
         </div>
@@ -211,14 +211,14 @@ export default function DailyTask() {
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>
               <p className="font-bold text-[#101828]">{dailyTask?.title || "Watch Sponsored Video"}</p>
-              <p className="text-xs text-[#667085]">{dailyTask?.subtitle || "Today's ROI video"}</p>
+              <p className="text-xs text-[#667085]">{String(dailyTask?.subtitle || "Today's AdView video").replaceAll("ROI", "AdView")}</p>
             </div>
             <StatusBadge tone="danger">Required</StatusBadge>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {[
               [Clock3, "bg-sky-50 text-sky-500", duration > 0 ? clock(duration) : "Full video", "Duration"],
-              [CircleCheck, "bg-rose-50 text-rose-500", "Unlock ROI", "Reward"],
+              [CircleCheck, "bg-rose-50 text-rose-500", "Unlock AdView", "Reward"],
               [ShieldCheck, "bg-emerald-50 text-emerald-500", `Minimum ${required}%`, "Required Watch"],
               [Gauge, "bg-orange-50 text-orange-500", playable ? playable.kind : "Not set", "Video"],
             ].map(([Icon, color, value, label]) => (
@@ -245,7 +245,7 @@ export default function DailyTask() {
             <li>Pause or leaving the tab stops the timer</li>
             <li>Forward skip is blocked on the player</li>
             <li>Watch at least {required}% of the real video</li>
-            <li>Then mark the task to unlock today's ROI</li>
+            <li>Then mark the task to unlock today's AdView</li>
           </ul>
         </article>
         </div>

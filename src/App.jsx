@@ -4,6 +4,7 @@ import Layout from "@/components/layout/Layout";
 import { LoadingState } from "@/components/common/EmptyState";
 import TopLoader, { PendingMark } from "@/components/common/TopLoader";
 import ScrollToTop from "@/components/common/ScrollToTop";
+import { isStandalone } from "@/lib/pwaInstall";
 
 const AuthPage = lazy(() => import("@/pages/Auth"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -39,6 +40,14 @@ function ReportRoute() {
   return <Page><Reports kind={kind} /></Page>;
 }
 
+function HomeRoute() {
+  if (isStandalone()) {
+    const token = localStorage.getItem("addflix_token");
+    return <Navigate to={token ? "/dashboard" : "/auth"} replace />;
+  }
+  return <Page><Landing /></Page>;
+}
+
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("addflix_token");
   if (!token) {
@@ -53,7 +62,7 @@ export default function App() {
     <TopLoader />
     <ScrollToTop />
     <Routes>
-      <Route path="/" element={<Page><Landing /></Page>} />
+      <Route path="/" element={<HomeRoute />} />
       <Route path="/auth" element={<Page><AuthPage key="login" mode="login" /></Page>} />
       <Route path="/register" element={<Page><AuthPage key="register" mode="register" /></Page>} />
       <Route path="/ref/:code" element={<Page><AuthPage key="referral" mode="register" /></Page>} />

@@ -23,6 +23,12 @@ if (typeof window !== "undefined") {
   });
 }
 
+export function isStandalone() {
+  if (typeof window === "undefined") return false;
+  if (document.documentElement.classList.contains("pwa-app")) return true;
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
 export function deviceKind() {
   const ua = navigator.userAgent || "";
   const inApp = /FBAN|FBAV|Instagram|Line\/|Twitter|WhatsApp|Telegram|Snapchat/i.test(ua) || /; wv\)/.test(ua);

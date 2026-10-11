@@ -1,4 +1,5 @@
 import { REFERRAL_ID, emailError, mobileError, normalizeReferralId } from '../../shared/contact.js';
+import { isCountry } from '../../shared/countries.js';
 
 export function validateRegistrationInput(payload = {}) {
   const errors = [];
@@ -12,6 +13,7 @@ export function validateRegistrationInput(payload = {}) {
   const otp = String(payload.otp ?? '').trim();
   const termsAccepted = Boolean(payload.termsAccepted);
   const privacyAccepted = Boolean(payload.privacyAccepted);
+  const country = String(payload.country ?? '').trim();
 
   if (!fullName || fullName.length < 2) {
     errors.push('Full name is required.');
@@ -49,8 +51,12 @@ export function validateRegistrationInput(payload = {}) {
     errors.push('OTP must be a 6-digit code.');
   }
 
+  if (!isCountry(country)) {
+    errors.push('Select your country.');
+  }
+
   if (!termsAccepted || !privacyAccepted) {
-    errors.push('You must accept the Terms & Conditions and Privacy Policy.');
+    errors.push('You must accept the Terms and Privacy Policy.');
   }
 
   return {

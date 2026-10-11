@@ -78,8 +78,8 @@ export default function TopHeader() {
               <div className="max-h-72 space-y-2 overflow-auto">
                 {notes.slice(0, 4).map((note) => (
                   <button key={note.id} onClick={() => navigate("/notifications")} className="block w-full rounded-xl bg-[#f8fafc] p-2.5 text-left">
-                    <p className="text-sm font-semibold">{note.title}</p>
-                    <p className="text-xs text-[#667085]">{note.body}</p>
+                    <p className="text-sm font-semibold">{String(note.title).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</p>
+                    <p className="text-xs text-[#667085]">{String(note.body).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</p>
                   </button>
                 ))}
               </div>

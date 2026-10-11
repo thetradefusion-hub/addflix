@@ -292,12 +292,12 @@ export const navItems = [
   { to: "/subscription", label: "My Subscription", icon: "CreditCard" },
   { to: "/investment", label: "My Plan / Investment", icon: "PieChart" },
   { to: "/daily-task", label: "Daily Task", icon: "ListChecks" },
-  { to: "/roi", label: "Today's ROI", icon: "CircleDollarSign" },
+  { to: "/roi", label: "Today's AdView", icon: "CircleDollarSign" },
   {
     label: "Income",
     icon: "DollarSign",
     children: [
-      { to: "/income/roi", label: "ROI Income" },
+      { to: "/income/roi", label: "AdView income" },
       { to: "/income/referral", label: "Referral Income" },
       { to: "/income/level", label: "Level Income" },
       { to: "/income/bonus", label: "Bonus" },
@@ -330,7 +330,7 @@ export const navItems = [
     label: "Reports",
     icon: "FileBarChart",
     children: [
-      { to: "/reports/roi", label: "ROI Report" },
+      { to: "/reports/roi", label: "AdView Report" },
       { to: "/reports/investment", label: "Investment Report" },
       { to: "/reports/referral", label: "Referral Report" },
       { to: "/reports/income", label: "Income Report" },
