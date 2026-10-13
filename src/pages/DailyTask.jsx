@@ -26,6 +26,7 @@ export default function DailyTask() {
   const playable = parsePlayableUrl(dailyTask?.videoUrl);
   const sampleRef = useRef(null);
   const finishing = useRef(false);
+  const busyRef = useRef(false);
   const reportRef = useRef(reportPlayback);
   const completeRef = useRef(completeTask);
   const toastRef = useRef(toast);
@@ -54,19 +55,25 @@ export default function DailyTask() {
   useEffect(() => {
     if (!playable || taskCompleted || offToday || !subscriptionActive) return undefined;
     let stopped = false;
-    const send = async () => {
+    const send = async (force) => {
       const sample = sampleRef.current;
       if (!sample || stopped) return;
       if (sample.error) {
         setPlayerNote(sample.error);
         return;
       }
-      const playing = Boolean(sample.playing) && document.visibilityState === "visible";
+      if (busyRef.current && !force && !sample.ended) return;
+      busyRef.current = true;
       try {
-        const account = await reportRef.current({ position: sample.position, duration: sample.duration, playing });
+        const account = await reportRef.current({
+          position: sample.position,
+          duration: sample.duration,
+          playing: Boolean(sample.playing) || Boolean(sample.ended),
+          ended: Boolean(sample.ended),
+        });
         const task = account?.dailyTask;
         const counted = Number(task?.watchSeconds) || 0;
-        setAhead(sample.position > counted + 4);
+        setAhead(sample.position > counted + 8);
         if (stopped || finishing.current || task?.completed) return;
         if (task?.durationLocked && (task?.progress || 0) >= (task?.requiredPercent || 95)) {
           finishing.current = true;
@@ -85,9 +92,11 @@ export default function DailyTask() {
           return;
         }
         toastRef.current(error.message, "warning");
+      } finally {
+        busyRef.current = false;
       }
     };
-    const id = setInterval(send, 1000);
+    const id = setInterval(() => { send(false); }, 1000);
     return () => {
       stopped = true;
       clearInterval(id);
@@ -133,7 +142,7 @@ export default function DailyTask() {
 
       <section className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.85fr)]">
         <div className="space-y-3">
-        <article className="overflow-hidden rounded-2xl bg-[#07111f] text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
+        <article className="sticky top-0 z-20 overflow-hidden rounded-2xl bg-[#07111f] text-white shadow-[0_16px_40px_rgba(15,23,42,0.18)]">
           <div className="relative aspect-video w-full bg-black">
             {offToday ? (
               <div className="grid h-full place-items-center px-6 text-center">
@@ -149,7 +158,30 @@ export default function DailyTask() {
                   <p className="mt-1 text-sm text-white/70">AdView is unlocked. A new video opens with tomorrow's task.</p>
                 </div>
               </div>
-            ) : playable ? <TaskVideo url={dailyTask.videoUrl} allowedSeconds={watched} onSample={(sample) => { sampleRef.current = sample; }} /> : (
+            ) : playable ? (
+              <TaskVideo
+                url={dailyTask.videoUrl}
+                onSample={(sample) => {
+                  const wasEnded = Boolean(sampleRef.current?.ended);
+                  sampleRef.current = sample;
+                  if (sample?.ended && !wasEnded && !finishing.current) {
+                    reportRef.current({
+                      position: sample.position,
+                      duration: sample.duration,
+                      playing: true,
+                      ended: true,
+                    }).then((account) => {
+                      const task = account?.dailyTask;
+                      if (!task || finishing.current || task.completed) return;
+                      if (task.durationLocked && (task.progress || 0) >= (task.requiredPercent || 95)) {
+                        finishing.current = true;
+                        return completeRef.current().then((ok) => { if (!ok) finishing.current = false; });
+                      }
+                    }).catch(() => {});
+                  }
+                }}
+              />
+            ) : (
               <div className="grid h-full place-items-center px-6 text-center">
                 <div>
                   <p className="text-lg font-black">No task video yet</p>
@@ -201,7 +233,7 @@ export default function DailyTask() {
             </button>
           ) : null}
           <p className="mt-2 text-center text-xs text-[#98a2b3]">
-            {offToday ? `No task on ${roiDay?.weekday}. Come back on ${roiDay?.resumesOn || "the next AdView day"}.` : taskCompleted ? "Today's task is complete and AdView is unlocked." : ahead ? "Forward skip was pulled back. Watch from the counted time." : ready ? "Required watch reached. Mark the task to unlock today's AdView." : "Forward skip is blocked. Only playback at normal speed is counted."}
+            {offToday ? `No task on ${roiDay?.weekday}. Come back on ${roiDay?.resumesOn || "the next AdView day"}.` : taskCompleted ? "Today's task is complete and AdView is unlocked." : ahead ? "Keep watching from here. Skipped time is not counted." : ready ? "Required watch reached. Mark the task to unlock today's AdView." : "Keep this page open. Scrolling does not reset the video. Forward skip is blocked."}
           </p>
         </article>
         </div>
@@ -241,7 +273,7 @@ export default function DailyTask() {
             Important
           </p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-[#475467]">
-            <li>Keep this page open while the video plays</li>
+            <li>Keep this page open while the video plays. You can scroll; the video stays on screen</li>
             <li>Pause or leaving the tab stops the timer</li>
             <li>Forward skip is blocked on the player</li>
             <li>Watch at least {required}% of the real video</li>

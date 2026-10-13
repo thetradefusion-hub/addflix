@@ -299,6 +299,7 @@ router.post("/task", async (req, res) => {
       position: req.body?.position,
       duration: req.body?.duration,
       playing: req.body?.playing,
+      ended: req.body?.ended,
     });
     account.markModified("dailyTask");
     await account.save();

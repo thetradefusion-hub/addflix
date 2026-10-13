@@ -271,7 +271,7 @@ export function AppProvider({ children }) {
   const reportPlayback = async (sample) => {
     const data = await apiFetch("/api/account/task", {
       method: "POST",
-      body: JSON.stringify({ action: "playback", position: sample.position, duration: sample.duration, playing: sample.playing }),
+      body: JSON.stringify({ action: "playback", position: sample.position, duration: sample.duration, playing: sample.playing, ended: sample.ended }),
       silent: true,
     });
     applyLive(data);

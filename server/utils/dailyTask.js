@@ -97,25 +97,27 @@ export function applyPlayback(task, sample, now = Date.now()) {
     }
   }
   const length = task.durationLocked && Number(task.durationSeconds) >= 5 ? Number(task.durationSeconds) : 0;
-  const playing = Boolean(sample?.playing);
+  const nearEnd = !length || position >= length * 0.9 || frontier >= length * (required / 100) * 0.9;
+  const ended = Boolean(sample?.ended) && nearEnd;
+  const playing = Boolean(sample?.playing) || ended;
   const lastAt = Number(task.lastHeartbeatAt) || 0;
   const lastPos = Number(task.lastPosition) || 0;
   let credit = 0;
   if (!lastAt) {
     task.lastPosition = position;
     task.lastHeartbeatAt = now;
-  } else if (playing) {
+  } else {
     const wall = Math.min(5, (now - lastAt) / 1000);
     const moved = position - lastPos;
-    const continuous = wall >= 0.25 && moved > 0 && moved <= wall + 1.5;
-    if (continuous && position > frontier) credit = Math.min(position - frontier, moved, wall);
-    if (continuous || position + 1 < lastPos || Math.abs(position - frontier) < Math.abs(lastPos - frontier)) task.lastPosition = position;
+    const continuous = wall >= 0.2 && moved >= -1.25 && moved <= wall + 8;
+    if (playing && continuous && position + 2 >= frontier && position > frontier) {
+      credit = Math.min(position - frontier, Math.max(moved, 0) + 0.75, wall + 0.75);
+    }
+    if (ended && length) credit = Math.max(credit, length - frontier);
+    task.lastPosition = position;
     task.lastHeartbeatAt = now;
-  } else {
-    task.lastHeartbeatAt = now;
-    if (position + 1 < lastPos) task.lastPosition = position;
   }
-  const watched = frontier + credit;
+  const watched = frontier + Math.max(0, credit);
   task.watchSeconds = length ? Math.min(length, watched) : watched;
   task.progress = length ? Math.min(100, Math.round((task.watchSeconds / length) * 100)) : Math.min(99, Number(task.progress) || 0);
   if (task.status === "Pending" || task.status === "Watching") task.status = task.watchSeconds > 0 ? "Watching" : "Pending";

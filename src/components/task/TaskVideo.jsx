@@ -16,7 +16,7 @@ function loadScript(src, ready) {
   });
 }
 
-export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
+export default function TaskVideo({ url, onSample }) {
   const source = parsePlayableUrl(url);
   const sampleRef = useRef(onSample);
   sampleRef.current = onSample;
@@ -24,14 +24,30 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
   const videoRef = useRef(null);
   const apiRef = useRef(null);
   const lastGoodRef = useRef(0);
+  const clockRef = useRef(0);
   const [playing, setPlaying] = useState(false);
-  const allowedRef = useRef(0);
-  allowedRef.current = Math.max(0, Number(allowedSeconds) || 0);
 
-  const hold = (position) => {
+  const hold = (position, active, ended) => {
+    const now = performance.now();
+    if (!clockRef.current) {
+      clockRef.current = now;
+      lastGoodRef.current = Math.max(0, position);
+      return null;
+    }
+    const elapsed = Math.max(0, (now - clockRef.current) / 1000);
+    clockRef.current = now;
     const prev = lastGoodRef.current;
-    if (position > prev + 2.2 && position > allowedRef.current + 2.2) return Math.max(prev, allowedRef.current);
-    lastGoodRef.current = position;
+    if (ended) {
+      lastGoodRef.current = Math.max(prev, position);
+      return null;
+    }
+    const maxAdvance = active ? Math.max(elapsed, 0.25) * 2 + 5 : 1.5;
+    if (position > prev + maxAdvance) return prev;
+    if (position + 1 < prev) {
+      lastGoodRef.current = position;
+      return null;
+    }
+    lastGoodRef.current = Math.max(prev, position);
     return null;
   };
 
@@ -42,12 +58,11 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
     let dead = false;
     let player;
     let timer;
+    lastGoodRef.current = 0;
+    clockRef.current = 0;
     const mount = document.createElement("div");
     mount.className = "h-full w-full";
     parent.appendChild(mount);
-    const publish = (isPlaying, ended, position, duration) => {
-      sampleRef.current?.({ position, duration, playing: isPlaying, ended });
-    };
     const start = () => {
       if (dead || !window.YT?.Player) return;
       player = new window.YT.Player(mount, {
@@ -58,7 +73,7 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
             apiRef.current = {
               toggle: () => {
                 const state = player.getPlayerState?.();
-                if (state === window.YT.PlayerState.PLAYING) player.pauseVideo();
+                if (state === window.YT.PlayerState.PLAYING || state === window.YT.PlayerState.BUFFERING) player.pauseVideo();
                 else player.playVideo();
               },
             };
@@ -66,19 +81,21 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
         },
       });
       timer = setInterval(() => {
+        const YT = window.YT?.PlayerState;
         const state = player?.getPlayerState?.();
-        if (state == null || !player.getCurrentTime) return;
-        if (state === window.YT.PlayerState.PLAYING && document.visibilityState === "hidden") player.pauseVideo?.();
+        if (state == null || !player.getCurrentTime || !YT) return;
+        if (document.visibilityState === "hidden" && (state === YT.PLAYING || state === YT.BUFFERING)) player.pauseVideo?.();
         if (player.getPlaybackRate?.() > 1) player.setPlaybackRate?.(1);
+        const ended = state === YT.ENDED;
+        const active = (state === YT.PLAYING || state === YT.BUFFERING) && document.visibilityState === "visible";
         let position = Number(player.getCurrentTime()) || 0;
-        const back = hold(position);
+        const back = hold(position, active, ended);
         if (back != null) {
           player.seekTo(back, true);
           position = back;
         }
-        const isPlaying = state === window.YT.PlayerState.PLAYING && document.visibilityState === "visible";
-        setPlaying(isPlaying);
-        publish(isPlaying, state === window.YT.PlayerState.ENDED, position, Number(player.getDuration()) || 0);
+        setPlaying(active);
+        sampleRef.current?.({ position, duration: Number(player.getDuration()) || 0, playing: active, ended });
       }, 250);
     };
     if (window.YT?.Player) start();
@@ -108,6 +125,8 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
     if (!frame) return undefined;
     let dead = false;
     let player;
+    lastGoodRef.current = 0;
+    clockRef.current = 0;
     loadScript("https://player.vimeo.com/api/player.js", () => Boolean(window.Vimeo?.Player))
       .then(() => {
         if (dead) return;
@@ -117,17 +136,18 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
         };
         const publish = (isPlaying, ended, data) => {
           let position = Number(data?.seconds) || 0;
-          const back = hold(position);
+          const active = isPlaying && document.visibilityState === "visible";
+          const back = hold(position, active, ended);
           if (back != null) {
             player.setCurrentTime(back).catch(() => {});
             position = back;
           }
           player.getPlaybackRate?.().then((rate) => { if (rate > 1) player.setPlaybackRate(1).catch(() => {}); }).catch(() => {});
-          setPlaying(isPlaying);
+          setPlaying(active);
           sampleRef.current?.({
             position,
             duration: Number(data?.duration) || 0,
-            playing: isPlaying && document.visibilityState === "visible",
+            playing: active,
             ended,
           });
         };
@@ -150,6 +170,8 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
 
   useEffect(() => {
     if (source?.kind !== "file") return undefined;
+    lastGoodRef.current = 0;
+    clockRef.current = 0;
     const onHide = () => {
       if (document.visibilityState === "hidden") videoRef.current?.pause();
     };
@@ -175,22 +197,30 @@ export default function TaskVideo({ url, allowedSeconds = 0, onSample }) {
             sampleRef.current?.({ position: 0, duration: event.currentTarget.duration, playing: false, ended: false });
           }}
           onSeeking={(event) => {
-            const back = hold(event.currentTarget.currentTime);
-            if (back != null) event.currentTarget.currentTime = back;
+            const video = event.currentTarget;
+            const active = !video.paused && document.visibilityState === "visible";
+            const back = hold(video.currentTime, active, video.ended);
+            if (back != null) video.currentTime = back;
           }}
           onRateChange={(event) => { if (event.currentTarget.playbackRate !== 1) event.currentTarget.playbackRate = 1; }}
           onTimeUpdate={(event) => {
             const video = event.currentTarget;
-            const back = hold(video.currentTime);
+            const ended = video.ended;
+            const active = !video.paused && !ended && document.visibilityState === "visible";
+            const back = hold(video.currentTime, active, ended);
             if (back != null) video.currentTime = back;
-            const isPlaying = !video.paused && document.visibilityState === "visible";
-            setPlaying(isPlaying);
-            sampleRef.current?.({ position: back ?? video.currentTime, duration: video.duration, playing: isPlaying, ended: video.ended });
+            setPlaying(active);
+            sampleRef.current?.({ position: back ?? video.currentTime, duration: video.duration, playing: active, ended });
           }}
           onPause={() => setPlaying(false)}
           onPlay={(event) => {
             if (document.visibilityState === "hidden") event.currentTarget.pause();
             else setPlaying(true);
+          }}
+          onEnded={(event) => {
+            const video = event.currentTarget;
+            setPlaying(false);
+            sampleRef.current?.({ position: video.duration || video.currentTime, duration: video.duration, playing: false, ended: true });
           }}
         />
         <PlayButton playing={playing} onClick={toggle} />
