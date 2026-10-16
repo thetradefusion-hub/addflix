@@ -7,14 +7,22 @@ import { findActivePlan } from "../utils/planCatalog.js";
 import { applyPlayback, requiredSeconds, todayKey } from "../utils/dailyTask.js";
 import { parsePlayableUrl } from "../utils/videoUrl.js";
 import { buildNetwork } from "../utils/network.js";
-import { BEP20_ADDRESS, availableBalance, lockFunds, quoteWithdrawal } from "../utils/withdrawal.js";
+import { BEP20_ADDRESS, availableBalance, quoteWithdrawal } from "../utils/withdrawal.js";
 import { applyPublishedTask, getSettings, readSettings } from "../utils/settings.js";
+import {
+  applyGatedTake,
+  backfillSignupWithdraw,
+  clampSignupRemaining,
+  presentSignupGate,
+  takeFromBuckets,
+} from "../utils/signupWithdrawGate.js";
 import Ticket from "../models/Ticket.js";
 import AuditLog from "../models/AuditLog.js";
 import Video from "../models/Video.js";
 import { flagSkip } from "../utils/fraud.js";
 import { notifyUser } from "../utils/notify.js";
 import { creditRoiLevelIncome } from "../utils/roiLevelCommission.js";
+import { creditDailySalary, presentSalary, refreshSalaryChain, syncSalaryRank } from "../utils/salaryPlan.js";
 import { istStamp } from "../utils/day.js";
 
 const router = express.Router();
@@ -29,7 +37,7 @@ function money2(value) {
 
 function debitLiquid(account, amount) {
   let left = amount;
-  for (const key of ["bonus", "referral", "roi"]) {
+  for (const key of ["roi", "referral", "bonus"]) {
     const have = money2(account.balances[key] || 0);
     const take = Math.min(have, left);
     account.balances[key] = money2(have - take);
@@ -59,16 +67,28 @@ async function loadAccount(userId) {
   await ensureInvestments(account);
   const rolled = account.rollTaskDay();
   const taskUpdated = applyPublishedTask(account.dailyTask, settings);
+  const gatedBackfill = backfillSignupWithdraw(account);
   if (taskUpdated) account.markModified("dailyTask");
-  if (rolled || taskUpdated) await account.save();
+  if (rolled || taskUpdated || gatedBackfill) await account.save();
   return account;
+}
+
+async function clientAccount(account, user, settings) {
+  const payload = account.toClient();
+  const gate = await presentSignupGate(account, user, settings || (await readSettings()));
+  payload.signupWithdraw = {
+    remaining: gate.remaining,
+    withdrawn: gate.withdrawn,
+  };
+  payload.signupGate = gate;
+  return payload;
 }
 
 router.use(requireAuth);
 
 router.get("/", async (req, res) => {
   const account = await loadAccount(req.user._id);
-  res.json({ ok: true, account: account.toClient() });
+  res.json({ ok: true, account: await clientAccount(account, req.user) });
 });
 
 router.patch("/wallet-address", async (req, res) => {
@@ -229,6 +249,7 @@ router.post("/invest", async (req, res) => {
 
   const quoted = quotePlan(plan, amount);
   debitLiquid(account, amount);
+  clampSignupRemaining(account);
   if (!Array.isArray(account.investments)) account.investments = [];
   const when = stamp();
   account.investments.unshift({
@@ -256,12 +277,19 @@ router.post("/invest", async (req, res) => {
   });
   account.markModified("investments");
   account.markModified("balances");
+  account.markModified("signupWithdraw");
   account.markModified("transactions");
   await account.save();
+  try {
+    await refreshSalaryChain(req.user);
+  } catch (error) {
+    console.error("Salary BV refresh failed after invest:", error);
+  }
+  const fresh = await loadAccount(req.user._id);
   return res.json({
     ok: true,
     message: `${plan.name} is active. Daily ROI is $${quoted.dailyAmount.toFixed(2)} until the $${quoted.cap.toFixed(2)} cap.`,
-    account: account.toClient(),
+    account: fresh.toClient(),
   });
 });
 
@@ -269,6 +297,42 @@ function liveTask(account) {
   const { dailyTask, todayRoi, roiDay } = account.toClient();
   return { ok: true, partial: true, account: { dailyTask, todayRoi, roiDay } };
 }
+
+router.get("/salary", async (req, res) => {
+  const account = await loadAccount(req.user._id);
+  await syncSalaryRank(req.user, account);
+  const paid = await creditDailySalary(req.user, account);
+  await account.save();
+  res.json({
+    ok: true,
+    salary: presentSalary(account.salary),
+    creditedToday: paid.credited || 0,
+    account: account.toClient(),
+  });
+});
+
+router.post("/salary/claim", async (req, res) => {
+  const account = await loadAccount(req.user._id);
+  if (!account.subscription?.active) {
+    return res.status(403).json({ ok: false, message: "Activate your $10 USDT subscription to claim salary." });
+  }
+  const paid = await creditDailySalary(req.user, account);
+  await account.save();
+  if (!(paid.credited > 0)) {
+    const reason = paid.reason === "tenure_done"
+      ? "This rank's 100-day salary tenure is finished. Grow BV to unlock the next rank."
+      : paid.reason === "already_paid"
+        ? "Today's salary is already credited."
+        : "No salary rank yet. Team investment BV must reach $5,000.";
+    return res.status(400).json({ ok: false, message: reason, salary: presentSalary(account.salary), account: account.toClient() });
+  }
+  res.json({
+    ok: true,
+    message: `$${paid.credited.toFixed(2)} salary credited.`,
+    salary: presentSalary(account.salary),
+    account: account.toClient(),
+  });
+});
 
 router.post("/task", async (req, res) => {
   const account = await loadAccount(req.user._id);
@@ -406,6 +470,12 @@ router.post("/task", async (req, res) => {
       console.error("ROI level income failed", claimId, error);
       await AuditLog.create({ action: "roi.level.error", target: req.user.referralId, note: `${claimId}: ${error.message}` });
     }
+    try {
+      await creditDailySalary(req.user, account);
+      await account.save();
+    } catch (error) {
+      console.error("Salary credit failed", error);
+    }
     return res.json({ ok: true, message: `Today's ROI of ${payout.total.toFixed(2)} USDT has been credited.`, account: account.toClient() });
   }
 
@@ -420,15 +490,23 @@ router.post("/withdraw", async (req, res) => {
   const amount = money2(req.body?.amount);
   const address = String(req.body?.address || "").trim();
   const pin = String(req.body?.pin || "").trim();
-  const withdrawable = availableBalance(account.balances);
   const settings = await getSettings();
   const minimum = Number(settings.minWithdraw) || 10;
+  const summary = await presentSignupGate(account, req.user, settings);
+  const percent = summary.unlockPercent;
 
   if (!amount || amount < minimum) {
     return res.status(400).json({ ok: false, message: `Minimum withdrawal is ${minimum} USDT.` });
   }
-  if (amount > withdrawable) {
+  if (amount > summary.available) {
     return res.status(400).json({ ok: false, message: "Amount cannot exceed your withdrawable balance." });
+  }
+  if (amount > summary.maxCashout) {
+    return res.status(400).json({
+      ok: false,
+      message: `Signup bonus unlock is limited to ${percent}% of your direct referral business ($${summary.directBusiness.toFixed(2)} → $${summary.unlockCap.toFixed(2)}). Max cashout now is $${summary.maxCashout.toFixed(2)} (free $${summary.free.toFixed(2)} + unlocked signup $${summary.gated.toFixed(2)}).`,
+      signupGate: summary,
+    });
   }
   if (!BEP20_ADDRESS.test(address)) {
     return res.status(400).json({ ok: false, message: "Enter a valid BEP-20 wallet address." });
@@ -441,7 +519,10 @@ router.post("/withdraw", async (req, res) => {
   }
 
   const quoted = quoteWithdrawal(amount, Number(settings.withdrawFeeRate));
-  const sources = lockFunds(account.balances, quoted.amount);
+  const gatedTake = applyGatedTake(account, quoted.amount, summary);
+  const sources = takeFromBuckets(account.balances, quoted.amount);
+  sources.signupGated = gatedTake;
+  account.balances.locked = money2(Number(account.balances.locked || 0) + quoted.amount);
   const when = stamp();
   const id = Date.now();
   account.withdrawals.unshift({
@@ -469,13 +550,14 @@ router.post("/withdraw", async (req, res) => {
     withdrawalId: id,
   });
   account.markModified("balances");
+  account.markModified("signupWithdraw");
   account.markModified("withdrawals");
   account.markModified("transactions");
   await account.save();
   return res.json({
     ok: true,
     message: `Withdrawal of $${quoted.amount.toFixed(2)} is pending. $${quoted.amount.toFixed(2)} is locked. You receive $${quoted.receive.toFixed(2)} after the ${Math.round(Number(settings.withdrawFeeRate) * 100)}% fee.`,
-    account: account.toClient(),
+    account: await clientAccount(account, req.user, settings),
   });
 });
 
@@ -555,12 +637,21 @@ router.post("/transfer", async (req, res) => {
   }
   const amount = money2(req.body?.amount);
   const pin = String(req.body?.pin || "").trim();
+  const settings = await readSettings();
+  const summary = await presentSignupGate(account, req.user, settings);
+  const percent = summary.unlockPercent;
   if (!amount || amount < 1) {
     return res.status(400).json({ ok: false, message: "Minimum transfer is 1 USDT." });
   }
-  const spendable = availableBalance(account.balances);
-  if (amount > spendable) {
+  if (amount > summary.available) {
     return res.status(400).json({ ok: false, message: "Amount cannot exceed your withdrawable balance." });
+  }
+  if (amount > summary.maxCashout) {
+    return res.status(400).json({
+      ok: false,
+      message: `Signup bonus unlock is limited to ${percent}% of your direct referral business ($${summary.directBusiness.toFixed(2)} → $${summary.unlockCap.toFixed(2)}). Max transfer now is $${summary.maxCashout.toFixed(2)}.`,
+      signupGate: summary,
+    });
   }
   if (!/^\d{6}$/.test(pin)) {
     return res.status(400).json({ ok: false, message: "Enter your 6 digit transaction PIN." });
@@ -579,6 +670,7 @@ router.post("/transfer", async (req, res) => {
   const recipientAccount = await loadAccount(member._id);
   const when = stamp();
   const id = Date.now();
+  applyGatedTake(account, amount, summary);
   debitLiquid(account, amount);
   account.transactions.unshift({
     id,
@@ -590,6 +682,7 @@ router.post("/transfer", async (req, res) => {
     description: `${member.fullName} · ${member.referralId}`,
   });
   account.markModified("balances");
+  account.markModified("signupWithdraw");
   account.markModified("transactions");
   await account.save();
 
@@ -622,7 +715,7 @@ router.post("/transfer", async (req, res) => {
   return res.json({
     ok: true,
     message: `$${amount.toFixed(2)} sent to ${member.fullName} (${member.referralId}).`,
-    account: account.toClient(),
+    account: await clientAccount(account, req.user, settings),
   });
 });
 

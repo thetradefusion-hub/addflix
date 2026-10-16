@@ -40,13 +40,17 @@ export async function buildNetwork(user) {
   const flat = items.map((item) => {
     const account = accountByUser.get(String(item.member._id));
     const plan = (account?.investments || []).find((row) => row.status === "Active");
-    const status = item.member.active === false ? "Blocked" : account?.subscription?.active ? "Active" : "Inactive";
+    const subscribed = Boolean(account?.subscription?.active);
+    const hasPlan = Boolean(plan);
+    const status = item.member.active === false ? "Blocked" : subscribed ? "Active" : "Inactive";
     return {
       id: item.member.referralId,
       name: item.member.fullName,
       parent: item.parent,
       level: item.level,
       status,
+      subscribed,
+      hasPlan,
       plan: plan?.planName || "—",
       investment: Number(plan?.amount) || 0,
       joined: new Date(item.member.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),

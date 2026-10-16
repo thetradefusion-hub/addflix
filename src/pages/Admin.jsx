@@ -33,6 +33,7 @@ const pageMeta = {
   reports: ["Reports", "Member, wallet, payout and income statements. Export the current view to Excel or PDF."],
   settings: ["Settings", "Subscription price, deposit address, referral rates, withdrawal rules and today's task."],
   plans: ["Plans", "Daily rate, minimum, cap and whether members can buy the plan."],
+  salary: ["Salary Plan", "Edit unilevel ranks, BV targets, daily salary and tenure. Members see the same plan."],
   subscriptions: ["Subscriptions", "Approve a $10 payment to activate the ID, or mark it failed."],
 };
 
@@ -89,7 +90,7 @@ function AdminConsole({ view, onLogout }) {
       } else if (view === "deposits") {
         const data = await apiFetch("/api/admin/deposits");
         setDeposits(data.deposits || []);
-      } else if (view === "settings") {
+      } else if (view === "settings" || view === "salary") {
         const data = await apiFetch("/api/admin/settings");
         setSettings(data.settings);
       } else if (view === "plans") {
@@ -154,7 +155,7 @@ function AdminConsole({ view, onLogout }) {
   return (
     <AdminShell user={adminUser} onLogout={logout}>
       <div className="space-y-3">
-          {view === "overview" || view === "users" || view === "withdrawals" || view === "deposits" || view === "plans" || view === "subscriptions" ? null : <PageHeader title={title} subtitle={meta[1]} crumbs={[{ label: "Admin", to: "/admin" }, { label: title }]} />}
+          {view === "overview" || view === "users" || view === "withdrawals" || view === "deposits" || view === "plans" || view === "salary" || view === "subscriptions" ? null : <PageHeader title={title} subtitle={meta[1]} crumbs={[{ label: "Admin", to: "/admin" }, { label: title }]} />}
           {error ? <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
           {notice ? <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{notice}</p> : null}
           {view === "overview" && overview ? <Overview overview={overview} audits={audits} name={adminUser?.fullName || "Admin"} /> : null}
@@ -249,6 +250,16 @@ function AdminConsole({ view, onLogout }) {
                 event.preventDefault();
                 run("/api/admin/settings", { method: "PUT", body: JSON.stringify({ ...settings, taskPublished: Boolean(settings.taskPublished) }) });
               }}
+            />
+          ) : null}
+          {view === "salary" && settings ? (
+            <SalaryPlanForm
+              settings={settings}
+              setSettings={setSettings}
+              onSave={(ranks) => run("/api/admin/settings", {
+                method: "PUT",
+                body: JSON.stringify({ salaryRanks: ranks }),
+              })}
             />
           ) : null}
       </div>
@@ -1357,6 +1368,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
     ["subscriptionAmount", "Subscription USDT"],
     ["signupBonus", "Signup bonus USDT"],
     ["signupReferralPercent", "Direct referral % of signup bonus"],
+    ["signupWithdrawDirectPercent", "Signup withdraw unlock % of direct business"],
     ["level1", "Level 1 commission"],
     ["level2", "Level 2 commission"],
     ["level3", "Level 3 commission"],
@@ -1373,7 +1385,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
   return (
     <form onSubmit={onSave} className={card}>
       <p className="font-bold">Platform settings</p>
-      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Direct referral % is the share of that bonus paid to the sponsor who shared the link. Set the percent to 0 to turn that share off. It applies only to new registrations.</p>
+      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Direct referral % is the share of that bonus paid to the sponsor who shared the link. Signup withdraw unlock % is how much of a member&apos;s direct referral business (active $10 sub + investments) can unlock their signup bonus and signup referral for withdraw/transfer. ROI and other income stay free. Salary ranks are edited under Admin → Salary Plan.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {fields.map(([key, label]) => (
           <label key={key} className="text-xs text-[#667085]">
@@ -1387,6 +1399,117 @@ function SettingsForm({ settings, setSettings, onSave }) {
         Daily task is published
       </label>
       <Button className="mt-4" type="submit">Save settings</Button>
+    </form>
+  );
+}
+
+function SalaryPlanForm({ settings, setSettings, onSave }) {
+  const ranks = Array.isArray(settings.salaryRanks) ? settings.salaryRanks : [];
+
+  const updateRank = (index, key, value) => {
+    const next = ranks.map((row, i) => (i === index ? { ...row, [key]: value } : row));
+    setSettings({ ...settings, salaryRanks: next });
+  };
+
+  const addRank = () => {
+    const last = ranks[ranks.length - 1];
+    setSettings({
+      ...settings,
+      salaryRanks: [
+        ...ranks,
+        {
+          id: ranks.length + 1,
+          name: `Rank ${ranks.length + 1}`,
+          bv: String(Number(last?.bv || 0) + 5000),
+          daily: String(Number(last?.daily || 0) + 5),
+          tenure: String(last?.tenure || 100),
+        },
+      ],
+    });
+  };
+
+  const removeRank = (index) => {
+    setSettings({ ...settings, salaryRanks: ranks.filter((_, i) => i !== index) });
+  };
+
+  const resetDefaults = () => {
+    setSettings({
+      ...settings,
+      salaryRanks: [
+        { id: 1, name: "Sales Manager", bv: 5000, daily: 5, tenure: 100 },
+        { id: 2, name: "Senior Sales Manager", bv: 25000, daily: 25, tenure: 100 },
+        { id: 3, name: "Executive", bv: 50000, daily: 50, tenure: 100 },
+        { id: 4, name: "Executive Manager", bv: 100000, daily: 100, tenure: 100 },
+        { id: 5, name: "Senior Manager", bv: 500000, daily: 300, tenure: 100 },
+        { id: 6, name: "Regional Manager", bv: 1000000, daily: 500, tenure: 100 },
+        { id: 7, name: "Asst. General Manager", bv: 5000000, daily: 3000, tenure: 100 },
+        { id: 8, name: "General Manager", bv: 10000000, daily: 5000, tenure: 100 },
+        { id: 9, name: "Vice President", bv: 50000000, daily: 10000, tenure: 100 },
+        { id: 10, name: "President", bv: 100000000, daily: 25000, tenure: 100 },
+      ],
+    });
+  };
+
+  const submit = (event) => {
+    event.preventDefault();
+    const payload = ranks.map((row, index) => ({
+      id: index + 1,
+      name: String(row.name || "").trim(),
+      bv: Number(row.bv),
+      daily: Number(row.daily),
+      tenure: Number(row.tenure) || 100,
+    }));
+    onSave(payload);
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-3">
+      <PageHeader title="Salary Plan" subtitle="Unilevel ranks from team investment BV. Edit name, BV target, daily salary and tenure." crumbs={[{ label: "Admin", to: "/admin" }, { label: "Salary Plan" }]} />
+      <article className={card}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-bold">Ranks</p>
+            <p className="text-xs text-[#98a2b3]">BV = member + full downline investment packages only. Higher BV unlocks the next rank and starts a new tenure.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={resetDefaults}>Load defaults</Button>
+            <Button type="button" variant="outline" onClick={addRank}>Add rank</Button>
+            <Button type="submit">Save salary plan</Button>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {ranks.map((row, index) => (
+            <div key={`rank-${index}`} className="grid gap-2 rounded-xl border border-[#eaecf0] bg-[#f8fafc] p-3 sm:grid-cols-12">
+              <label className="text-xs text-[#667085] sm:col-span-1">
+                #
+                <input value={index + 1} readOnly className="mt-1 h-10 w-full rounded-lg border border-[#eaecf0] bg-white px-2 text-sm font-semibold text-[#101828]" />
+              </label>
+              <label className="text-xs text-[#667085] sm:col-span-3">
+                Rank name
+                <input value={row.name ?? ""} onChange={(e) => updateRank(index, "name", e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#eaecf0] bg-white px-2 text-sm text-[#101828]" required />
+              </label>
+              <label className="text-xs text-[#667085] sm:col-span-2">
+                BV needed ($)
+                <input type="number" min="1" step="1" value={row.bv ?? ""} onChange={(e) => updateRank(index, "bv", e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#eaecf0] bg-white px-2 text-sm text-[#101828]" required />
+              </label>
+              <label className="text-xs text-[#667085] sm:col-span-2">
+                Daily ($)
+                <input type="number" min="0" step="0.01" value={row.daily ?? ""} onChange={(e) => updateRank(index, "daily", e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#eaecf0] bg-white px-2 text-sm text-[#101828]" required />
+              </label>
+              <label className="text-xs text-[#667085] sm:col-span-2">
+                Tenure (days)
+                <input type="number" min="1" step="1" value={row.tenure ?? 100} onChange={(e) => updateRank(index, "tenure", e.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#eaecf0] bg-white px-2 text-sm text-[#101828]" required />
+              </label>
+              <div className="flex items-end sm:col-span-2">
+                <Button type="button" variant="outline" className="h-10 w-full text-[#e10600]" onClick={() => removeRank(index)} disabled={ranks.length <= 1}>
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {!ranks.length ? <p className="mt-3 text-sm text-[#667085]">No ranks yet. Click Load defaults or Add rank.</p> : null}
+      </article>
     </form>
   );
 }

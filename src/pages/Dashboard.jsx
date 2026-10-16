@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Copy, Eye, EyeOff } from "lucide-react";
+import { Copy, Eye, EyeOff, ExternalLink } from "lucide-react";
 import AppIcon from "@/components/common/AppIcon";
 import { useApp } from "@/context/AppContext";
 import { activationLabel, copyText, money } from "@/lib/utils";
 import { WhatsAppIcon, whatsappShareUrl } from "@/lib/whatsappShare.jsx";
-import { incomeByDay, lifetimeFigures, liveTransactions } from "@/lib/ledger";
+import { incomeByDay, lifetimeFigures, liveIncome, liveTransactions } from "@/lib/ledger";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
 import { useOffDay } from "@/components/common/OffDayBanner";
 
@@ -38,6 +38,13 @@ export default function Dashboard() {
   const activeAmount = activePlans.reduce((sum, row) => sum + Number(row.amount || 0), 0);
   const earned = lifetimeFigures(balances, referralCredits, income);
   const week = incomeByDay(income, 7);
+  const liveRows = liveIncome(income);
+  const signupBonusAmount = liveRows
+    .filter((row) => row.type === "Bonus Income" && /signup bonus/i.test(String(row.description || "")))
+    .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  const signupReferralAmount = liveRows
+    .filter((row) => row.type === "Referral Income" && /^Signup bonus ·/i.test(String(row.description || "")))
+    .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
   const txRows = liveTransactions(transactions).slice(0, 5).map((row) => {
     const [icon, tone] = txTone[row.type] || ["Coins", "bg-slate-100 text-slate-500"];
     return { ...row, icon, tone };
@@ -51,6 +58,10 @@ export default function Dashboard() {
   const shareWhatsApp = () => {
     if (!referralLink) return;
     window.open(whatsappShareUrl(referralLink), "_blank", "noopener,noreferrer");
+  };
+  const openReferral = () => {
+    if (!referralLink) return;
+    window.open(referralLink, "_blank", "noopener,noreferrer");
   };
   const stats = [
     { icon: "Wallet", iconBg: "bg-emerald-50 text-emerald-500", accent: "#34d399", label: "Today AdView", value: `$${money(todayRoi)}`, badge: roiStatus, to: "/roi" },
@@ -96,8 +107,18 @@ export default function Dashboard() {
               {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <p className="mt-1 text-sm text-white/75">≈ {hidden ? "••••" : `${money(balances.total)} USDT`}</p>
-          <div className="mt-6 grid grid-cols-3 gap-2">
+          <p className="mt-1 text-sm text-white/75">≈ {hidden ? "••••" : `$${money(balances.total)} USDT`}</p>
+          <div className="relative z-[1] mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-white/15 px-3 py-2.5 backdrop-blur-[2px]">
+              <p className="text-[11px] font-medium text-white/75">Signup Bonus</p>
+              <p className="mt-0.5 text-sm font-black tracking-tight">{hidden ? "••••" : `$${money(signupBonusAmount)}`}</p>
+            </div>
+            <div className="rounded-xl bg-white/15 px-3 py-2.5 backdrop-blur-[2px]">
+              <p className="text-[11px] font-medium text-white/75">Signup Referral</p>
+              <p className="mt-0.5 text-sm font-black tracking-tight">{hidden ? "••••" : `$${money(signupReferralAmount)}`}</p>
+            </div>
+          </div>
+          <div className="relative z-[1] mt-4 grid grid-cols-3 gap-2">
             <button onClick={() => navigate("/wallet/deposit")} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#e10600] px-2 text-xs font-bold sm:text-sm"><AppIcon name="ArrowDownToLine" size={15} /> Deposit</button>
             <button onClick={() => { if (!guard()) return; navigate("/wallet/withdraw"); }} className="theme-fixed inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-white px-2 text-xs font-bold text-[#111827] sm:text-sm"><AppIcon name="ArrowUpFromLine" size={15} /> Withdraw</button>
             <button onClick={() => navigate("/wallet/transfer")} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#4c1d95] px-2 text-xs font-bold sm:text-sm"><AppIcon name="ArrowLeftRight" size={15} /> Transfer</button>
@@ -112,6 +133,16 @@ export default function Dashboard() {
               </button>
               <button type="button" onClick={copyReferral} disabled={!referralLink} className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#e10600] px-3 text-xs font-bold text-white disabled:opacity-60">
                 <Copy size={13} /> Copy
+              </button>
+              <button
+                type="button"
+                onClick={openReferral}
+                disabled={!referralLink}
+                title="Open joining page"
+                aria-label="Open joining page in a new tab"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#eaecf0] bg-[#f8fafc] text-[#475467] disabled:opacity-60"
+              >
+                <ExternalLink size={14} />
               </button>
             </div>
           </div>

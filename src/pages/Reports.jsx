@@ -3,7 +3,7 @@ import Pager, { usePaging } from "@/components/common/Pager";
 import PageHeader from "@/components/common/PageHeader";
 import StatusBadge from "@/components/common/StatusBadge";
 import { useApp } from "@/context/AppContext";
-import { money } from "@/lib/utils";
+import { money, signedUsd } from "@/lib/utils";
 import { formatLedgerDate, liveIncome } from "@/lib/ledger";
 import AppIcon from "@/components/common/AppIcon";
 
@@ -101,13 +101,37 @@ export default function Reports({ kind }) {
           </table>
         </div>
         <div className="space-y-2 lg:hidden">
-          {statement.items.map((row) => (
-            <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3">
-              <p className="font-semibold">{row.cells[1]}</p>
-              <p className="text-xs text-[#667085]">{row.cells[0]}</p>
-              <p className="mt-1 text-sm font-bold text-emerald-600">{row.cells[2]}</p>
-            </article>
-          ))}
+          {statement.items.map((row) => {
+            if (kind === "roi") {
+              const date = row.cells[rows.columns.indexOf("Date")];
+              const amount = row.cells[rows.columns.indexOf("Amount")];
+              return (
+                <article key={row.id} className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fafc] px-3 py-3">
+                  <p className="min-w-0 text-sm text-[#667085]">{date}</p>
+                  <p className="shrink-0 text-sm font-bold text-emerald-600">{amount}</p>
+                </article>
+              );
+            }
+            return (
+              <article key={row.id} className="rounded-xl bg-[#f8fafc] p-3">
+                <dl className="space-y-2">
+                  {rows.columns.map((column, index) => {
+                    const value = row.cells[index];
+                    if (value == null || value === "") return null;
+                    const moneyCol = /amount|commission|fee|receive|earned/i.test(column);
+                    return (
+                      <div key={column} className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-xs font-medium text-[#667085]">{column}</dt>
+                        <dd className={`min-w-0 break-words text-right text-sm ${moneyCol ? "font-bold text-emerald-600" : "font-medium text-[#101828]"}`}>
+                          {value}
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </article>
+            );
+          })}
         </div>
         {statement.total === 0 ? <p className="py-6 text-center text-sm text-[#98a2b3]">No rows in this statement.</p> : null}
         <Pager page={statement.page} pages={statement.pages} total={statement.total} size={statement.size} onChange={statement.setPage} />
@@ -165,7 +189,7 @@ function buildRows(kind, income, transactions, depositRows, withdrawalRows, subs
       columns: ["Date", "Type", "Amount", "Status"],
       items: transactions.map((row) => ({
         id: row.id,
-        cells: [row.date, String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView"), `${row.amount > 0 ? "+" : ""}${money(row.amount)}`, <StatusBadge key={row.id} tone={row.status}>{row.status}</StatusBadge>],
+        cells: [row.date, String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView"), signedUsd(row.amount), <StatusBadge key={row.id} tone={row.status}>{row.status}</StatusBadge>],
       })),
     };
   }
@@ -212,7 +236,7 @@ function buildRows(kind, income, transactions, depositRows, withdrawalRows, subs
     columns: ["Date", "Type", "Description", "Amount", "Status"],
     items: source.map((row) => ({
       id: row.id,
-      cells: [formatLedgerDate(row.date), String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView income"), String(row.description).replaceAll("ROI", "AdView income"), `+${money(row.amount)}`, <StatusBadge key={row.id} tone={row.status}>{row.status}</StatusBadge>],
+      cells: [formatLedgerDate(row.date), String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView income"), String(row.description).replaceAll("ROI", "AdView income"), signedUsd(row.amount), <StatusBadge key={row.id} tone={row.status}>{row.status}</StatusBadge>],
     })),
   };
 }

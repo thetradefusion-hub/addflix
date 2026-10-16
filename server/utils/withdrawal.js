@@ -54,6 +54,15 @@ export function rejectWithdrawal(account, withdrawalId, note = "") {
     for (const key of ["bonus", "referral", "roi"]) {
       account.balances[key] = money2(Number(account.balances[key] || 0) + Number(row.sources[key] || 0));
     }
+    const gatedTake = money2(row.sources?.signupGated || 0);
+    if (gatedTake > 0) {
+      if (!account.signupWithdraw || typeof account.signupWithdraw !== "object") {
+        account.signupWithdraw = { remaining: 0, withdrawn: 0 };
+      }
+      account.signupWithdraw.remaining = money2((account.signupWithdraw.remaining || 0) + gatedTake);
+      account.signupWithdraw.withdrawn = money2(Math.max(0, (account.signupWithdraw.withdrawn || 0) - gatedTake));
+      account.markModified?.("signupWithdraw");
+    }
   }
   const ledger = (account.transactions || []).find((item) => String(item.withdrawalId) === String(row.id));
   if (ledger) ledger.status = "Failed";
@@ -67,7 +76,7 @@ export function availableBalance(balances) {
 export function lockFunds(balances, amount) {
   let left = money2(amount);
   const sources = { bonus: 0, referral: 0, roi: 0 };
-  for (const key of ["bonus", "referral", "roi"]) {
+  for (const key of ["roi", "referral", "bonus"]) {
     const have = money2(balances[key] || 0);
     const take = money2(Math.min(have, left));
     balances[key] = money2(have - take);

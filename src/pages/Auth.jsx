@@ -130,6 +130,12 @@ function AuthScreen({ routeMode }) {
   const [otpStep, setOtpStep] = useState(false);
   const [otpNotice, setOtpNotice] = useState('');
   const sponsorSeq = useRef(0);
+  const [avail, setAvail] = useState({
+    mobile: { status: 'idle', message: '' },
+    email: { status: 'idle', message: '' },
+    username: { status: 'idle', message: '' },
+  });
+  const availSeq = useRef({ mobile: 0, email: 0, username: 0 });
 
   useEffect(() => {
     if (!sponsorCode) return;
@@ -180,7 +186,65 @@ function AuthScreen({ routeMode }) {
     return () => clearTimeout(timer);
   }, [mode, register.sponsorId]);
 
-  const isSubmitDisabled = useMemo(() => loading, [loading]);
+  useEffect(() => {
+    if (mode !== 'register') return undefined;
+
+    const watch = [
+      { key: 'mobile', value: register.mobile, ready: Boolean(String(register.mobile).trim()) && !mobileError(register.mobile) },
+      { key: 'email', value: register.email, ready: Boolean(String(register.email).trim()) && !emailError(register.email) },
+      { key: 'username', value: register.username, ready: String(register.username).trim().length >= 3 },
+    ];
+
+    const timers = watch.map(({ key, value, ready }) => {
+      const trimmed = String(value ?? '').trim();
+      if (!trimmed || !ready) {
+        availSeq.current[key] += 1;
+        setAvail((prev) => (prev[key].status === 'idle' && !prev[key].message ? prev : { ...prev, [key]: { status: 'idle', message: '' } }));
+        return undefined;
+      }
+      const seq = ++availSeq.current[key];
+      setAvail((prev) => ({ ...prev, [key]: { status: 'checking', message: '' } }));
+      return setTimeout(() => {
+        apiFetch(`/api/auth/availability?field=${encodeURIComponent(key)}&value=${encodeURIComponent(trimmed)}`)
+          .then((data) => {
+            if (seq !== availSeq.current[key]) return;
+            if (data.available) {
+              setAvail((prev) => ({ ...prev, [key]: { status: 'available', message: '' } }));
+              setFormErrors((prev) => ({ ...prev, [key]: '' }));
+              return;
+            }
+            const msg = data.message || `This ${key} is already registered.`;
+            setAvail((prev) => ({ ...prev, [key]: { status: 'taken', message: msg } }));
+            setFormErrors((prev) => ({ ...prev, [key]: msg }));
+          })
+          .catch((error) => {
+            if (seq !== availSeq.current[key]) return;
+            const msg = error.message || `Unable to check this ${key}.`;
+            if (/already registered/i.test(msg)) {
+              setAvail((prev) => ({ ...prev, [key]: { status: 'taken', message: msg } }));
+              setFormErrors((prev) => ({ ...prev, [key]: msg }));
+              return;
+            }
+            setAvail((prev) => ({ ...prev, [key]: { status: 'idle', message: '' } }));
+          });
+      }, 400);
+    });
+
+    return () => {
+      timers.forEach((timer) => {
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, [mode, register.mobile, register.email, register.username]);
+
+  const isSubmitDisabled = useMemo(() => {
+    if (loading) return true;
+    if (mode !== 'register' || otpStep) return false;
+    return ['mobile', 'email', 'username'].some((key) => {
+      const status = avail[key].status;
+      return status === 'checking' || status === 'taken';
+    });
+  }, [loading, mode, otpStep, avail]);
 
   const setField = (stateSetter, key) => (event) => {
     let value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
@@ -201,7 +265,7 @@ function AuthScreen({ routeMode }) {
     }));
   };
 
-  const checkRegister = (values = register, status = sponsorStatus) => {
+  const checkRegister = (values = register, status = sponsorStatus, availability = avail) => {
     const errors = {};
     const sponsor = normalizeReferralId(values.sponsorId);
     if (!sponsor) errors.sponsorId = 'Referral ID is required.';
@@ -212,13 +276,19 @@ function AuthScreen({ routeMode }) {
     if (!COUNTRIES.includes(values.country)) errors.country = 'Select your country.';
     const badMobile = mobileError(values.mobile);
     if (badMobile) errors.mobile = badMobile;
+    else if (availability.mobile.status === 'taken') errors.mobile = availability.mobile.message || 'This mobile number is already registered.';
+    else if (availability.mobile.status === 'checking') errors.mobile = 'Checking mobile availability…';
     const badEmail = emailError(values.email);
     if (badEmail) errors.email = badEmail;
+    else if (availability.email.status === 'taken') errors.email = availability.email.message || 'This email is already registered.';
+    else if (availability.email.status === 'checking') errors.email = 'Checking email availability…';
     if (String(values.username).trim().length < 3) errors.username = 'Username must be at least 3 characters.';
+    else if (availability.username.status === 'taken') errors.username = availability.username.message || 'This username is already registered.';
+    else if (availability.username.status === 'checking') errors.username = 'Checking username availability…';
     if (!values.password) errors.password = 'Password is required.';
     else if (values.password.length < 8) errors.password = 'Password must be at least 8 characters.';
     if (!values.confirmPassword) errors.confirmPassword = 'Confirm your password.';
-    else     if (values.password !== values.confirmPassword) errors.confirmPassword = 'Passwords do not match.';
+    else if (values.password !== values.confirmPassword) errors.confirmPassword = 'Passwords do not match.';
     if (!values.termsAccepted || !values.privacyAccepted) errors.terms = 'Accept the Terms and Privacy Policy to continue.';
     return errors;
   };
@@ -449,7 +519,7 @@ function AuthScreen({ routeMode }) {
                 value={register.sponsorId}
                 onChange={setField(setRegister, 'sponsorId')}
                 readOnly={Boolean(sponsorCode)}
-                className={`${inputClass} uppercase read-only:bg-[#f2f4f7] read-only:text-[#475467] ${sponsorStatus === 'found' ? 'border-emerald-600 focus:border-emerald-600 focus:ring-emerald-600/15' : sponsorStatus === 'missing' || sponsorStatus === 'invalid' || formErrors.sponsorId ? 'border-red-500 focus:border-red-500' : ''}`}
+                className={`${inputClass} uppercase ${sponsorCode ? 'bg-[#f2f4f7] text-[#101828]' : ''} ${sponsorStatus === 'found' ? 'border-emerald-600 focus:border-emerald-600 focus:ring-emerald-600/15' : sponsorStatus === 'missing' || sponsorStatus === 'invalid' || formErrors.sponsorId ? 'border-red-500 focus:border-red-500' : ''}`}
                 placeholder="Enter referral ID"
                 autoComplete="off"
                 required
@@ -471,30 +541,67 @@ function AuthScreen({ routeMode }) {
                 {COUNTRIES.map((name) => <option key={name} value={name}>{name}</option>)}
               </select>
             </Field>
-            <Field label="Mobile" required error={formErrors.mobile}>
+            <Field
+              label="Mobile"
+              required
+              error={formErrors.mobile || (avail.mobile.status === 'taken' ? avail.mobile.message : '')}
+              hint={avail.mobile.status === 'checking' ? 'Checking…' : ''}
+            >
+              <div className="relative">
+                <input
+                  value={register.mobile}
+                  onChange={setField(setRegister, 'mobile')}
+                  onBlur={() => blurRegister('mobile')}
+                  className={`${inputClass} ${avail.mobile.status === 'available' ? 'border-emerald-600 pr-11 focus:border-emerald-600 focus:ring-emerald-600/15' : formErrors.mobile || avail.mobile.status === 'taken' ? 'border-red-500' : ''}`}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  required
+                />
+                {avail.mobile.status === 'available' ? (
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600" aria-label="Mobile number is available">
+                    <CheckCircle2 size={18} />
+                  </span>
+                ) : null}
+              </div>
+            </Field>
+            <Field
+              label="Email"
+              required
+              error={formErrors.email || (avail.email.status === 'taken' ? avail.email.message : '')}
+              hint={avail.email.status === 'checking' ? 'Checking…' : ''}
+            >
+              <div className="relative">
+                <input
+                  type="email"
+                  value={register.email}
+                  onChange={setField(setRegister, 'email')}
+                  onBlur={() => blurRegister('email')}
+                  className={`${inputClass} ${avail.email.status === 'available' ? 'border-emerald-600 pr-11 focus:border-emerald-600 focus:ring-emerald-600/15' : formErrors.email || avail.email.status === 'taken' ? 'border-red-500' : ''}`}
+                  autoComplete="email"
+                  required
+                />
+                {avail.email.status === 'available' ? (
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600" aria-label="Email is available">
+                    <CheckCircle2 size={18} />
+                  </span>
+                ) : null}
+              </div>
+            </Field>
+            <Field
+              label="Username"
+              required
+              error={formErrors.username || (avail.username.status === 'taken' ? avail.username.message : '')}
+              hint={avail.username.status === 'available' ? 'Username is available' : avail.username.status === 'checking' ? 'Checking…' : ''}
+              hintTone={avail.username.status === 'available' ? 'ok' : undefined}
+            >
               <input
-                value={register.mobile}
-                onChange={setField(setRegister, 'mobile')}
-                onBlur={() => blurRegister('mobile')}
-                className={`${inputClass} ${formErrors.mobile ? 'border-red-500' : ''}`}
-                inputMode="tel"
-                autoComplete="tel"
+                value={register.username}
+                onChange={setField(setRegister, 'username')}
+                onBlur={() => blurRegister('username')}
+                className={`${inputClass} ${avail.username.status === 'available' ? 'border-emerald-600 focus:border-emerald-600 focus:ring-emerald-600/15' : formErrors.username || avail.username.status === 'taken' ? 'border-red-500' : ''}`}
+                autoComplete="username"
                 required
               />
-            </Field>
-            <Field label="Email" required error={formErrors.email}>
-              <input
-                type="email"
-                value={register.email}
-                onChange={setField(setRegister, 'email')}
-                onBlur={() => blurRegister('email')}
-                className={`${inputClass} ${formErrors.email ? 'border-red-500' : ''}`}
-                autoComplete="email"
-                required
-              />
-            </Field>
-            <Field label="Username" required error={formErrors.username}>
-              <input value={register.username} onChange={setField(setRegister, 'username')} onBlur={() => blurRegister('username')} className={`${inputClass} ${formErrors.username ? 'border-red-500' : ''}`} autoComplete="username" required />
             </Field>
             <Field label="Password" required error={formErrors.password}>
               <PasswordInput value={register.password} onChange={setField(setRegister, 'password')} onBlur={() => blurRegister('password')} autoComplete="new-password" required className={formErrors.password ? 'border-red-500' : ''} />

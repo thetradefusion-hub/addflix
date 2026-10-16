@@ -18,7 +18,7 @@ const paths = { Deposit: "/wallet/deposit", Withdraw: "/wallet/withdraw", Transf
 
 export default function Transfer({ mode = "Deposit" }) {
   const navigate = useNavigate();
-  const { balances, depositRows, withdrawalRows, transactions, submitWithdrawal, submitTransfer, toast, submitDeposit, depositAddress, walletAddress } = useApp();
+  const { balances, signupGate, depositRows, withdrawalRows, transactions, submitWithdrawal, submitTransfer, toast, submitDeposit, depositAddress, walletAddress } = useApp();
   const guard = useActiveGuard();
   const [tab, setTab] = useState(mode);
   const [recipient, setRecipient] = useState("");
@@ -79,6 +79,8 @@ export default function Transfer({ mode = "Deposit" }) {
   const fee = useMemo(() => Number(((Number(amount) || 0) * 0.1).toFixed(2)), [amount]);
   const receive = useMemo(() => Math.max(0, Number(((Number(amount) || 0) - fee).toFixed(2))), [amount, fee]);
   const available = Math.max(0, Number((balances.total - balances.locked).toFixed(2)));
+  const maxCashout = Number(signupGate?.maxCashout ?? available);
+  const unlockPercent = Number(signupGate?.unlockPercent ?? 10);
 
   const sendDeposit = async () => {
     const value = Number(depositAmount);
@@ -155,7 +157,7 @@ export default function Transfer({ mode = "Deposit" }) {
         <section className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
           <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
             <p className="font-bold">Transfer to a member</p>
-            <p className="text-sm text-[#667085]">Available balance ${money(available)} USDT. The amount leaves your wallet and is added to theirs.</p>
+            <p className="text-sm text-[#667085]">Available balance ${money(available)} USDT. Max transfer ${money(maxCashout)} (signup bonus unlocks with {unlockPercent}% of direct referral business). The amount leaves your wallet and is added to theirs.</p>
             <label className="mt-3 block text-xs text-[#667085]">Member ID or username</label>
             <input value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder="ADD12568" className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] px-3 text-sm" />
             {member ? <p className="mt-1 text-xs font-semibold text-emerald-600">Member: {member.name} · {member.id}</p> : null}
@@ -177,6 +179,10 @@ export default function Transfer({ mode = "Deposit" }) {
               }
               if (value > available) {
                 toast("Amount cannot exceed your withdrawable balance.", "warning");
+                return;
+              }
+              if (value > maxCashout) {
+                toast(`Max transfer is $${money(maxCashout)}. Signup bonus needs ${unlockPercent}% of direct business to unlock.`, "warning");
                 return;
               }
               if (!/^\d{6}$/.test(transferPin)) {
@@ -257,22 +263,40 @@ export default function Transfer({ mode = "Deposit" }) {
         <section className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
           <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
             <p className="font-bold">Withdraw Funds</p>
-            <p className="text-sm text-[#667085]">Withdraw your available balance to your external wallet.</p>
+            <p className="text-sm text-[#667085]">Withdraw your available balance to your external wallet. Signup bonus and signup referral unlock with {unlockPercent}% of your direct referral business only. ROI and other income stay free.</p>
             <div className="mt-3 rounded-xl border border-emerald-500 bg-emerald-50 p-3">
-              <p className="text-xs text-[#667085]">Available to withdraw</p>
-              <p className="font-bold">${money(available)}</p>
-              <p className="text-[11px] text-[#667085]">Total ${money(balances.total)} minus locked ${money(balances.locked)}</p>
+              <p className="text-xs text-[#667085]">Max cashout now</p>
+              <p className="font-bold">${money(maxCashout)}</p>
+              <p className="text-[11px] text-[#667085]">Wallet available ${money(available)} · free ${money(signupGate?.free ?? available)} · unlocked signup ${money(signupGate?.gated || 0)}</p>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
+                <p className="text-[#667085]">Direct business</p>
+                <p className="font-bold text-[#101828]">${money(signupGate?.directBusiness || 0)}</p>
+              </div>
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
+                <p className="text-[#667085]">{unlockPercent}% unlock</p>
+                <p className="font-bold text-[#101828]">${money(signupGate?.unlockCap || 0)}</p>
+              </div>
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
+                <p className="text-[#667085]">Signup gated left</p>
+                <p className="font-bold text-[#101828]">${money(signupGate?.remaining || 0)}</p>
+              </div>
+              <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
+                <p className="text-[#667085]">Already unlocked out</p>
+                <p className="font-bold text-[#101828]">${money(signupGate?.withdrawn || 0)}</p>
+              </div>
             </div>
             <label className="mt-3 block text-xs text-[#667085]">Withdrawal Amount (USDT)</label>
             <input value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] px-3 text-sm" />
-            <p className="mt-1 text-[11px] text-[#98a2b3]">Available: ${money(available)} · Minimum: 10 USDT</p>
+            <p className="mt-1 text-[11px] text-[#98a2b3]">Max cashout: ${money(maxCashout)} · Minimum: 10 USDT</p>
             <label className="mt-3 block text-xs text-[#667085]">Wallet Address (BEP-20)</label>
             <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="0x and 40 hex characters" className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] px-3 text-sm" />
             <label className="mt-3 block text-xs text-[#667085]">Transaction Password / PIN</label>
             <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="Enter 6 digit transaction PIN" inputMode="numeric" autoComplete="off" type="password" className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] px-3 text-sm" />
             <div className="mt-3 rounded-xl bg-[#f8fafc] p-3 text-sm">
-              <div className="flex justify-between"><span>Withdrawal Fee (10%)</span><span>{money(fee)} USDT</span></div>
-              <div className="mt-1 flex justify-between font-bold text-emerald-600"><span>You Will Receive</span><span>{money(receive)} USDT</span></div>
+              <div className="flex justify-between"><span>Withdrawal Fee (10%)</span><span>${money(fee)} USDT</span></div>
+              <div className="mt-1 flex justify-between font-bold text-emerald-600"><span>You Will Receive</span><span>${money(receive)} USDT</span></div>
             </div>
             <Button className="mt-3 w-full" onClick={() => {
               if (!guard()) return;
@@ -283,6 +307,10 @@ export default function Transfer({ mode = "Deposit" }) {
               }
               if (value > available) {
                 toast("Amount cannot exceed your withdrawable balance.", "warning");
+                return;
+              }
+              if (value > maxCashout) {
+                toast(`Max cashout is $${money(maxCashout)}. Build direct business to unlock more signup bonus.`, "warning");
                 return;
               }
               if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
@@ -315,7 +343,7 @@ export default function Transfer({ mode = "Deposit" }) {
         onClose={() => setConfirm(false)}
         footer={<><Button variant="ghost" className="flex-1" onClick={() => setConfirm(false)}>Cancel</Button><Button className="flex-1" disabled={busy} onClick={submit}>{busy ? "Submitting..." : "Confirm"}</Button></>}
       >
-        <p>Lock <b>{money(Number(amount) || 0)} USDT</b> for review. Fee {money(fee)} USDT. You receive <b>{money(receive)} USDT</b> when it is paid. Your total balance stays the same until then. Available becomes ${money(Math.max(0, available - (Number(amount) || 0)))}.</p>
+        <p>Lock <b>${money(Number(amount) || 0)} USDT</b> for review. Fee ${money(fee)} USDT. You receive <b>${money(receive)} USDT</b> when it is paid. Your total balance stays the same until then. Available becomes ${money(Math.max(0, available - (Number(amount) || 0)))}.</p>
       </Modal>
     </div>
   );

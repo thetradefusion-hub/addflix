@@ -15,6 +15,7 @@ const Investment = lazy(() => import("@/pages/Investment"));
 const WalletPage = lazy(() => import("@/pages/Wallet"));
 const Referral = lazy(() => import("@/pages/Referral"));
 const Team = lazy(() => import("@/pages/Team"));
+const Salary = lazy(() => import("@/pages/Salary"));
 const Income = lazy(() => import("@/pages/Income"));
 const Transfer = lazy(() => import("@/pages/Transfer"));
 const Reports = lazy(() => import("@/pages/Reports"));
@@ -73,6 +74,7 @@ export default function App() {
       <Route path="/admin/withdrawals" element={<Page><Admin view="withdrawals" /></Page>} />
       <Route path="/admin/deposits" element={<Page><Admin view="deposits" /></Page>} />
       <Route path="/admin/settings" element={<Page><Admin view="settings" /></Page>} />
+      <Route path="/admin/salary" element={<Page><Admin view="salary" /></Page>} />
       <Route path="/admin/plans" element={<Page><Admin view="plans" /></Page>} />
       <Route path="/admin/subscriptions" element={<Page><Admin view="subscriptions" /></Page>} />
       <Route path="/admin/level-income" element={<Page><Admin view="level" /></Page>} />
@@ -98,11 +100,13 @@ export default function App() {
         <Route path="/referral/link" element={<Page><Referral view="link" /></Page>} />
         <Route path="/referral/level/:level" element={<LevelRoute />} />
         <Route path="/team" element={<Page><Team /></Page>} />
+        <Route path="/salary" element={<Page><Salary /></Page>} />
         <Route path="/income" element={<Page><Income preset="All Income" /></Page>} />
         <Route path="/income/roi" element={<Page><Income preset="ROI Income" /></Page>} />
         <Route path="/income/referral" element={<Page><Income preset="Referral Income" /></Page>} />
         <Route path="/income/level" element={<Page><Income preset="Level Income" /></Page>} />
         <Route path="/income/bonus" element={<Page><Income preset="Bonus Income" /></Page>} />
+        <Route path="/income/salary" element={<Page><Income preset="Salary Income" /></Page>} />
         <Route path="/watch" element={<Navigate to="/daily-task" replace />} />
         <Route path="/notifications" element={<Page><NotificationsPage /></Page>} />
         <Route path="/support" element={<Page><SupportPage /></Page>} />

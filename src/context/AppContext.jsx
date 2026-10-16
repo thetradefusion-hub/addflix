@@ -11,6 +11,17 @@ const USER_KEY = "addflix_user";
 const CACHE_PREFIX = "addflix_account_";
 const EMPTY_BALANCES = { total: 0, roi: 0, referral: 0, bonus: 0, locked: 0 };
 const EMPTY_NETWORK = { members: [], levels: [], total: 0, active: 0, direct: 0, commissionPerTen: 0 };
+const EMPTY_SIGNUP_GATE = {
+  remaining: 0,
+  withdrawn: 0,
+  directBusiness: 0,
+  unlockPercent: 10,
+  unlockCap: 0,
+  free: 0,
+  gated: 0,
+  maxCashout: 0,
+  available: 0,
+};
 
 function readStoredUser() {
   try {
@@ -61,6 +72,7 @@ export function AppProvider({ children }) {
   const [dailyTask, setDailyTask] = useState(null);
   const [roiDays, setRoiDays] = useState([]);
   const [balances, setBalances] = useState(EMPTY_BALANCES);
+  const [signupGate, setSignupGate] = useState(EMPTY_SIGNUP_GATE);
   const [transactions, setTransactions] = useState([]);
   const [income, setIncome] = useState([]);
   const [referralCredits, setReferralCredits] = useState([]);
@@ -89,6 +101,9 @@ export function AppProvider({ children }) {
     if (!account) return;
     setWalletAddress(account.walletAddress || "");
     setBalances(account.balances || EMPTY_BALANCES);
+    if (account.signupGate) {
+      setSignupGate({ ...EMPTY_SIGNUP_GATE, ...account.signupGate });
+    }
     setTransactions(Array.isArray(account.transactions) ? account.transactions : []);
     setDepositRows(Array.isArray(account.deposits) ? account.deposits : []);
     setWithdrawalRows(Array.isArray(account.withdrawals) ? account.withdrawals : []);
@@ -133,6 +148,7 @@ export function AppProvider({ children }) {
     setNetwork(EMPTY_NETWORK);
     setWatching(false);
     applyAccount({ balances: EMPTY_BALANCES }, { cache: false });
+    setSignupGate(EMPTY_SIGNUP_GATE);
     setDailyTask(null);
   };
 
@@ -486,6 +502,7 @@ export function AppProvider({ children }) {
       dailyTask,
       roiDays,
       balances,
+      signupGate,
       transactions,
       income,
       referralCredits,
@@ -542,6 +559,7 @@ export function AppProvider({ children }) {
       dailyTask,
       roiDays,
       balances,
+      signupGate,
       transactions,
       income,
       referralCredits,

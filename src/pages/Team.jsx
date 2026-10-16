@@ -23,7 +23,40 @@ function branchMatches(member, members, query) {
   return members.some((row) => sameId(row.parent, member.id) && branchMatches(row, members, query));
 }
 
-function GeneNode({ member, members, onPick, depth, query, focusLevel }) {
+/** Free ID = red, subscription only = yellow, active ROI package = green. */
+function packageTone(member) {
+  const subscribed = member.subscribed ?? member.status === "Active";
+  const hasPlan = member.hasPlan ?? (Number(member.investment) > 0 && member.plan && member.plan !== "—");
+  if (subscribed && hasPlan) return "plan";
+  if (subscribed) return "sub";
+  return "free";
+}
+
+const PACKAGE_CARD = {
+  free: {
+    card: "border-red-600 bg-red-500 text-white shadow-[0_8px_18px_rgba(225,6,0,0.28)]",
+    avatar: "bg-white/20 text-white",
+    muted: "text-white/80",
+    chip: "bg-white/20 text-white",
+    label: "Free",
+  },
+  sub: {
+    card: "border-amber-600 bg-amber-500 text-white shadow-[0_8px_18px_rgba(245,158,11,0.32)]",
+    avatar: "bg-white/20 text-white",
+    muted: "text-white/85",
+    chip: "bg-white/20 text-white",
+    label: "Sub",
+  },
+  plan: {
+    card: "border-emerald-600 bg-emerald-500 text-white shadow-[0_8px_18px_rgba(16,185,129,0.28)]",
+    avatar: "bg-white/20 text-white",
+    muted: "text-white/80",
+    chip: "bg-white/20 text-white",
+    label: "Plan",
+  },
+};
+
+function GeneNode({ member, members, onFocus, depth, query, focusLevel }) {
   const kids = members.filter((row) => sameId(row.parent, member.id));
   const visibleKids = query ? kids.filter((row) => branchMatches(row, members, query)) : kids;
   const [open, setOpen] = useState(depth < 1);
@@ -31,17 +64,18 @@ function GeneNode({ member, members, onPick, depth, query, focusLevel }) {
     if (query) setOpen(true);
   }, [query]);
   const hot = focusLevel && member.level === focusLevel;
+  const tone = PACKAGE_CARD[packageTone(member)];
 
   return (
     <li>
-      <div className={`relative w-[8.75rem] rounded-2xl border bg-white px-2 py-2.5 text-center ${hot ? "border-[#e10600]" : "border-[#eaecf0]"}`}>
-        <button type="button" onClick={() => onPick(member)} className="w-full text-center">
-          <span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-red-50 text-xs font-bold text-[#e10600]">{initials(member.name)}</span>
-          <span className="mt-1 block truncate text-xs font-semibold text-[#101828]">{member.name}</span>
-          <span className="block truncate text-[10px] text-[#667085]">{member.id}</span>
+      <div className={`relative w-[8.75rem] rounded-2xl border px-2 py-2.5 text-center ${tone.card} ${hot ? "ring-2 ring-[#e10600] ring-offset-2" : ""}`}>
+        <button type="button" onClick={() => onFocus(member)} className="w-full text-center">
+          <span className={`mx-auto grid h-9 w-9 place-items-center rounded-full text-xs font-bold ${tone.avatar}`}>{initials(member.name)}</span>
+          <span className="mt-1 block truncate text-xs font-semibold">{member.name}</span>
+          <span className={`block truncate text-[10px] ${tone.muted}`}>{member.id}</span>
           <span className="mt-1.5 flex flex-wrap items-center justify-center gap-1">
-            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-[#475467]">L{member.level}</span>
-            <StatusBadge tone={member.status}>{member.status}</StatusBadge>
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`}>L{member.level}</span>
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`}>{tone.label}</span>
           </span>
         </button>
         {kids.length ? (
@@ -59,7 +93,7 @@ function GeneNode({ member, members, onPick, depth, query, focusLevel }) {
       {open && visibleKids.length ? (
         <ul>
           {visibleKids.map((child) => (
-            <GeneNode key={child.id} member={child} members={members} onPick={onPick} depth={depth + 1} query={query} focusLevel={focusLevel} />
+            <GeneNode key={child.id} member={child} members={members} onFocus={onFocus} depth={depth + 1} query={query} focusLevel={focusLevel} />
           ))}
         </ul>
       ) : null}
@@ -67,18 +101,42 @@ function GeneNode({ member, members, onPick, depth, query, focusLevel }) {
   );
 }
 
+function FocusRoot({ member, onOpenDetails }) {
+  const tone = PACKAGE_CARD[packageTone(member)];
+  return (
+    <div className={`w-[8.75rem] rounded-2xl border px-2 py-3 text-center ${tone.card}`}>
+      <button type="button" onClick={() => onOpenDetails(member)} className="w-full text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/75">Focus</p>
+        <span className={`mx-auto mt-1 grid h-9 w-9 place-items-center rounded-full text-xs font-bold ${tone.avatar}`}>{initials(member.name)}</span>
+        <p className="mt-1 truncate text-sm font-black">{member.name}</p>
+        <p className={`truncate text-[10px] ${tone.muted}`}>{member.id}</p>
+        <span className="mt-1.5 flex flex-wrap items-center justify-center gap-1">
+          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`}>L{member.level}</span>
+          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`}>{tone.label}</span>
+        </span>
+      </button>
+    </div>
+  );
+}
 export default function Team() {
   const { sessionUser, network } = useApp();
   const members = network.members || [];
   const memberId = sessionUser?.id || "—";
   const [picked, setPicked] = useState(null);
+  const [treeFocus, setTreeFocus] = useState(null);
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState(0);
   const q = query.trim().toLowerCase();
-  const roots = useMemo(
-    () => members.filter((row) => row.level === 1 && (!q || branchMatches(row, members, q))),
-    [members, q],
+  const focused = useMemo(
+    () => (treeFocus ? members.find((row) => sameId(row.id, treeFocus.id)) || treeFocus : null),
+    [members, treeFocus],
   );
+  const roots = useMemo(() => {
+    if (focused) {
+      return members.filter((row) => sameId(row.parent, focused.id) && (!q || branchMatches(row, members, q)));
+    }
+    return members.filter((row) => row.level === 1 && (!q || branchMatches(row, members, q)));
+  }, [members, q, focused]);
   const directory = useMemo(
     () => members.filter((row) => {
       const levelOk = !level || row.level === level;
@@ -102,7 +160,9 @@ export default function Team() {
     if (!hidden) return;
     const delta = rootBox.left - scrollerBox.left - (scrollerBox.width - rootBox.width) / 2;
     scroller.scrollLeft += delta;
-  }, [members.length, q]);
+  }, [members.length, q, focused?.id]);
+
+  const clearTreeFocus = () => setTreeFocus(null);
 
   return (
     <div className="mx-auto max-w-[1180px]">
@@ -127,35 +187,64 @@ export default function Team() {
 
       <section className="rounded-2xl border border-[#eaecf0] bg-white p-3 lg:p-4">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-bold text-[#101828]">Genealogy</p>
-          <label className="relative block sm:w-64">
-            <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98a2b3]" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search name or ID"
-              aria-label="Search team"
-              className="h-10 w-full rounded-full border border-[#eaecf0] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#e10600]"
-            />
-          </label>
+          <div>
+            <p className="font-bold text-[#101828]">Genealogy</p>
+            <div className="mt-1.5 flex flex-wrap gap-2 text-[11px] font-semibold text-[#667085]">
+              <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Free ID</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Subscription</span>
+              <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Package / ROI</span>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            {focused ? (
+              <button type="button" onClick={clearTreeFocus} className="h-9 rounded-full border border-[#eaecf0] bg-[#f8fafc] px-3 text-xs font-semibold text-[#344054]">
+                Show full tree
+              </button>
+            ) : null}
+            <label className="relative block sm:w-64">
+              <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98a2b3]" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search name or ID"
+                aria-label="Search team"
+                className="h-10 w-full rounded-full border border-[#eaecf0] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#e10600]"
+              />
+            </label>
+          </div>
         </div>
+        {focused ? (
+          <p className="mb-3 text-xs text-[#667085]">
+            Showing only <span className="font-semibold text-[#101828]">{focused.name}</span> ({focused.id}) and their downline.
+          </p>
+        ) : (
+          <p className="mb-3 text-xs text-[#667085]">Tap a member to focus their tree and hide the rest.</p>
+        )}
         <div ref={scrollerRef} className="overflow-x-auto pb-4">
           <div className="gene-tree mx-auto w-max min-w-full px-2 py-2">
             <ul>
               <li>
-                <div ref={rootRef} className="w-[8.75rem] rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 px-2 py-3 text-center text-white">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-white/75">You</p>
-                  <p className="mt-1 truncate text-sm font-black">{sessionUser?.name || "You"}</p>
-                  <p className="truncate text-[10px] text-white/80">{memberId}</p>
-                </div>
+                {focused ? (
+                  <div ref={rootRef}>
+                    <FocusRoot member={focused} onOpenDetails={setPicked} />
+                  </div>
+                ) : (
+                  <div ref={rootRef} className="w-[8.75rem] rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 px-2 py-3 text-center text-white">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-white/75">You</p>
+                    <p className="mt-1 truncate text-sm font-black">{sessionUser?.name || "You"}</p>
+                    <p className="truncate text-[10px] text-white/80">{memberId}</p>
+                  </div>
+                )}
                 {roots.length ? (
                   <ul>
                     {roots.map((member) => (
-                      <GeneNode key={member.id} member={member} members={members} onPick={setPicked} depth={0} query={q} focusLevel={level} />
+                      <GeneNode key={member.id} member={member} members={members} onFocus={setTreeFocus} depth={0} query={q} focusLevel={level} />
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-4 text-center text-sm text-[#667085]">{q ? "No member matches that search." : "No downline yet."}</p>
+                  <p className="mt-4 text-center text-sm text-[#667085]">
+                    {q ? "No member matches that search." : focused ? "This member has no downline yet." : "No downline yet."}
+                  </p>
                 )}
               </li>
             </ul>

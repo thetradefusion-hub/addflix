@@ -10,7 +10,7 @@ import AppIcon from "@/components/common/AppIcon";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/context/AppContext";
 import { useActiveGuard } from "@/components/common/ActiveGate";
-import { copyText, money } from "@/lib/utils";
+import { copyText, money, signedUsd } from "@/lib/utils";
 import Pager, { usePaging } from "@/components/common/Pager";
 
 export default function WalletPage({ initialTab = "Overview" }) {
@@ -53,7 +53,7 @@ export default function WalletPage({ initialTab = "Overview" }) {
               {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <p className="mt-1 text-sm text-white/75">≈ {hidden ? "••••" : `${money(balances.total)} USDT`}</p>
+          <p className="mt-1 text-sm text-white/75">≈ {hidden ? "••••" : `$${money(balances.total)} USDT`}</p>
           <div className="mt-6 flex flex-wrap gap-2">
             <button onClick={() => navigate("/wallet/deposit")} className="h-10 rounded-xl bg-[#e10600] px-5 text-sm font-bold text-white shadow-sm">Deposit</button>
             <button onClick={() => guard() && navigate("/wallet/withdraw")} className="h-10 rounded-xl border border-white/70 bg-white/10 px-5 text-sm font-bold text-white">Withdraw</button>
@@ -62,10 +62,10 @@ export default function WalletPage({ initialTab = "Overview" }) {
         </article>
 
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
-          <BalanceTile icon={<AppIcon name="HandCoins" size={20} />} iconClass="bg-emerald-50 text-emerald-500" label="AdView Balance" amount={`$${money(balances.roi)}`} hint={`${money(balances.roi)} USDT`} />
-          <BalanceTile icon={<AppIcon name="Users" size={20} />} iconClass="bg-sky-50 text-sky-500" label="Referral Balance" amount={`$${money(balances.referral)}`} hint={`${money(balances.referral)} USDT`} />
-          <BalanceTile icon={<AppIcon name="Gift" size={20} />} iconClass="bg-orange-50 text-orange-500" label="Bonus Balance" amount={`$${money(balances.bonus)}`} hint={`${money(balances.bonus)} USDT`} />
-          <BalanceTile icon={<AppIcon name="LockKeyhole" size={20} />} iconClass="bg-violet-50 text-violet-500" label="Locked Balance" amount={`$${money(balances.locked)}`} hint={`${money(balances.locked)} USDT`} />
+          <BalanceTile icon={<AppIcon name="HandCoins" size={20} />} iconClass="bg-emerald-50 text-emerald-500" label="AdView Balance" amount={`$${money(balances.roi)}`} hint={`$${money(balances.roi)} USDT`} />
+          <BalanceTile icon={<AppIcon name="Users" size={20} />} iconClass="bg-sky-50 text-sky-500" label="Referral Balance" amount={`$${money(balances.referral)}`} hint={`$${money(balances.referral)} USDT`} />
+          <BalanceTile icon={<AppIcon name="Gift" size={20} />} iconClass="bg-orange-50 text-orange-500" label="Bonus Balance" amount={`$${money(balances.bonus)}`} hint={`$${money(balances.bonus)} USDT`} />
+          <BalanceTile icon={<AppIcon name="LockKeyhole" size={20} />} iconClass="bg-violet-50 text-violet-500" label="Locked Balance" amount={`$${money(balances.locked)}`} hint={`$${money(balances.locked)} USDT`} />
         </div>
       </section>
 
@@ -192,7 +192,7 @@ function TransactionList({ rows, toast }) {
                 <td className="py-3">{list.start + index + 1}</td>
                 <td className="whitespace-nowrap">{row.date}</td>
                 <td>{String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")}</td>
-                <td className={row.amount > 0 ? "font-semibold text-emerald-600" : "font-semibold text-[#e10600]"}>{row.amount > 0 ? "+" : ""}{money(row.amount)}</td>
+                <td className={row.amount > 0 ? "font-semibold text-emerald-600" : "font-semibold text-[#e10600]"}>{signedUsd(row.amount)}</td>
                 <td><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
                 <td><button className="rounded-lg border border-[#fda4a4] px-2.5 py-1 text-xs font-semibold text-[#e10600]" onClick={() => toast(`${String(row.type).replaceAll("ROI Income", "AdView income").replaceAll("ROI", "AdView")} · ${row.date}`)}>View</button></td>
               </tr>
@@ -211,7 +211,7 @@ function TransactionList({ rows, toast }) {
                 <p className="text-[11px] text-[#98a2b3]">{row.date}</p>
               </div>
               <div className="text-right">
-                <p className={row.amount > 0 ? "text-sm font-bold text-emerald-600" : "text-sm font-bold text-[#e10600]"}>{row.amount > 0 ? "+" : ""}{money(row.amount)}</p>
+                <p className={row.amount > 0 ? "text-sm font-bold text-emerald-600" : "text-sm font-bold text-[#e10600]"}>{signedUsd(row.amount)}</p>
                 <StatusBadge tone={row.status}>{row.status}</StatusBadge>
               </div>
             </article>

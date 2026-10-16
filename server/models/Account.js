@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import { previewTodayRoi, roiDayInfo } from "../utils/plans.js";
 import { assignDailyTask, rollTask, todayKey } from "../utils/dailyTask.js";
+import { presentSalary } from "../utils/salaryRanks.js";
 
 export const TODAY_ROI = 2.5;
 
@@ -21,6 +22,10 @@ const accountSchema = new mongoose.Schema(
       bonus: { type: Number, default: 0 },
       locked: { type: Number, default: 0 },
     },
+    signupWithdraw: {
+      remaining: { type: Number, default: 0 },
+      withdrawn: { type: Number, default: 0 },
+    },
     transactions: { type: Array, default: [] },
     deposits: { type: Array, default: [] },
     withdrawals: { type: Array, default: [] },
@@ -33,6 +38,17 @@ const accountSchema = new mongoose.Schema(
     subscriptionPayments: { type: Array, default: [] },
     notifications: { type: Array, default: [] },
     videoWatches: { type: Array, default: [] },
+    salary: {
+      rank: { type: Number, default: 0 },
+      rankName: { type: String, default: "" },
+      bv: { type: Number, default: 0 },
+      dailyAmount: { type: Number, default: 0 },
+      tenure: { type: Number, default: 100 },
+      startedDay: { type: String, default: "" },
+      daysPaid: { type: Number, default: 0 },
+      lastPaidDay: { type: String, default: "" },
+      unlockedAt: { type: String, default: "" },
+    },
     subscription: {
       active: { type: Boolean, default: false },
       paymentState: { type: String, default: "idle" },
@@ -89,6 +105,11 @@ accountSchema.methods.toClient = function toClient() {
     notifications: this.notifications || [],
     subscription: this.subscription,
     dailyTask: this.dailyTask,
+    salary: presentSalary(this.salary),
+    signupWithdraw: {
+      remaining: Number(this.signupWithdraw?.remaining || 0),
+      withdrawn: Number(this.signupWithdraw?.withdrawn || 0),
+    },
   };
 };
 

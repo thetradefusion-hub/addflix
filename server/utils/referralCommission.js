@@ -128,6 +128,11 @@ export async function creditSignupReferral({ sponsor, member, signupBonus, perce
   const when = istStamp();
   account.balances.referral = money2((account.balances.referral || 0) + share);
   account.balances.total = money2((account.balances.total || 0) + share);
+  if (!account.signupWithdraw || typeof account.signupWithdraw !== "object") {
+    account.signupWithdraw = { remaining: 0, withdrawn: 0 };
+  }
+  account.signupWithdraw.remaining = money2((account.signupWithdraw.remaining || 0) + share);
+  account.markModified("signupWithdraw");
   account.income.unshift({
     id,
     date: when,

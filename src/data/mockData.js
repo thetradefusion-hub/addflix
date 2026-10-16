@@ -293,6 +293,7 @@ export const navItems = [
   { to: "/investment", label: "My Plan / Investment", icon: "PieChart" },
   { to: "/daily-task", label: "Daily Task", icon: "ListChecks" },
   { to: "/roi", label: "Today's AdView", icon: "CircleDollarSign" },
+  { to: "/salary", label: "Salary Plan", icon: "CircleDollarSign" },
   {
     label: "Income",
     icon: "DollarSign",
@@ -301,6 +302,7 @@ export const navItems = [
       { to: "/income/referral", label: "Referral Income" },
       { to: "/income/level", label: "Level Income" },
       { to: "/income/bonus", label: "Bonus" },
+      { to: "/income/salary", label: "Salary Income" },
       { to: "/income", label: "Income History" },
     ],
   },

@@ -17,6 +17,20 @@ export function fineMoney(value) {
   return Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 }
 
+/** Always includes a leading $. */
+export function usd(value, digits = 2) {
+  return `$${money(value, digits)}`;
+}
+
+/** Signed money with $: +$1.25 / -$1.25 / $0.00 */
+export function signedUsd(value, digits = 2) {
+  const n = Number(value || 0);
+  const abs = money(Math.abs(n), digits);
+  if (n > 0) return `+$${abs}`;
+  if (n < 0) return `-$${abs}`;
+  return `$${abs}`;
+}
+
 const weekNames = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
 
 export function roiDaysLabel(offDays) {

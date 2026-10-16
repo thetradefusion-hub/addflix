@@ -6,6 +6,7 @@ import { requireAdmin, requireDuty } from "../middleware/requireAdmin.js";
 import { notifyUser } from "../utils/notify.js";
 import deskRoutes from "./adminDesk.js";
 import { getSettings, readSettings } from "../utils/settings.js";
+import { normalizeSalaryRanks, ranksFromSettings } from "../utils/salaryRanks.js";
 import { approveWithdrawal, money2, rejectWithdrawal } from "../utils/withdrawal.js";
 import { closeTaskDay, normalizeTask, todayKey } from "../utils/dailyTask.js";
 import Plan from "../models/Plan.js";
@@ -43,6 +44,7 @@ function publicSettings(settings) {
     level4: settings.level4,
     minWithdraw: settings.minWithdraw,
     withdrawFeeRate: settings.withdrawFeeRate,
+    signupWithdrawDirectPercent: Number(settings.signupWithdrawDirectPercent) || 10,
     taskTitle: settings.taskTitle,
     taskSubtitle: settings.taskSubtitle,
     taskVideoUrl: settings.taskVideoUrl,
@@ -51,6 +53,7 @@ function publicSettings(settings) {
     taskPublished: settings.taskPublished,
     bep20Rpc: settings.bep20Rpc || "",
     depositAddress: settings.depositAddress || "0x3A7F9D8e4B2c1F6d5E8a9B0c3D4eF6A7b8C9D0e1",
+    salaryRanks: ranksFromSettings(settings),
   };
 }
 
@@ -614,15 +617,15 @@ router.get("/settings", requireDuty("settings"), async (_req, res) => {
 router.put("/settings", requireDuty("settings"), async (req, res) => {
   const settings = await getSettings();
   const body = req.body || {};
-  const numbers = ["subscriptionAmount", "signupBonus", "signupReferralPercent", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
+  const numbers = ["subscriptionAmount", "signupBonus", "signupReferralPercent", "signupWithdrawDirectPercent", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
   for (const key of numbers) {
     if (body[key] == null || body[key] === "") continue;
     const value = Number(body[key]);
     if (!Number.isFinite(value) || value < 0) {
       return res.status(400).json({ ok: false, message: `${key} must be a positive number.` });
     }
-    if (key === "signupReferralPercent" && value > 100) {
-      return res.status(400).json({ ok: false, message: "Direct referral percent must be from 0 to 100." });
+    if ((key === "signupReferralPercent" || key === "signupWithdrawDirectPercent") && value > 100) {
+      return res.status(400).json({ ok: false, message: `${key === "signupWithdrawDirectPercent" ? "Signup withdraw" : "Direct referral"} percent must be from 0 to 100.` });
     }
     settings[key] = value;
   }
@@ -638,9 +641,20 @@ router.put("/settings", requireDuty("settings"), async (req, res) => {
     settings.depositAddress = address;
   }
   if (typeof body.taskPublished === "boolean") settings.taskPublished = body.taskPublished;
+  if (body.salaryRanks !== undefined) {
+    const ranks = normalizeSalaryRanks(body.salaryRanks);
+    if (!ranks.length) {
+      return res.status(400).json({ ok: false, message: "Add at least one salary rank with name, BV and daily income." });
+    }
+    if (ranks.length > 30) {
+      return res.status(400).json({ ok: false, message: "Maximum 30 salary ranks." });
+    }
+    settings.salaryRanks = ranks;
+  }
   await settings.save();
-  await writeAudit(req.user, "settings.update", "platform", "Platform settings saved");
-  res.json({ ok: true, message: "Settings saved.", settings: publicSettings(settings) });
+  ranksFromSettings(settings);
+  await writeAudit(req.user, "settings.update", "platform", body.salaryRanks ? "Salary plan saved" : "Platform settings saved");
+  res.json({ ok: true, message: body.salaryRanks ? "Salary plan saved." : "Settings saved.", settings: publicSettings(settings) });
 });
 
 router.get("/plans", async (_req, res) => {

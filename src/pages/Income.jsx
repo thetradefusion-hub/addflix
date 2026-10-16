@@ -10,12 +10,13 @@ import { useApp } from "@/context/AppContext";
 import { fineMoney, money, shortHash } from "@/lib/utils";
 import { formatLedgerDate, lifetimeFigures, liveIncome, parseLedgerDate } from "@/lib/ledger";
 
-const tabs = ["All Income", "ROI Income", "Referral Income", "Level Income", "Bonus Income", "Other Income"];
+const tabs = ["All Income", "ROI Income", "Referral Income", "Level Income", "Bonus Income", "Salary Income", "Other Income"];
 const typeIcon = {
   "ROI Income": "HandCoins",
   "Referral Income": "Users",
   "Level Income": "Coins",
   "Bonus Income": "Gift",
+  "Salary Income": "CircleDollarSign",
   "Other Income": "Coins",
 };
 function incomeText(value) {
@@ -28,6 +29,7 @@ const pageCopy = {
   "Referral Income": ["Referral Income", "Commission credited when someone in your team activates. Your own ID must be active."],
   "Level Income": ["Level Income", "Level 1–15 commission on the daily AdView income your team claims. Your ID must be active and you need at least one direct referral."],
   "Bonus Income": ["Bonus", "Video rewards and other bonus credits on this account."],
+  "Salary Income": ["Salary Income", "Daily rank salary from team investment business volume."],
   "Other Income": ["Other Income", "Any other credit that is not AdView income, referral, or bonus."],
 };
 
@@ -37,7 +39,7 @@ function exportRows(rows, toast) {
     return;
   }
   const header = ["Date", "Type", "Description", "Amount", "Status", "TX"];
-  const lines = [header, ...rows.map((row) => [formatLedgerDate(row.date), incomeText(row.type), incomeText(row.description), row.amount, row.status, row.tx])];
+  const lines = [header, ...rows.map((row) => [formatLedgerDate(row.date), incomeText(row.type), incomeText(row.description), `$${Number(row.amount || 0).toFixed(2)}`, row.status, row.tx])];
   const csv = lines.map((cols) => cols.map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
   const link = document.createElement("a");
@@ -147,7 +149,7 @@ export default function Income({ preset = "All Income" }) {
                       <td>{formatLedgerDate(row.date)}</td>
                       <td>{incomeText(row.type)}</td>
                       <td>{incomeText(row.description)}</td>
-                      <td className="font-semibold text-emerald-600">+{fineMoney(row.amount)}</td>
+                      <td className="font-semibold text-emerald-600">+${fineMoney(row.amount)}</td>
                       <td><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
                       <td>{shortHash(row.tx, 8, 4)}</td>
                       <td><button className="text-xs font-semibold text-[#e10600]" onClick={() => openRow(row)}>View</button></td>
@@ -163,7 +165,7 @@ export default function Income({ preset = "All Income" }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-start justify-between gap-2">
                       <span className="truncate text-sm font-semibold text-[#101828]">{row.type === "ROI Income" ? "AdView income" : row.type.replace(" Income", "")}</span>
-                      <span className="shrink-0 text-sm font-bold text-emerald-600">+{fineMoney(row.amount)}</span>
+                      <span className="shrink-0 text-sm font-bold text-emerald-600">+${fineMoney(row.amount)}</span>
                     </span>
                     <span className="mt-0.5 block truncate text-[11px] text-[#667085]">{incomeText(row.description)}</span>
                     <span className="mt-1 flex items-center justify-between gap-2">

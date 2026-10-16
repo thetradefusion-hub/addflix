@@ -8,7 +8,7 @@ import { requireAuth } from '../middleware/requireAuth.js';
 import { describeClient, formatSessionTime } from '../utils/clientInfo.js';
 import { env } from '../config/env.js';
 import { validateLoginInput, validatePasswordChangeInput, validateRegistrationInput } from '../utils/authValidation.js';
-import { normalizeEmail, normalizeMobile } from '../../shared/contact.js';
+import { emailError, mobileError, normalizeEmail, normalizeMobile } from '../../shared/contact.js';
 import AuditLog from '../models/AuditLog.js';
 import { noteSharedDevice } from '../utils/fraud.js';
 import { readSettings } from '../utils/settings.js';
@@ -45,6 +45,14 @@ export function signToken(user, sessionId, extra = {}) {
   return jwt.sign({ sub: user._id.toString(), email: user.email, sid: sessionId?.toString(), ...extra }, JWT_SECRET, { expiresIn: '7d' });
 }
 
+/** Match stored mobiles whether they were saved as 10-digit, +91…, or spaced. */
+function mobileLookupValues(value) {
+  const normalized = normalizeMobile(value);
+  if (!normalized) return [];
+  if (normalized.startsWith('+')) return [normalized];
+  return [normalized, `+91${normalized}`, `+91 ${normalized}`, `91${normalized}`];
+}
+
 async function openSession(user, req, deviceId) {
   await LoginSession.updateMany({ user: user._id, current: true }, { $set: { current: false, endedAt: new Date() } });
   const info = describeClient(req);
@@ -74,7 +82,7 @@ router.post('/register', async (req, res) => {
     const otp = String(payload.otp).trim();
 
     const existingUser = await User.findOne({
-      $or: [{ email }, { mobile }, { username }],
+      $or: [{ email }, { mobile: { $in: mobileLookupValues(mobile) } }, { username }],
     });
 
     if (existingUser) {
@@ -119,6 +127,7 @@ router.post('/register', async (req, res) => {
     if (signupBonus > 0) {
       const when = istStamp();
       account.balances = { total: signupBonus, roi: 0, referral: 0, bonus: signupBonus, locked: 0 };
+      account.signupWithdraw = { remaining: signupBonus, withdrawn: 0 };
       account.income = [{
         id: `SIGNUP-${referralId}`,
         date: when,
@@ -176,6 +185,56 @@ router.get('/sponsor/:code', async (req, res) => {
     return res.status(404).json({ ok: false, message: 'Sponsor referral ID is invalid or not found.' });
   }
   res.json({ ok: true, sponsor: { name: sponsor.fullName, id: sponsor.referralId } });
+});
+
+router.get('/availability', async (req, res) => {
+  try {
+    const field = String(req.query.field || '').trim().toLowerCase();
+    const raw = String(req.query.value ?? '').trim();
+    if (!['mobile', 'email', 'username'].includes(field)) {
+      return res.status(400).json({ ok: false, message: 'field must be mobile, email, or username.' });
+    }
+    if (!raw) {
+      return res.status(400).json({ ok: false, message: 'value is required.' });
+    }
+
+    let query;
+    if (field === 'mobile') {
+      const normalized = normalizeMobile(raw);
+      if (!normalized) {
+        return res.status(400).json({ ok: false, available: false, field, message: mobileError(raw) || 'Enter a valid mobile number.' });
+      }
+      query = { mobile: { $in: mobileLookupValues(normalized) } };
+    } else if (field === 'email') {
+      const normalized = normalizeEmail(raw);
+      if (!normalized) {
+        return res.status(400).json({ ok: false, available: false, field, message: emailError(raw) || 'Enter a valid email address.' });
+      }
+      query = { email: normalized };
+    } else {
+      const normalized = raw.toLowerCase();
+      if (normalized.length < 3) {
+        return res.status(400).json({ ok: false, available: false, field, message: 'Username must be at least 3 characters.' });
+      }
+      query = { username: normalized };
+    }
+
+    const taken = await User.exists(query);
+    if (taken) {
+      const labels = { mobile: 'mobile number', email: 'email', username: 'username' };
+      return res.json({
+        ok: true,
+        available: false,
+        field,
+        message: `This ${labels[field]} is already registered.`,
+      });
+    }
+
+    res.json({ ok: true, available: true, field });
+  } catch (error) {
+    console.error('Availability check error:', error);
+    res.status(500).json({ ok: false, message: 'Unable to check availability.' });
+  }
 });
 
 router.post('/login', async (req, res) => {

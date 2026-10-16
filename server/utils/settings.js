@@ -1,4 +1,5 @@
 import Settings, { onSettingsSaved } from "../models/Settings.js";
+import { ranksFromSettings } from "./salaryRanks.js";
 
 const CACHE_MS = 10_000;
 let cached = null;
@@ -13,6 +14,7 @@ export async function readSettings() {
   const settings = await getSettings();
   cached = settings.toObject();
   cachedAt = Date.now();
+  ranksFromSettings(cached);
   return cached;
 }
 
