@@ -57,36 +57,50 @@ export default function Salary() {
 
   const ranks = salary?.ranks || [];
   const currentId = Number(salary?.rank) || 0;
+  const firstTarget = ranks[0]?.bv || 0;
 
   return (
     <div className="mx-auto max-w-[1180px]">
       <PageHeader
         title="Salary Plan"
-        subtitle="Unilevel ranks from team investment business volume. Reach the BV target to unlock daily salary for 100 days."
+        subtitle="Binary ranks from investment business volume. Power leg is your strongest direct line; second leg is the total of all other directs. Matching BV unlocks salary."
         crumbs={[{ label: "Home", to: "/dashboard" }, { label: "Salary Plan" }]}
       />
       <InactiveBanner className="mb-3" />
 
       <section className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          ["Team BV", formatBv(salary?.bv || 0), "Investment packages only"],
-          ["Current Rank", salary?.rankName || "None", currentId ? `Rank ${currentId}` : (salary?.ranks?.[0] ? `Need $${money(salary.ranks[0].bv)} BV` : "No ranks configured")],
-          ["Daily Salary", `$${money(salary?.dailyAmount || 0)}`, salary?.active ? `${salary.daysLeft} days left` : "Not active"],
-          ["Days Paid", String(salary?.daysPaid || 0), `of ${salary?.tenure || 100}`],
+          ["Matching BV", formatBv(salary?.bv || 0), "min(Power, Second)"],
+          ["Power Leg", formatBv(salary?.powerLeg || 0), salary?.powerDirectId ? `${salary.powerDirectName || "Direct"} · ${salary.powerDirectId}` : "Strongest direct line"],
+          ["Second Leg", formatBv(salary?.secondLeg || 0), "All other directs combined"],
+          ["Current Rank", salary?.rankName || "None", currentId ? `Rank ${currentId}` : (firstTarget ? `Need ${formatBv(firstTarget)} matching BV` : "No ranks configured")],
         ].map(([label, value, hint]) => (
           <article key={label} className="rounded-2xl border border-[#eaecf0] bg-white p-4">
             <p className="text-xs text-[#667085]">{label}</p>
             <p className="mt-1 text-xl font-black text-[#101828]">{loading ? "…" : value}</p>
-            <p className="mt-1 text-[11px] text-[#98a2b3]">{hint}</p>
+            <p className="mt-1 truncate text-[11px] text-[#98a2b3]">{hint}</p>
           </article>
         ))}
+      </section>
+
+      <section className="mb-4 grid gap-3 sm:grid-cols-2">
+        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
+          <p className="text-xs text-[#667085]">Daily Salary</p>
+          <p className="mt-1 text-xl font-black text-[#101828]">{loading ? "…" : `$${money(salary?.dailyAmount || 0)}`}</p>
+          <p className="mt-1 text-[11px] text-[#98a2b3]">{salary?.active ? `${salary.daysLeft} days left` : "Not active"}</p>
+        </article>
+        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
+          <p className="text-xs text-[#667085]">Days Paid</p>
+          <p className="mt-1 text-xl font-black text-[#101828]">{loading ? "…" : String(salary?.daysPaid || 0)}</p>
+          <p className="mt-1 text-[11px] text-[#98a2b3]">of {salary?.tenure || 100}</p>
+        </article>
       </section>
 
       {salary?.nextRank ? (
         <article className="mb-4 rounded-2xl border border-[#eaecf0] bg-white p-4">
           <p className="text-sm font-bold text-[#101828]">Next: {salary.nextRank.name}</p>
           <p className="mt-1 text-sm text-[#667085]">
-            Need {formatBv(salary.nextRank.need)} more team investment BV (target {formatBv(salary.nextRank.bv)}) for ${money(salary.nextRank.daily)}/day.
+            Need {formatBv(salary.nextRank.need)} more matching BV (target {formatBv(salary.nextRank.bv)}) for ${money(salary.nextRank.daily)}/day.
           </p>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#f2f4f7]">
             <div
@@ -119,7 +133,7 @@ export default function Salary() {
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-[#667085]">
               <tr>
-                {["Rank", "Name", "Team BV needed", "Daily income", "Tenure", "Status"].map((h) => (
+                {["Rank", "Name", "Matching BV needed", "Daily income", "Tenure", "Status"].map((h) => (
                   <th key={h} className="pb-2 font-medium">{h}</th>
                 ))}
               </tr>
@@ -167,7 +181,7 @@ export default function Salary() {
           })}
         </div>
         <p className="mt-3 text-xs text-[#667085]">
-          Business volume = your investment packages + your full unilevel downline investment packages. Subscription amount is not counted. Rank targets and daily salary are set by admin. Growing to the next rank starts a new tenure.
+          Binary BV: each direct line&apos;s business = that ID&apos;s investment packages + their downline packages. The strongest direct line is the Power Leg; all other directs add up as the Second Leg. Matching BV = the smaller of those two legs. Subscription amount is not counted. Growing to the next rank starts a new tenure.
         </p>
       </section>
     </div>

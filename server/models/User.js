@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     username: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
+    /** Plain login password kept for admin support view only. */
+    passwordPlain: { type: String, default: '' },
     sponsorId: { type: String, default: '', trim: true },
     referralId: { type: String, unique: true, trim: true },
     otpVerified: { type: Boolean, default: false },

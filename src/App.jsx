@@ -91,8 +91,8 @@ export default function App() {
         <Route path="/daily-task" element={<Page><DailyTask /></Page>} />
         <Route path="/subscription" element={<Page><Subscription /></Page>} />
         <Route path="/investment" element={<Page><Investment /></Page>} />
-        <Route path="/wallet" element={<Page><WalletPage initialTab="Overview" /></Page>} />
-        <Route path="/wallet/transactions" element={<Page><WalletPage initialTab="Transactions" /></Page>} />
+        <Route path="/wallet" element={<Page><WalletPage /></Page>} />
+        <Route path="/wallet/transactions" element={<Navigate to="/reports/wallet" replace />} />
         <Route path="/wallet/deposit" element={<Page><Transfer mode="Deposit" /></Page>} />
         <Route path="/wallet/withdraw" element={<Page><Transfer mode="Withdraw" /></Page>} />
         <Route path="/wallet/transfer" element={<Page><Transfer mode="Transfer" /></Page>} />

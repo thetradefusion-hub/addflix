@@ -325,7 +325,6 @@ export const navItems = [
       { to: "/wallet", label: "Balance" },
       { to: "/wallet/deposit", label: "Deposit" },
       { to: "/wallet/withdraw", label: "Withdraw" },
-      { to: "/wallet/transactions", label: "Transactions" },
     ],
   },
   {

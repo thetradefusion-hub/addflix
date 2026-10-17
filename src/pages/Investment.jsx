@@ -20,7 +20,7 @@ const colors = {
 };
 
 export default function Investment() {
-  const { balances, toast, investments, investInPlan, plans } = useApp();
+  const { balances, toast, investments, investInPlan, plans, signupGate } = useApp();
   const guard = useActiveGuard();
   const [filter, setFilter] = useState("All");
   const [selectedId, setSelectedId] = useState("standard");
@@ -29,6 +29,7 @@ export default function Investment() {
   const [busy, setBusy] = useState(false);
   const [detail, setDetail] = useState(null);
   const planPage = usePaging(investments, 8, investments.length);
+  const investable = Number(signupGate?.free ?? Math.max(0, (balances.total || 0) - (balances.locked || 0)));
   useEffect(() => {
     if (!plans.length) return;
     if (!plans.some((plan) => plan.id === selectedId)) {
@@ -61,6 +62,10 @@ export default function Investment() {
     if (!selected) return;
     if (!amount || amount < selected.min) {
       toast(`Minimum for ${selected.name} is $${selected.min} USDT.`, "warning");
+      return;
+    }
+    if (amount > investable) {
+      toast(`Signup bonus cannot fund investment. Investable balance is $${money(investable)}.`, "warning");
       return;
     }
     setBusy(true);
@@ -232,8 +237,8 @@ export default function Investment() {
             {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} (Min ${plan.min})</option>)}
           </select>
           <label className="mt-3 block text-xs font-semibold text-[#667085]">Investment Amount (USDT)</label>
-          <input type="number" min={selected?.min || 0} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="mt-1.5 h-12 w-full rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600] focus:bg-white" />
-          <p className="mt-2 text-xs text-[#667085]">Wallet balance ${money(balances.total)} · BEP-20 (BSC)</p>
+          <input type="number" min={selected?.min || 0} max={investable} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="mt-1.5 h-12 w-full rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600] focus:bg-white" />
+          <p className="mt-2 text-xs text-[#667085]">Investable ${money(investable)} · Signup bonus excluded · Wallet ${money(balances.total)}</p>
           <Button className="mt-4 w-full" onClick={() => { if (!guard()) return; setOpen(true); }}>Proceed to Invest →</Button>
         </article>
 
@@ -289,7 +294,7 @@ export default function Investment() {
           </>
         }
       >
-        <p>Invest <b>${money(amount || 0)} USDT</b> in <b>{selected?.name}</b>? This amount leaves your wallet now. Daily AdView is ${money(daily || 0)} after each completed task, and it stops at the ${money(cap || 0)} cap.</p>
+        <p>Invest <b>${money(amount || 0)} USDT</b> in <b>{selected?.name}</b>? This amount leaves your investable balance (signup bonus excluded). Daily AdView is ${money(daily || 0)} after each completed task, and it stops at the ${money(cap || 0)} cap.</p>
       </Modal>
       <Modal open={Boolean(detail)} title={detail?.planName || "Plan"} onClose={() => setDetail(null)}>
         {detail ? (

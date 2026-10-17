@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Play } from "lucide-react";
 import { catalogTabs, flow, posters, values, why } from "@/data/landingPlan";
 import { DarkCard, FeatureIcon, Heading, Kicker, Section, reveal, signedIn } from "./LandingChrome";
+import Logo from "@/components/layout/Logo";
 
 const joinClass = "inline-flex h-12 min-h-12 items-center justify-center rounded-full bg-[#e10600] px-6 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-[#c10500] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e10600]";
 const ghostClass = "inline-flex h-12 min-h-12 items-center justify-center rounded-full border border-white/30 px-6 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:border-white/50 hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
@@ -35,7 +36,11 @@ export function Hero() {
               <Kicker>Premium entertainment meets opportunity</Kicker>
             </span>
           </div>
-          <h1 className="mt-7 flex max-w-full flex-col items-center gap-1 text-[4.25rem] font-semibold leading-[0.9] tracking-tight text-white drop-shadow-[0_12px_40px_rgba(0,0,0,0.55)] sm:text-8xl lg:flex-row lg:flex-wrap lg:justify-center lg:gap-x-5 lg:text-[5.75rem] xl:text-[6.75rem]">
+          <div {...rise(140)} className="landing-rise relative mt-6 sm:mt-8">
+            <span aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e10600]/35 blur-3xl sm:h-48 sm:w-48" />
+            <Logo className="relative mx-auto h-[5.5rem] w-auto max-w-[min(92vw,28rem)] drop-shadow-[0_12px_40px_rgba(0,0,0,0.55)] sm:h-[7rem] md:h-[8.25rem]" />
+          </div>
+          <h1 className="mt-5 flex max-w-full flex-col items-center gap-1 text-[4.25rem] font-semibold leading-[0.9] tracking-tight text-white drop-shadow-[0_12px_40px_rgba(0,0,0,0.55)] sm:mt-6 sm:text-8xl lg:flex-row lg:flex-wrap lg:justify-center lg:gap-x-5 lg:text-[5.75rem] xl:text-[6.75rem]">
             <span className="hero-word" style={{ "--d": "160ms" }}>Watch.</span>
             <span className="hero-word" style={{ "--d": "340ms" }}>Promote.</span>
             <span className="hero-word hero-earn" style={{ "--d": "520ms" }}>Earn.</span>

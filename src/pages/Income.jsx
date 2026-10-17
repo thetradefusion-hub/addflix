@@ -29,7 +29,7 @@ const pageCopy = {
   "Referral Income": ["Referral Income", "Commission credited when someone in your team activates. Your own ID must be active."],
   "Level Income": ["Level Income", "Level 1–15 commission on the daily AdView income your team claims. Your ID must be active and you need at least one direct referral."],
   "Bonus Income": ["Bonus", "Video rewards and other bonus credits on this account."],
-  "Salary Income": ["Salary Income", "Daily rank salary from team investment business volume."],
+  "Salary Income": ["Salary Income", "Daily rank salary from binary matching business volume."],
   "Other Income": ["Other Income", "Any other credit that is not AdView income, referral, or bonus."],
 };
 

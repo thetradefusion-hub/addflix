@@ -1,5 +1,5 @@
 /** Bump when default legal copy changes so ensureCms refreshes DB stubs. */
-export const CMS_CONTENT_VERSION = 2;
+export const CMS_CONTENT_VERSION = 4;
 
 export const CMS_DEFAULTS = [
   {
@@ -86,8 +86,9 @@ export const CMS_DEFAULTS = [
       "• If enabled, a signup bonus may credit the new member’s wallet once at registration.",
       "• A share of that bonus may credit the direct sponsor.",
       "• Withdrawing or transferring remaining signup bonus may require unlock based on direct referral business. ROI and other incomes stay free of that gate.",
+      "• Signup bonus and signup referral cannot fund investment plans — only free wallet balance can invest.",
       "Salary plan",
-      "• Unilevel team investment volume (BV) can unlock salary ranks defined by admin.",
+      "• Binary matching BV unlocks salary ranks: power leg = strongest direct line; second leg = other directs combined; matching BV = the smaller leg.",
       "• Daily salary, tenure and claim rules follow the Salary Plan screen.",
       "Withdrawals",
       "• Minimum withdrawal and fee rate follow Settings.",

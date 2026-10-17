@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Navigate, useLocation, useParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { apiFetch, clearAdminSession, readAdminSession } from "@/lib/api";
-import { activationLabel, fineMoney, money, shortHash } from "@/lib/utils";
+import { activationLabel, copyText, fineMoney, money, shortHash } from "@/lib/utils";
 import { formatLedgerDate } from "@/lib/ledger";
 import { Button } from "@/components/ui/button";
 import StatusBadge from "@/components/common/StatusBadge";
@@ -33,7 +33,7 @@ const pageMeta = {
   reports: ["Reports", "Member, wallet, payout and income statements. Export the current view to Excel or PDF."],
   settings: ["Settings", "Subscription price, deposit address, referral rates, withdrawal rules and today's task."],
   plans: ["Plans", "Daily rate, minimum, cap and whether members can buy the plan."],
-  salary: ["Salary Plan", "Edit unilevel ranks, BV targets, daily salary and tenure. Members see the same plan."],
+  salary: ["Salary Plan", "Edit binary ranks, matching BV targets, daily salary and tenure. Members see the same plan."],
   subscriptions: ["Subscriptions", "Approve a $10 payment to activate the ID, or mark it failed."],
 };
 
@@ -180,6 +180,7 @@ function AdminConsole({ view, onLogout }) {
               entering={entering === member.id}
               onLoginAs={() => loginAs(member.id)}
               onStatus={(active) => run(`/api/admin/users/${member.id}/status`, { method: "POST", body: JSON.stringify({ active }) })}
+              onSaveCredentials={(payload) => run(`/api/admin/users/${member.id}/credentials`, { method: "POST", body: JSON.stringify(payload) })}
               onAdjust={(event) => {
                 event.preventDefault();
                 const value = Math.abs(Number(adjust.amount));
@@ -392,15 +393,18 @@ function Overview({ overview, audits, name }) {
   );
 }
 
+const USER_PAGE_SIZES = [10, 25, 50, 100, 500, 1000];
+
 function Users({ users, query, setQuery, onSearch, onLoginAs, entering }) {
   const [filter, setFilter] = useState("all");
+  const [pageSize, setPageSize] = useState(10);
   const filtered = users.filter((user) => {
     if (filter === "subscribed") return user.subscription && user.active;
     if (filter === "inactive") return !user.subscription && user.active;
     if (filter === "blocked") return !user.active;
     return true;
   });
-  const list = usePaging(filtered, 10, `${query}:${filter}:${filtered.length}:${filtered[0]?.id || ""}`);
+  const list = usePaging(filtered, pageSize, `${query}:${filter}:${pageSize}:${filtered.length}:${filtered[0]?.id || ""}`);
   const subscribed = users.filter((user) => user.subscription).length;
   const blocked = users.filter((user) => !user.active).length;
   const wallets = users.reduce((sum, user) => sum + Number(user.wallet || 0), 0);
@@ -468,7 +472,15 @@ function Users({ users, query, setQuery, onSearch, onLoginAs, entering }) {
             </article>
           ))}
         </div>
-        <Pager page={list.page} pages={list.pages} total={list.total} size={list.size} onChange={list.setPage} />
+        <Pager
+          page={list.page}
+          pages={list.pages}
+          total={list.total}
+          size={list.size}
+          onChange={list.setPage}
+          pageSizes={USER_PAGE_SIZES}
+          onSizeChange={setPageSize}
+        />
       </article>
     </div>
   );
@@ -530,10 +542,37 @@ function RecordList({ title, empty, rows, render, resetKey }) {
   );
 }
 
-function Member({ member, adjust, setAdjust, onStatus, onAdjust, onLoginAs, entering }) {
+function Member({ member, adjust, setAdjust, onStatus, onAdjust, onLoginAs, onSaveCredentials, entering }) {
   const task = member.dailyTask || {};
   const balances = member.balances || {};
   const activePlans = (member.investments || []).filter((row) => row.status === "Active");
+  const [loginDraft, setLoginDraft] = useState(member.loginPassword || "");
+  const [pinDraft, setPinDraft] = useState(member.transactionPin || "");
+  const [copied, setCopied] = useState("");
+  const [credBusy, setCredBusy] = useState(false);
+
+  useEffect(() => {
+    setLoginDraft(member.loginPassword || "");
+    setPinDraft(member.transactionPin || "");
+  }, [member.id, member.loginPassword, member.transactionPin]);
+
+  const copyValue = async (label, value) => {
+    if (!value) return;
+    await copyText(value);
+    setCopied(label);
+    window.setTimeout(() => setCopied(""), 1600);
+  };
+
+  const saveCredentials = async (event) => {
+    event.preventDefault();
+    setCredBusy(true);
+    await onSaveCredentials({
+      loginPassword: loginDraft.trim(),
+      transactionPin: pinDraft.trim(),
+    });
+    setCredBusy(false);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -543,6 +582,53 @@ function Member({ member, adjust, setAdjust, onStatus, onAdjust, onLoginAs, ente
           <Button variant="outline" onClick={() => onStatus(!member.active)}>{member.active ? "Block user" : "Activate user"}</Button>
         </div>
       </div>
+
+      <article className={card}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-bold">Login &amp; transaction passwords</p>
+            <p className="text-xs text-[#98a2b3]">Saved passwords show below. Set or update them here, then copy.</p>
+          </div>
+          {copied ? <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{copied} copied</span> : null}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-[#eaecf0] bg-[#f8fafc] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#98a2b3]">Login password</p>
+            <p className="mt-1 break-all font-mono text-base font-black text-[#101828]">{member.loginPassword || "Not saved yet"}</p>
+            <Button type="button" size="sm" variant="outline" className="mt-2" disabled={!member.loginPassword} onClick={() => copyValue("Login password", member.loginPassword)}>Copy</Button>
+          </div>
+          <div className="rounded-xl border border-[#eaecf0] bg-[#f8fafc] p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#98a2b3]">Transaction password</p>
+            <p className="mt-1 break-all font-mono text-base font-black text-[#101828]">{member.transactionPin || "Not set"}</p>
+            <Button type="button" size="sm" variant="outline" className="mt-2" disabled={!member.transactionPin} onClick={() => copyValue("Transaction password", member.transactionPin)}>Copy</Button>
+          </div>
+        </div>
+        <form onSubmit={saveCredentials} className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <label className="text-xs text-[#667085]">
+            Set login password
+            <input
+              value={loginDraft}
+              onChange={(event) => setLoginDraft(event.target.value)}
+              placeholder="Enter login password"
+              className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] bg-white px-3 text-sm text-[#101828]"
+            />
+          </label>
+          <label className="text-xs text-[#667085]">
+            Set transaction password
+            <input
+              value={pinDraft}
+              onChange={(event) => setPinDraft(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="6 digits"
+              inputMode="numeric"
+              maxLength={6}
+              className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] bg-white px-3 text-sm text-[#101828]"
+            />
+          </label>
+          <div className="flex items-end">
+            <Button type="submit" disabled={credBusy} className="h-11 w-full sm:w-auto">{credBusy ? "Saving..." : "Save passwords"}</Button>
+          </div>
+        </form>
+      </article>
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard icon={<AppIcon name="Wallet" size={18} />} label="Total balance" value={`$${money(balances.total)}`} hint={`Available $${money(balances.available)}`} />
@@ -593,7 +679,6 @@ function Member({ member, adjust, setAdjust, onStatus, onAdjust, onLoginAs, ente
             ["Joined", member.joined],
             ["Last login", member.lastLogin],
             ["2FA", member.twoFactor ? "On" : "Off"],
-            ["Transaction PIN", member.pinSet ? "Set" : "Not set"],
             ["Wallet address", member.walletAddress],
           ]} />
         </article>
@@ -1419,7 +1504,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
   return (
     <form onSubmit={onSave} className={card}>
       <p className="font-bold">Platform settings</p>
-      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Direct referral % is the share of that bonus paid to the sponsor who shared the link. Investment direct referral % is paid only to the immediate sponsor when a member invests in a plan (default 5%). Signup withdraw unlock % is how much of a member&apos;s direct referral business (active $10 sub + investments) can unlock their signup bonus and signup referral for withdraw/transfer. ROI and other income stay free. Salary ranks are edited under Admin → Salary Plan.</p>
+      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Direct referral % is the share of that bonus paid to the sponsor who shared the link. Signup bonus and signup referral cannot fund investment plans. Investment direct referral % is paid only to the immediate sponsor when a member invests in a plan (default 5%). Signup withdraw unlock % is how much of a member&apos;s direct referral business (active $10 sub + investments) can unlock their signup bonus and signup referral for withdraw/transfer. ROI and other income stay free. Salary ranks are edited under Admin → Salary Plan.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {fields.map(([key, label]) => (
           <label key={key} className="text-xs text-[#667085]">
@@ -1533,12 +1618,12 @@ function SalaryPlanForm({ settings, setSettings, onSave }) {
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <PageHeader title="Salary Plan" subtitle="Unilevel ranks from team investment BV. Edit name, BV target, daily salary and tenure." crumbs={[{ label: "Admin", to: "/admin" }, { label: "Salary Plan" }]} />
+      <PageHeader title="Salary Plan" subtitle="Binary ranks from matching BV (min of power & second leg). Edit name, BV target, daily salary and tenure." crumbs={[{ label: "Admin", to: "/admin" }, { label: "Salary Plan" }]} />
       <article className={card}>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="font-bold">Ranks</p>
-            <p className="text-xs text-[#98a2b3]">BV = member + full downline investment packages only. Higher BV unlocks the next rank and starts a new tenure.</p>
+            <p className="text-xs text-[#98a2b3]">Binary BV: strongest direct line = Power Leg; sum of other directs = Second Leg. Matching BV = min(Power, Second). Higher matching BV unlocks the next rank and starts a new tenure.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={resetDefaults}>Load defaults</Button>

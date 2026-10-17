@@ -21,7 +21,8 @@ import {
 async function seedDatabase() {
   await connectDb();
 
-  const passwordHash = await bcrypt.hash('Password@123', 10);
+  const demoPassword = 'Password@123';
+  const passwordHash = await bcrypt.hash(demoPassword, 10);
 
   const seededUsers = [
     {
@@ -30,6 +31,7 @@ async function seedDatabase() {
       email: 'platform@addflix.demo',
       username: 'addflix',
       passwordHash,
+      passwordPlain: demoPassword,
       sponsorId: '',
       referralId: 'ADD1000',
       country: 'India',
@@ -46,6 +48,7 @@ async function seedDatabase() {
       email: 'rahul.kumar@example.com',
       username: 'rahul123',
       passwordHash,
+      passwordPlain: demoPassword,
       sponsorId: 'ADD1000',
       referralId: 'ADD12568',
       country: 'India',
@@ -62,6 +65,7 @@ async function seedDatabase() {
       email: 'amit.sharma@example.com',
       username: 'amit456',
       passwordHash,
+      passwordPlain: demoPassword,
       sponsorId: 'ADD12568',
       referralId: 'ADD26891',
       country: 'India',
@@ -78,6 +82,7 @@ async function seedDatabase() {
       email: 'neha.verma@example.com',
       username: 'neha789',
       passwordHash,
+      passwordPlain: demoPassword,
       sponsorId: 'ADD12568',
       referralId: 'ADD26990',
       country: 'India',

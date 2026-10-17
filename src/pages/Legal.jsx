@@ -145,12 +145,13 @@ const pages = {
           "If enabled, a signup bonus may credit the new member’s wallet once at registration.",
           "A share of that bonus may credit the direct sponsor (signup referral %).",
           "Withdrawing / transferring remaining signup bonus and signup referral may require unlock based on a percentage of your direct referral business (active subscription + investments). ROI and other incomes are not limited by that gate.",
+          "Signup bonus and signup referral cannot be used to activate or fund investment plans. Only free wallet balance (deposits, AdView, and other unlocked income) can invest.",
         ],
       },
       {
         heading: "Salary plan",
         bullets: [
-          "Unilevel team investment volume (BV) can unlock salary ranks defined by admin.",
+          "Binary matching BV unlocks salary ranks: power leg is the strongest direct line; second leg is the total of all other directs; matching BV is the smaller of the two.",
           "Daily salary, tenure and claim rules follow the Salary Plan screen and admin rank table.",
         ],
       },

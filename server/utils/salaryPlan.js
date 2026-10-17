@@ -34,7 +34,18 @@ function investmentTotal(account) {
   );
 }
 
-/** Self + entire unilevel downline investment package totals. */
+function emptyBinary() {
+  return {
+    bv: 0,
+    powerLeg: 0,
+    secondLeg: 0,
+    powerDirectId: "",
+    powerDirectName: "",
+    directs: [],
+  };
+}
+
+/** Self + entire unilevel downline investment package totals (legacy helper / subtree). */
 export async function computeTeamInvestmentBv(user) {
   const rootCode = String(user.referralId || "").trim().toUpperCase();
   if (!rootCode) return 0;
@@ -67,19 +78,140 @@ export async function computeTeamInvestmentBv(user) {
   return total;
 }
 
-/** Sync Account.salary from live BV; upgrade rank when threshold crossed. */
+/**
+ * Binary BV from direct legs only:
+ * - Each direct's business = that member's investments + their full downline investments
+ * - Power leg = the direct with the highest business
+ * - Second leg = sum of every other direct's business
+ * - Qualifying BV = min(power, second) matching volume
+ */
+export async function computeBinaryInvestmentBv(user) {
+  const rootCode = String(user.referralId || "").trim().toUpperCase();
+  if (!rootCode) return emptyBinary();
+
+  const escaped = rootCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const [directs, tree] = await Promise.all([
+    User.find({
+      sponsorId: new RegExp(`^${escaped}$`, "i"),
+      role: { $ne: "admin" },
+    })
+      .select("_id referralId fullName sponsorId")
+      .lean(),
+    User.aggregate([
+      { $match: { _id: user._id } },
+      {
+        $graphLookup: {
+          from: User.collection.name,
+          startWith: "$referralId",
+          connectFromField: "referralId",
+          connectToField: "sponsorId",
+          as: "team",
+          restrictSearchWithMatch: { role: { $ne: "admin" } },
+        },
+      },
+      {
+        $project: {
+          team: {
+            _id: 1,
+            referralId: 1,
+            sponsorId: 1,
+            fullName: 1,
+          },
+        },
+      },
+    ]),
+  ]);
+
+  if (!directs.length) return emptyBinary();
+
+  const team = tree[0]?.team || [];
+  const directCodes = new Set(directs.map((row) => String(row.referralId || "").trim().toUpperCase()));
+  const byRef = new Map();
+  for (const row of directs) {
+    byRef.set(String(row.referralId || "").trim().toUpperCase(), row);
+  }
+  for (const row of team) {
+    byRef.set(String(row.referralId || "").trim().toUpperCase(), row);
+  }
+
+  const legBv = new Map();
+  for (const code of directCodes) legBv.set(code, 0);
+
+  const allIds = [...new Set([...directs.map((row) => String(row._id)), ...team.map((row) => String(row._id))])];
+  const accounts = allIds.length
+    ? await Account.find({ user: { $in: allIds } }).select("user investments.amount").lean()
+    : [];
+  const invByUser = new Map(accounts.map((row) => [String(row.user), investmentTotal(row)]));
+
+  function powerOwner(member) {
+    let code = String(member.referralId || "").trim().toUpperCase();
+    if (directCodes.has(code)) return code;
+    let sponsor = String(member.sponsorId || "").trim().toUpperCase();
+    const seen = new Set();
+    while (sponsor && !seen.has(sponsor)) {
+      seen.add(sponsor);
+      if (directCodes.has(sponsor)) return sponsor;
+      if (sponsor === rootCode) return "";
+      const parent = byRef.get(sponsor);
+      if (!parent) return "";
+      sponsor = String(parent.sponsorId || "").trim().toUpperCase();
+    }
+    return "";
+  }
+
+  for (const member of team) {
+    const owner = powerOwner(member);
+    if (!owner) continue;
+    const inv = invByUser.get(String(member._id)) || 0;
+    if (!(inv > 0)) continue;
+    legBv.set(owner, money2((legBv.get(owner) || 0) + inv));
+  }
+
+  const legs = directs
+    .map((row) => {
+      const code = String(row.referralId || "").trim().toUpperCase();
+      return {
+        id: String(row._id),
+        referralId: row.referralId,
+        name: row.fullName || row.referralId,
+        bv: money2(legBv.get(code) || 0),
+      };
+    })
+    .sort((a, b) => b.bv - a.bv || String(a.referralId).localeCompare(String(b.referralId)));
+
+  const power = legs[0];
+  const powerLeg = money2(power?.bv || 0);
+  const secondLeg = money2(legs.slice(1).reduce((sum, row) => sum + row.bv, 0));
+  const bv = money2(Math.min(powerLeg, secondLeg));
+
+  return {
+    bv,
+    powerLeg,
+    secondLeg,
+    powerDirectId: power?.referralId || "",
+    powerDirectName: power?.name || "",
+    directs: legs,
+  };
+}
+
+/** Sync Account.salary from live binary BV; upgrade rank when threshold crossed. */
 export async function syncSalaryRank(user, account) {
   if (!account) return emptySalary();
   if (!account.salary || typeof account.salary !== "object") account.salary = emptySalary();
 
   const ranks = await liveRanks();
-  const bv = await computeTeamInvestmentBv(user);
+  const binary = await computeBinaryInvestmentBv(user);
+  const bv = binary.bv;
   const matched = rankForBv(bv, ranks);
   const prevId = Number(account.salary.rank) || 0;
   const prevRank = ranks.find((row) => row.id === prevId) || ranks.find((row) => row.name === account.salary.rankName);
   const upgraded = Boolean(matched) && (!prevRank || matched.bv > prevRank.bv);
 
   account.salary.bv = bv;
+  account.salary.powerLeg = binary.powerLeg;
+  account.salary.secondLeg = binary.secondLeg;
+  account.salary.powerDirectId = binary.powerDirectId;
+  account.salary.powerDirectName = binary.powerDirectName;
 
   if (upgraded) {
     account.salary.rank = matched.id;
@@ -94,7 +226,7 @@ export async function syncSalaryRank(user, account) {
     account.notifications.unshift({
       id: `SALARY-UNLOCK-${matched.id}-${Date.now()}`,
       title: "Salary rank unlocked",
-      body: `${matched.name} unlocked. $${matched.daily}/day for ${matched.tenure} days (team investment BV $${bv.toFixed(2)}).`,
+      body: `${matched.name} unlocked. $${matched.daily}/day for ${matched.tenure} days (binary matching BV $${bv.toFixed(2)}).`,
       kind: "wallet",
       unread: true,
       time: new Date().toISOString(),

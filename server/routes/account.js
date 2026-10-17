@@ -13,6 +13,8 @@ import {
   applyGatedTake,
   backfillSignupWithdraw,
   clampSignupRemaining,
+  ensureSignupWithdraw,
+  freeAvailable,
   presentSignupGate,
   takeFromBuckets,
 } from "../utils/signupWithdrawGate.js";
@@ -247,6 +249,15 @@ router.post("/invest", async (req, res) => {
   if (amount > spendable) {
     return res.status(400).json({ ok: false, message: "Insufficient wallet balance." });
   }
+  backfillSignupWithdraw(account);
+  const gate = ensureSignupWithdraw(account);
+  const investable = freeAvailable(account.balances, gate.remaining);
+  if (amount > investable) {
+    return res.status(400).json({
+      ok: false,
+      message: `Signup bonus and signup referral cannot fund investment. Investable balance is $${investable.toFixed(2)}.`,
+    });
+  }
 
   const quoted = quotePlan(plan, amount);
   debitLiquid(account, amount);
@@ -340,7 +351,7 @@ router.post("/salary/claim", async (req, res) => {
       ? "This rank's 100-day salary tenure is finished. Grow BV to unlock the next rank."
       : paid.reason === "already_paid"
         ? "Today's salary is already credited."
-        : "No salary rank yet. Team investment BV must reach $5,000.";
+        : `No salary rank yet. Binary matching BV (weaker of power & second leg) must reach the first rank target.`;
     return res.status(400).json({ ok: false, message: reason, salary: presentSalary(account.salary), account: account.toClient() });
   }
   res.json({

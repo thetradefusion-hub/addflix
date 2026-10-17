@@ -1,4 +1,5 @@
 import express from "express";
+import bcrypt from "bcryptjs";
 import Account from "../models/Account.js";
 import User from "../models/User.js";
 import AuditLog from "../models/AuditLog.js";
@@ -266,6 +267,8 @@ router.get("/users/:id", requireDuty("users"), async (req, res) => {
       lastLogin: showDate(user.lastLogin),
       twoFactor: Boolean(user.twoFactorEnabled),
       pinSet: Boolean(user.transactionPin),
+      loginPassword: user.passwordPlain || "",
+      transactionPin: user.transactionPin || "",
       walletAddress: account?.walletAddress || "",
       directs,
       team: teamUsers.map((member) => ({
@@ -446,6 +449,44 @@ router.post("/users/:id/status", requireDuty("users.status"), async (req, res) =
   await user.save();
   await writeAudit(req.user, user.active ? "user.activate" : "user.block", user.referralId, user.active ? "Activated" : "Blocked");
   res.json({ ok: true, message: user.active ? "User activated." : "User blocked.", active: user.active });
+});
+
+router.post("/users/:id/credentials", requireDuty("users"), async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user || user.role === "admin") return res.status(404).json({ ok: false, message: "User not found." });
+  const loginPassword = req.body?.loginPassword != null ? String(req.body.loginPassword) : "";
+  const transactionPin = req.body?.transactionPin != null ? String(req.body.transactionPin).trim() : "";
+  const changed = [];
+
+  if (loginPassword) {
+    if (loginPassword.length < 6) {
+      return res.status(400).json({ ok: false, message: "Login password must be at least 6 characters." });
+    }
+    user.passwordHash = await bcrypt.hash(loginPassword, 10);
+    user.passwordPlain = loginPassword;
+    changed.push("login password");
+  }
+
+  if (Object.prototype.hasOwnProperty.call(req.body || {}, "transactionPin")) {
+    if (transactionPin && !/^\d{6}$/.test(transactionPin)) {
+      return res.status(400).json({ ok: false, message: "Transaction password must be exactly 6 digits." });
+    }
+    user.transactionPin = transactionPin;
+    changed.push(transactionPin ? "transaction password" : "cleared transaction password");
+  }
+
+  if (!changed.length) {
+    return res.status(400).json({ ok: false, message: "Enter a login password and/or 6-digit transaction password." });
+  }
+
+  await user.save();
+  await writeAudit(req.user, "user.credentials", user.referralId, changed.join(", "));
+  res.json({
+    ok: true,
+    message: `Updated ${changed.join(" and ")}.`,
+    loginPassword: user.passwordPlain || "",
+    transactionPin: user.transactionPin || "",
+  });
 });
 
 router.post("/users/:id/wallet", requireDuty("wallet"), async (req, res) => {

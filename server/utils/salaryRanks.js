@@ -1,4 +1,4 @@
-/** Default unilevel salary ranks (admin can override in Settings). */
+/** Default binary salary ranks (admin can override in Settings). */
 export const DEFAULT_SALARY_RANKS = [
   { id: 1, name: "Sales Manager", bv: 5_000, daily: 5, tenure: 100 },
   { id: 2, name: "Senior Sales Manager", bv: 25_000, daily: 25, tenure: 100 },
@@ -26,6 +26,10 @@ export function emptySalary() {
     rank: 0,
     rankName: "",
     bv: 0,
+    powerLeg: 0,
+    secondLeg: 0,
+    powerDirectId: "",
+    powerDirectName: "",
     dailyAmount: 0,
     tenure: 100,
     startedDay: "",
@@ -95,10 +99,16 @@ export function presentSalary(salary, bvOverride, ranks = getSalaryRanks()) {
   const daysPaid = Number(current.daysPaid) || 0;
   const tenure = Number(current.tenure) || Number(rank?.tenure) || 100;
   const active = Boolean(rank) && daysPaid < tenure;
+  const powerLeg = money2(current.powerLeg);
+  const secondLeg = money2(current.secondLeg);
   return {
     ...emptySalary(),
     ...current,
     bv,
+    powerLeg,
+    secondLeg,
+    powerDirectId: current.powerDirectId || "",
+    powerDirectName: current.powerDirectName || "",
     rank: rank?.id || 0,
     rankName: rank?.name || "",
     dailyAmount: rank?.daily || 0,

@@ -248,7 +248,7 @@ export default function Dashboard() {
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <p className="font-bold">Recent Transactions</p>
-            <button className="text-xs font-semibold text-[#e10600]" onClick={() => navigate("/wallet/transactions")}>View All</button>
+            <button className="text-xs font-semibold text-[#e10600]" onClick={() => navigate("/reports/wallet")}>View All</button>
           </div>
           <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-left text-xs">
