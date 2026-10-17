@@ -16,33 +16,38 @@ export function Hero() {
   return (
     <section className="relative isolate min-h-[100svh] overflow-hidden bg-[#07080d]">
       <picture>
-        <source media="(max-width: 639px)" srcSet="/landing/hero-mobile.jpg" />
-        <img src="/landing/hero.jpg" alt="" className="landing-zoom absolute inset-0 h-full w-full object-cover object-center" />
+        <source media="(max-width: 639px)" srcSet="/landing/hero-ott-mobile.jpg" />
+        <img src="/landing/hero-ott.jpg" alt="" className="landing-zoom absolute inset-0 h-full w-full object-cover object-center" />
       </picture>
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(7,8,13,0.28)_0%,rgba(7,8,13,0.72)_52%,rgba(7,8,13,0.94)_100%)]" />
-      <div aria-hidden className="landing-glow pointer-events-none absolute left-1/2 top-[42%] h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e10600]/25 blur-3xl" />
-      <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#07080d] to-transparent" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,8,13,0.55)_0%,rgba(7,8,13,0.35)_38%,rgba(7,8,13,0.78)_78%,rgba(7,8,13,0.98)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(225,6,0,0.18)_0%,transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(7,8,13,0.55)_70%,rgba(7,8,13,0.92)_100%)]" />
+      <div aria-hidden className="landing-glow pointer-events-none absolute left-1/2 top-[40%] h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#e10600]/30 blur-3xl" />
+      <div aria-hidden className="landing-float pointer-events-none absolute -left-16 top-28 h-40 w-40 rounded-full bg-[#e10600]/15 blur-3xl" />
+      <div aria-hidden className="landing-float-delay pointer-events-none absolute -right-10 bottom-32 h-48 w-48 rounded-full bg-[#7c3aed]/15 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/70 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#07080d] via-[#07080d]/90 to-transparent" />
       <div className="relative mx-auto flex min-h-[100svh] max-w-[1180px] items-center justify-center px-4 pb-24 pt-32 text-center sm:px-6">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center">
           <div {...rise(80)}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 py-1 pl-1 pr-3 backdrop-blur">
-              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#e10600]"><Play size={11} fill="currentColor" /></span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/35 py-1 pl-1 pr-3 shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-md">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#e10600] shadow-[0_0_16px_rgba(225,6,0,0.55)]"><Play size={11} fill="currentColor" /></span>
               <Kicker>Premium entertainment meets opportunity</Kicker>
             </span>
           </div>
-          <h1 className="mt-7 flex max-w-full flex-col items-center gap-1 text-[4.25rem] font-semibold leading-[0.9] tracking-tight text-white sm:text-8xl lg:flex-row lg:flex-wrap lg:justify-center lg:gap-x-5 lg:text-[5.75rem] xl:text-[6.75rem]">
+          <h1 className="mt-7 flex max-w-full flex-col items-center gap-1 text-[4.25rem] font-semibold leading-[0.9] tracking-tight text-white drop-shadow-[0_12px_40px_rgba(0,0,0,0.55)] sm:text-8xl lg:flex-row lg:flex-wrap lg:justify-center lg:gap-x-5 lg:text-[5.75rem] xl:text-[6.75rem]">
             <span className="hero-word" style={{ "--d": "160ms" }}>Watch.</span>
             <span className="hero-word" style={{ "--d": "340ms" }}>Promote.</span>
             <span className="hero-word hero-earn" style={{ "--d": "520ms" }}>Earn.</span>
           </h1>
           <span aria-hidden className="hero-rule mt-6" />
           <p {...rise(720)} className="landing-rise mt-6 max-w-2xl text-lg font-medium text-white sm:text-2xl">The future of entertainment and smart earning</p>
-          <p {...rise(820)} className="landing-rise mt-3 max-w-xl text-sm leading-6 text-white/75 sm:text-base sm:leading-7">Experience entertainment while exploring a business opportunity built around one platform.</p>
+          <p {...rise(820)} className="landing-rise mt-3 max-w-xl text-sm leading-6 text-white/80 sm:text-base sm:leading-7">Stream the vibe. Share your link. Grow with a platform built for watchers and builders.</p>
           <div {...rise(940)} className="landing-rise mt-9 flex w-full flex-col items-center justify-center gap-3 min-[420px]:w-auto min-[420px]:flex-row">
             <Link to={inside ? "/dashboard" : "/register"} className={`${joinClass} w-full shadow-[0_10px_28px_rgba(225,6,0,0.4)] min-[420px]:w-auto`}>{inside ? "Open app" : "Join ADD FLIX"}</Link>
-            <a href="#how" className={`${ghostClass} w-full bg-black/20 backdrop-blur min-[420px]:w-auto`}>See how it works</a>
+            <a href="#how" className={`${ghostClass} w-full bg-black/35 backdrop-blur-md min-[420px]:w-auto`}>See how it works</a>
           </div>
-          <p {...rise(1060)} className="landing-rise mt-7 text-xs tracking-wide text-white/55">A new way to watch, share and earn with ADD FLIX.</p>
+          <p {...rise(1060)} className="landing-rise mt-7 text-xs tracking-wide text-white/60">A cinematic way to watch, share and earn with ADD FLIX.</p>
         </div>
       </div>
     </section>
@@ -53,8 +58,8 @@ export function ValueStrip() {
   return (
     <section className="relative z-10 mx-auto -mt-10 max-w-[1180px] px-4 sm:px-6" aria-label="What ADD FLIX offers">
       <ul {...reveal()} className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 lg:grid-cols-5">
-        {values.map((item) => (
-          <li key={item.title} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0e1017]/95 px-4 py-4 text-sm font-medium text-white/85 shadow-[0_16px_40px_rgba(0,0,0,0.28)] backdrop-blur">
+        {values.map((item, index) => (
+          <li key={item.title} className="landing-lift flex items-center gap-3 rounded-2xl border border-white/12 bg-gradient-to-br from-[#171a24]/95 via-[#0e1017]/92 to-[#12141c]/95 px-4 py-4 text-sm font-medium text-white/90 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur-md" style={{ transitionDelay: `${index * 40}ms` }}>
             <FeatureIcon name={item.icon} />
             <span className="leading-5">{item.title}</span>
           </li>
@@ -121,9 +126,10 @@ export function Entertainment() {
       <ul key={tab} className="no-scrollbar -mx-4 flex snap-x scroll-px-4 gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0">
         {row.map((item, index) => (
           <li key={item.title} className="landing-rise group w-[68%] max-w-[240px] shrink-0 snap-start sm:w-auto sm:max-w-none" style={{ "--d": `${index * 80}ms` }}>
-            <div className="relative overflow-hidden rounded-2xl border border-white/10">
+            <div className="relative overflow-hidden rounded-2xl border border-white/12 shadow-[0_18px_40px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.04]">
               <img src={item.image} alt="" className="aspect-[3/4] w-full object-cover transition duration-700 ease-out group-hover:scale-105" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent opacity-90" />
+              <div className="absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100 bg-[radial-gradient(circle_at_center,rgba(225,6,0,0.2),transparent_60%)]" />
               <span className="absolute left-1/2 top-1/2 grid h-12 w-12 -translate-x-1/2 -translate-y-1/2 scale-90 place-items-center rounded-full bg-[#e10600] text-white opacity-0 shadow-[0_10px_30px_rgba(225,6,0,0.5)] transition duration-300 group-hover:scale-100 group-hover:opacity-100">
                 <Play size={18} fill="currentColor" />
               </span>
@@ -145,8 +151,8 @@ export function HowItWorks() {
       <ol className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <span className="pointer-events-none absolute left-[12%] right-[12%] top-[2.75rem] hidden h-px bg-gradient-to-r from-transparent via-[#e10600]/50 to-transparent lg:block" aria-hidden="true" />
         {flow.map((item, index) => (
-          <li key={item.step} {...reveal(index * 110)} className="landing-lift relative rounded-2xl border border-white/10 bg-[#101219] p-5 text-center hover:border-[#e10600]/35 sm:p-6">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-[#e10600] bg-[#07080d] text-sm font-semibold text-[#e10600] shadow-[0_0_0_6px_rgba(225,6,0,0.08)]">{item.step}</span>
+          <li key={item.step} {...reveal(index * 110)} className="landing-lift relative rounded-2xl border border-white/12 bg-gradient-to-b from-[#171b26] to-[#0e1118] p-5 text-center shadow-[0_16px_40px_rgba(0,0,0,0.3)] hover:border-[#e10600]/40 sm:p-6">
+            <span className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-[#e10600] bg-[#07080d] text-sm font-semibold text-[#e10600] shadow-[0_0_0_6px_rgba(225,6,0,0.1),0_0_24px_rgba(225,6,0,0.25)]">{item.step}</span>
             <h3 className="mt-5 text-lg font-semibold">{item.title}</h3>
             <p className="mt-2 text-sm leading-6 text-white/60">{item.body}</p>
           </li>

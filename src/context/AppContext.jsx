@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch, mapSessionUser } from "../lib/api";
 
@@ -59,6 +59,7 @@ export function AppProvider({ children }) {
   const [plans, setPlans] = useState([]);
   const [depositAddress, setDepositAddress] = useState("");
   const [subscriptionPrice, setSubscriptionPrice] = useState(10);
+  const [offerPopup, setOfferPopup] = useState({ enabled: false, image: "", link: "", key: "" });
   const [network, setNetwork] = useState(EMPTY_NETWORK);
   const [subscriptionActive, setSubscriptionFlag] = useState(false);
   const [paymentState, setPaymentState] = useState("idle");
@@ -169,6 +170,16 @@ export function AppProvider({ children }) {
       .catch(() => {});
   };
 
+  const refreshNetwork = useCallback(async () => {
+    try {
+      const data = await apiFetch("/api/account/network");
+      setNetwork(data.network || EMPTY_NETWORK);
+      return data.network || EMPTY_NETWORK;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const refreshSession = async (user = readStoredUser()) => {
     if (!localStorage.getItem(TOKEN_KEY)) {
       signOutLocally();
@@ -227,6 +238,7 @@ export function AppProvider({ children }) {
         setPlans(Array.isArray(data.plans) ? data.plans : []);
         if (data.depositAddress) setDepositAddress(data.depositAddress);
         if (data.subscriptionAmount) setSubscriptionPrice(Number(data.subscriptionAmount));
+        if (data.offerPopup) setOfferPopup(data.offerPopup);
       })
       .catch(() => {});
   }, []);
@@ -528,7 +540,9 @@ export function AppProvider({ children }) {
       plans,
       depositAddress,
       subscriptionPrice,
+      offerPopup,
       network,
+      refreshNetwork,
       submitWithdrawal,
       submitTransfer,
       submitDeposit,
@@ -580,6 +594,7 @@ export function AppProvider({ children }) {
       plans,
       depositAddress,
       subscriptionPrice,
+      offerPopup,
       network,
     ]
   );

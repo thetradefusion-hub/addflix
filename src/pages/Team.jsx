@@ -119,14 +119,22 @@ function FocusRoot({ member, onOpenDetails }) {
   );
 }
 export default function Team() {
-  const { sessionUser, network } = useApp();
+  const { sessionUser, network, refreshNetwork, subscriptionActive, investments } = useApp();
   const members = network.members || [];
   const memberId = sessionUser?.id || "—";
   const [picked, setPicked] = useState(null);
   const [treeFocus, setTreeFocus] = useState(null);
   const [query, setQuery] = useState("");
   const [level, setLevel] = useState(0);
+
+  useEffect(() => {
+    refreshNetwork?.();
+  }, []);
   const q = query.trim().toLowerCase();
+  const selfTone = useMemo(() => {
+    const hasPlan = (investments || []).some((row) => row.status === "Active");
+    return PACKAGE_CARD[packageTone({ subscribed: Boolean(subscriptionActive), hasPlan })];
+  }, [subscriptionActive, investments]);
   const focused = useMemo(
     () => (treeFocus ? members.find((row) => sameId(row.id, treeFocus.id)) || treeFocus : null),
     [members, treeFocus],
@@ -229,10 +237,11 @@ export default function Team() {
                     <FocusRoot member={focused} onOpenDetails={setPicked} />
                   </div>
                 ) : (
-                  <div ref={rootRef} className="w-[8.75rem] rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 px-2 py-3 text-center text-white">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-white/75">You</p>
+                  <div ref={rootRef} className={`w-[8.75rem] rounded-2xl border px-2 py-3 text-center ${selfTone.card}`}>
+                    <p className={`text-[10px] font-semibold uppercase tracking-wide ${selfTone.muted}`}>You</p>
                     <p className="mt-1 truncate text-sm font-black">{sessionUser?.name || "You"}</p>
-                    <p className="truncate text-[10px] text-white/80">{memberId}</p>
+                    <p className={`truncate text-[10px] ${selfTone.muted}`}>{memberId}</p>
+                    <span className={`mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold ${selfTone.chip}`}>{selfTone.label}</span>
                   </div>
                 )}
                 {roots.length ? (

@@ -52,9 +52,11 @@ export default function Subscription() {
               <p className="text-2xl font-black">Activate Your Account</p>
               <p className="mt-1 max-w-sm text-sm text-white/70">Get full access to earning platform, daily tasks, referral income and investment plans.</p>
             </div>
-            <div className="rounded-2xl border border-red-500/40 bg-black/40 px-6 py-4 text-center">
-              <Crown className="mx-auto text-amber-300" />
-              <p className="text-4xl font-black text-[#ff2a2a]">${subscriptionPrice} <span className="text-lg">USDT</span></p>
+            <div className="max-w-xs rounded-2xl border border-red-500/40 bg-black/40 px-4 py-4 text-center sm:px-5">
+              <Crown className="mx-auto text-amber-300" size={22} />
+              <p className="mt-2 text-sm font-semibold leading-5 text-white/90">
+                Your ID is not active. Pay ${subscriptionPrice} USDT to unlock daily task, AdView claim, investment and withdrawals.
+              </p>
             </div>
             <ul className="space-y-1 text-sm">
               {["Activate Your ID", "Start Earning", "Enable Referral Income", "Access All Features"].map((item) => (
@@ -154,8 +156,8 @@ export default function Subscription() {
 
       <section className={`mt-3 grid gap-3 ${subscriptionActive ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
         {!subscriptionActive ? (
-        <article className="rounded-2xl border border-rose-100 bg-rose-50/70 p-4 text-sm">
-          <p className="font-bold">Important Instructions</p>
+        <article className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm">
+          <p className="font-bold text-[#9f1239]">Important Instructions</p>
           <ol className="mt-2 list-decimal space-y-1 pl-4 text-[#475467]">
             <li>Send exactly {subscriptionPrice} USDT using BEP-20 (BSC) network.</li>
             <li>Do not send from other network (ERC20, TRC20, etc).</li>

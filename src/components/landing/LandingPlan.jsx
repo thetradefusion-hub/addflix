@@ -16,7 +16,7 @@ export function Faq() {
         {columns.map((column, col) => (
           <div key={column[0].q} className="space-y-3">
             {column.map((item, index) => (
-              <details key={item.q} {...reveal((col + index) * 60)} className="group rounded-2xl border border-white/10 bg-[#101219] px-5 transition-colors duration-300 hover:border-white/20 open:border-[#e10600]/35 open:bg-[#151821]">
+              <details key={item.q} {...reveal((col + index) * 60)} className="group rounded-2xl border border-white/12 bg-gradient-to-b from-[#151821]/95 to-[#0f1219] px-5 shadow-[0_12px_36px_rgba(0,0,0,0.25)] transition-colors duration-300 hover:border-white/25 open:border-[#e10600]/40 open:bg-[#171b26]">
                 <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 py-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#e10600] [&::-webkit-details-marker]:hidden">
                   <span>{item.q}</span>
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/5 text-white/60 transition duration-300 group-open:rotate-180 group-open:bg-[#e10600] group-open:text-white">
@@ -46,10 +46,11 @@ export function Closing() {
           <li className="rounded-xl border border-white/5 bg-white/[0.04] px-4 py-3">ADD FLIX can update policies under its terms.</li>
         </ul>
       </DarkCard>
-      <div {...reveal(100)} className="group relative isolate min-h-[300px] overflow-hidden rounded-2xl border border-white/10 bg-[#07080d] sm:min-h-[340px]">
-        <img src="/landing/cta.jpg" alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_center] transition duration-[1.6s] ease-out group-hover:scale-105" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/75 to-black/35 sm:bg-gradient-to-r sm:from-black sm:via-black/80 sm:to-black/20" />
-        <div aria-hidden className="landing-glow pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-[#e10600]/25 blur-3xl" />
+      <div {...reveal(100)} className="group relative isolate min-h-[300px] overflow-hidden rounded-2xl border border-white/12 bg-[#07080d] shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:min-h-[340px]">
+        <img src="/landing/hero-ott.jpg" alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_center] transition duration-[1.6s] ease-out group-hover:scale-105" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40 sm:bg-gradient-to-r sm:from-black sm:via-black/85 sm:to-black/25" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_left,rgba(225,6,0,0.22),transparent_55%)]" />
+        <div aria-hidden className="landing-glow pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-[#e10600]/30 blur-3xl" />
         <div className="relative flex min-h-[300px] max-w-xl flex-col justify-end px-6 py-8 sm:min-h-[340px] sm:justify-center sm:px-10 sm:py-12">
           <h2 className="text-[1.75rem] font-semibold leading-tight tracking-tight sm:text-4xl lg:text-[2.6rem]">Ready to watch, promote and earn?</h2>
           <p className="mt-4 text-sm leading-6 text-white/75 sm:text-base sm:leading-7">Explore the ADD FLIX platform and see how entertainment and opportunity come together.</p>

@@ -23,6 +23,7 @@ import { flagSkip } from "../utils/fraud.js";
 import { notifyUser } from "../utils/notify.js";
 import { creditRoiLevelIncome } from "../utils/roiLevelCommission.js";
 import { creditDailySalary, presentSalary, refreshSalaryChain, syncSalaryRank } from "../utils/salaryPlan.js";
+import { creditInvestmentReferral, investmentReferralPercent } from "../utils/referralCommission.js";
 import { istStamp } from "../utils/day.js";
 
 const router = express.Router();
@@ -252,8 +253,9 @@ router.post("/invest", async (req, res) => {
   clampSignupRemaining(account);
   if (!Array.isArray(account.investments)) account.investments = [];
   const when = stamp();
+  const investmentId = `INV-${Date.now()}`;
   account.investments.unshift({
-    id: `INV-${Date.now()}`,
+    id: investmentId,
     planId: plan.id,
     planName: plan.name,
     amount: quoted.amount,
@@ -285,10 +287,25 @@ router.post("/invest", async (req, res) => {
   } catch (error) {
     console.error("Salary BV refresh failed after invest:", error);
   }
+  let referralNote = "";
+  try {
+    const settings = await readSettings();
+    const share = await creditInvestmentReferral({
+      member: req.user,
+      investmentId,
+      planName: plan.name,
+      amount: quoted.amount,
+      when,
+      percent: investmentReferralPercent(settings),
+    });
+    if (share > 0) referralNote = ` Direct sponsor received $${share.toFixed(2)} referral.`;
+  } catch (error) {
+    console.error("Investment referral credit failed:", error);
+  }
   const fresh = await loadAccount(req.user._id);
   return res.json({
     ok: true,
-    message: `${plan.name} is active. Daily ROI is $${quoted.dailyAmount.toFixed(2)} until the $${quoted.cap.toFixed(2)} cap.`,
+    message: `${plan.name} is active. Daily ROI is $${quoted.dailyAmount.toFixed(2)} until the $${quoted.cap.toFixed(2)} cap.${referralNote}`,
     account: fresh.toClient(),
   });
 });

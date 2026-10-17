@@ -248,7 +248,21 @@ function AdminConsole({ view, onLogout }) {
               setSettings={setSettings}
               onSave={(event) => {
                 event.preventDefault();
-                run("/api/admin/settings", { method: "PUT", body: JSON.stringify({ ...settings, taskPublished: Boolean(settings.taskPublished) }) });
+                const { offerPopup, offerPopupData, clearOfferPopup, ...rest } = settings || {};
+                run("/api/admin/settings", {
+                  method: "PUT",
+                  body: JSON.stringify({
+                    ...rest,
+                    taskPublished: Boolean(settings.taskPublished),
+                    offerPopupEnabled: Boolean(settings.offerPopupEnabled),
+                    offerPopupImage: settings.offerPopupImage || "",
+                    offerPopupLink: settings.offerPopupLink || "",
+                    ...(offerPopupData ? { offerPopupData } : {}),
+                    ...(clearOfferPopup ? { clearOfferPopup: true } : {}),
+                  }),
+                }).then(() => {
+                  setSettings((prev) => (prev ? { ...prev, offerPopupData: "", clearOfferPopup: false } : prev));
+                });
               }}
             />
           ) : null}
@@ -386,7 +400,7 @@ function Users({ users, query, setQuery, onSearch, onLoginAs, entering }) {
     if (filter === "blocked") return !user.active;
     return true;
   });
-  const list = usePaging(filtered, 8, `${query}:${filter}:${filtered.length}:${filtered[0]?.id || ""}`);
+  const list = usePaging(filtered, 10, `${query}:${filter}:${filtered.length}:${filtered[0]?.id || ""}`);
   const subscribed = users.filter((user) => user.subscription).length;
   const blocked = users.filter((user) => !user.active).length;
   const wallets = users.reduce((sum, user) => sum + Number(user.wallet || 0), 0);
@@ -1369,6 +1383,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
     ["signupBonus", "Signup bonus USDT"],
     ["signupReferralPercent", "Direct referral % of signup bonus"],
     ["signupWithdrawDirectPercent", "Signup withdraw unlock % of direct business"],
+    ["investmentReferralPercent", "Investment direct referral %"],
     ["level1", "Level 1 commission"],
     ["level2", "Level 2 commission"],
     ["level3", "Level 3 commission"],
@@ -1382,10 +1397,29 @@ function SettingsForm({ settings, setSettings, onSave }) {
     ["bep20Rpc", "BEP-20 RPC URL"],
     ["depositAddress", "Platform deposit address"],
   ];
+  const offerPreview = settings.offerPopupData || settings.offerPopupImage || "";
+  const onOfferFile = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2.5 * 1024 * 1024) {
+      window.alert("Offer image must be under 2.5 MB.");
+      event.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setSettings({
+        ...settings,
+        offerPopupData: String(reader.result || ""),
+        offerPopupEnabled: true,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
   return (
     <form onSubmit={onSave} className={card}>
       <p className="font-bold">Platform settings</p>
-      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Direct referral % is the share of that bonus paid to the sponsor who shared the link. Signup withdraw unlock % is how much of a member&apos;s direct referral business (active $10 sub + investments) can unlock their signup bonus and signup referral for withdraw/transfer. ROI and other income stay free. Salary ranks are edited under Admin → Salary Plan.</p>
+      <p className="text-xs text-[#98a2b3]">Signup bonus is credited once when a member creates an account. Set it to 0 to turn the bonus off. Direct referral % is the share of that bonus paid to the sponsor who shared the link. Investment direct referral % is paid only to the immediate sponsor when a member invests in a plan (default 5%). Signup withdraw unlock % is how much of a member&apos;s direct referral business (active $10 sub + investments) can unlock their signup bonus and signup referral for withdraw/transfer. ROI and other income stay free. Salary ranks are edited under Admin → Salary Plan.</p>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {fields.map(([key, label]) => (
           <label key={key} className="text-xs text-[#667085]">
@@ -1398,6 +1432,41 @@ function SettingsForm({ settings, setSettings, onSave }) {
         <input type="checkbox" checked={Boolean(settings.taskPublished)} onChange={set("taskPublished")} />
         Daily task is published
       </label>
+
+      <div className="mt-5 rounded-2xl border border-[#eaecf0] bg-[#f8fafc] p-4">
+        <p className="font-bold text-[#101828]">Dashboard offer popup</p>
+        <p className="mt-1 text-xs text-[#98a2b3]">Shows a centered offer image on the member dashboard. Members can close it. Upload a new image to show it again after dismiss.</p>
+        <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
+          <input type="checkbox" checked={Boolean(settings.offerPopupEnabled)} onChange={set("offerPopupEnabled")} />
+          Show offer popup on dashboard
+        </label>
+        <label className="mt-3 block text-xs text-[#667085]">
+          Upload offer image (PNG, JPG, WEBP, GIF · max 2.5 MB)
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={onOfferFile} className="mt-1 block w-full text-sm text-[#101828]" />
+        </label>
+        <label className="mt-3 block text-xs text-[#667085]">
+          Or image URL / path
+          <input value={settings.offerPopupImage ?? ""} onChange={set("offerPopupImage")} placeholder="/uploads/offer-popup.jpg or https://..." className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] bg-white px-3 text-sm text-[#101828]" />
+        </label>
+        <label className="mt-3 block text-xs text-[#667085]">
+          Optional click link
+          <input value={settings.offerPopupLink ?? ""} onChange={set("offerPopupLink")} placeholder="https://..." className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] bg-white px-3 text-sm text-[#101828]" />
+        </label>
+        {offerPreview ? (
+          <div className="mt-3">
+            <p className="text-xs font-semibold text-[#667085]">Preview</p>
+            <img src={offerPreview} alt="Offer preview" className="mt-2 max-h-56 rounded-xl border border-[#eaecf0] object-contain" />
+          </div>
+        ) : null}
+        <button
+          type="button"
+          className="mt-3 text-xs font-semibold text-[#e10600]"
+          onClick={() => setSettings({ ...settings, clearOfferPopup: true, offerPopupEnabled: false, offerPopupImage: "", offerPopupLink: "", offerPopupData: "" })}
+        >
+          Clear offer popup
+        </button>
+      </div>
+
       <Button className="mt-4" type="submit">Save settings</Button>
     </form>
   );

@@ -108,6 +108,94 @@ export function signupSharePercent(settings) {
   return Math.min(100, Math.max(0, value));
 }
 
+export function investmentReferralPercent(settings) {
+  const value = Number(settings?.investmentReferralPercent);
+  if (!Number.isFinite(value)) return 5;
+  return Math.min(100, Math.max(0, value));
+}
+
+/** Direct sponsor only: percent of investment amount. */
+export async function creditInvestmentReferral({ member, investmentId, planName, amount, when, percent }) {
+  const investAmount = money2(amount);
+  const rate = investmentReferralPercent({ investmentReferralPercent: percent });
+  const share = money2((investAmount * rate) / 100);
+  if (!(share > 0) || !(investAmount > 0) || !member || !investmentId) return 0;
+
+  const sponsorCode = String(member.sponsorId || "").trim().toUpperCase();
+  if (!sponsorCode) return 0;
+  const sponsor = await User.findOne({ referralId: sponsorCode });
+  if (!sponsor || sponsor.role === "admin") return 0;
+
+  const account = await Account.findOne({ user: sponsor._id });
+  if (!account?.subscription?.active) return 0;
+
+  const id = `INV-REF-${investmentId}`;
+  if (!Array.isArray(account.income)) account.income = [];
+  if (account.income.some((row) => row.id === id)) return 0;
+  if (!Array.isArray(account.transactions)) account.transactions = [];
+  if (!Array.isArray(account.referralCredits)) account.referralCredits = [];
+  if (!Array.isArray(account.notifications)) account.notifications = [];
+  if (!account.balances) account.balances = { total: 0, roi: 0, referral: 0, bonus: 0, locked: 0 };
+
+  const stamp = when || istStamp();
+  account.balances.referral = money2((account.balances.referral || 0) + share);
+  account.balances.total = money2((account.balances.total || 0) + share);
+  account.income.unshift({
+    id,
+    date: stamp,
+    type: "Referral Income",
+    description: `Investment ${rate}% · ${planName || "Plan"} · ${member.fullName} · ${member.referralId}`,
+    amount: share,
+    status: "Credited",
+    tx: id,
+  });
+  account.transactions.unshift({
+    id: `${id}-tx`,
+    date: stamp,
+    type: "Referral Income",
+    amount: share,
+    status: "Success",
+    direction: "credit",
+    description: `Investment referral · ${member.referralId}`,
+  });
+  account.referralCredits.unshift({
+    id,
+    paymentId: investmentId,
+    date: stamp,
+    user: member.referralId,
+    name: member.fullName,
+    level: 1,
+    amount: investAmount,
+    commission: share,
+    status: "Credited",
+    tx: id,
+    kind: "investment",
+  });
+  account.notifications.unshift({
+    id: `${id}-note`,
+    title: "Investment referral",
+    body: `${member.fullName} invested $${investAmount.toFixed(2)} in ${planName || "a plan"}. $${share.toFixed(2)} (${rate}%) was added to your wallet.`,
+    kind: "wallet",
+    unread: true,
+    time: new Date().toISOString(),
+  });
+  account.markModified("balances");
+  account.markModified("income");
+  account.markModified("transactions");
+  account.markModified("referralCredits");
+  account.markModified("notifications");
+  await account.save();
+
+  await AuditLog.create({
+    action: "referral.investment",
+    target: member.referralId,
+    note: `L1 ${sponsor.referralId} $${share.toFixed(2)} (${rate}% of $${investAmount.toFixed(2)})`,
+    meta: { investmentId, sponsorId: sponsor.referralId, amount: investAmount, commission: share, percent: rate },
+  });
+
+  return share;
+}
+
 export async function creditSignupReferral({ sponsor, member, signupBonus, percent = 50 }) {
   const bonus = money2(signupBonus);
   const rate = Math.min(100, Math.max(0, Number(percent) || 0));

@@ -213,7 +213,7 @@ export function reveal(delay = 0) {
 
 export function DarkCard({ className, children, delay = 0, still = false }) {
   return (
-    <article {...reveal(delay)} className={cn("rounded-2xl border border-white/10 bg-gradient-to-b from-[#151821] to-[#101219] p-5 shadow-[0_16px_40px_rgba(0,0,0,0.22)] sm:p-6", !still && "landing-lift hover:border-[#e10600]/35", className)}>
+    <article {...reveal(delay)} className={cn("rounded-2xl border border-white/12 bg-gradient-to-b from-[#1a1e2a]/95 via-[#12151e] to-[#0d0f16] p-5 shadow-[0_18px_48px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.04] backdrop-blur-sm sm:p-6", !still && "landing-lift hover:border-[#e10600]/40 hover:shadow-[0_22px_55px_rgba(225,6,0,0.12)]", className)}>
       {children}
     </article>
   );
@@ -221,7 +221,7 @@ export function DarkCard({ className, children, delay = 0, still = false }) {
 
 export function Section({ id, className, children }) {
   return (
-    <section id={id} className={cn("scroll-mt-20 mx-auto w-full max-w-[1180px] px-4 py-16 sm:px-6 sm:py-20 lg:py-24", className)}>
+    <section id={id} className={cn("scroll-mt-20 relative mx-auto w-full max-w-[1180px] px-4 py-16 sm:px-6 sm:py-20 lg:py-24", className)}>
       {children}
     </section>
   );

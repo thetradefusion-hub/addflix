@@ -4,7 +4,7 @@ import Account, { defaultDailyTask } from "../models/Account.js";
 import CmsPage from "../models/CmsPage.js";
 import Video from "../models/Video.js";
 import Ticket from "../models/Ticket.js";
-import { CMS_DEFAULTS } from "./cmsDefaults.js";
+import { CMS_CONTENT_VERSION, CMS_DEFAULTS } from "./cmsDefaults.js";
 import { ensurePlans } from "./planCatalog.js";
 
 const EXTRA_ADMINS = [
@@ -73,7 +73,16 @@ async function removeExtraAdmins(admin) {
 async function ensureCms() {
   for (const page of CMS_DEFAULTS) {
     const existing = await CmsPage.findOne({ slug: page.slug });
-    if (!existing) await CmsPage.create(page);
+    if (!existing) {
+      await CmsPage.create({ ...page, contentVersion: CMS_CONTENT_VERSION });
+      continue;
+    }
+    if (Number(existing.contentVersion || 0) < CMS_CONTENT_VERSION) {
+      existing.title = page.title;
+      existing.body = page.body;
+      existing.contentVersion = CMS_CONTENT_VERSION;
+      await existing.save();
+    }
   }
 }
 

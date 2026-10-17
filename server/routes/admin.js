@@ -7,6 +7,7 @@ import { notifyUser } from "../utils/notify.js";
 import deskRoutes from "./adminDesk.js";
 import { getSettings, readSettings } from "../utils/settings.js";
 import { normalizeSalaryRanks, ranksFromSettings } from "../utils/salaryRanks.js";
+import { presentOfferPopup, saveOfferPopupImage } from "../utils/offerPopup.js";
 import { approveWithdrawal, money2, rejectWithdrawal } from "../utils/withdrawal.js";
 import { closeTaskDay, normalizeTask, todayKey } from "../utils/dailyTask.js";
 import Plan from "../models/Plan.js";
@@ -45,6 +46,7 @@ function publicSettings(settings) {
     minWithdraw: settings.minWithdraw,
     withdrawFeeRate: settings.withdrawFeeRate,
     signupWithdrawDirectPercent: Number(settings.signupWithdrawDirectPercent) || 10,
+    investmentReferralPercent: Number(settings.investmentReferralPercent) || 5,
     taskTitle: settings.taskTitle,
     taskSubtitle: settings.taskSubtitle,
     taskVideoUrl: settings.taskVideoUrl,
@@ -54,6 +56,11 @@ function publicSettings(settings) {
     bep20Rpc: settings.bep20Rpc || "",
     depositAddress: settings.depositAddress || "0x3A7F9D8e4B2c1F6d5E8a9B0c3D4eF6A7b8C9D0e1",
     salaryRanks: ranksFromSettings(settings),
+    offerPopupEnabled: Boolean(settings.offerPopupEnabled),
+    offerPopupImage: String(settings.offerPopupImage || ""),
+    offerPopupLink: String(settings.offerPopupLink || ""),
+    offerPopupKey: String(settings.offerPopupKey || ""),
+    offerPopup: presentOfferPopup(settings),
   };
 }
 
@@ -617,15 +624,15 @@ router.get("/settings", requireDuty("settings"), async (_req, res) => {
 router.put("/settings", requireDuty("settings"), async (req, res) => {
   const settings = await getSettings();
   const body = req.body || {};
-  const numbers = ["subscriptionAmount", "signupBonus", "signupReferralPercent", "signupWithdrawDirectPercent", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
+  const numbers = ["subscriptionAmount", "signupBonus", "signupReferralPercent", "signupWithdrawDirectPercent", "investmentReferralPercent", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
   for (const key of numbers) {
     if (body[key] == null || body[key] === "") continue;
     const value = Number(body[key]);
     if (!Number.isFinite(value) || value < 0) {
       return res.status(400).json({ ok: false, message: `${key} must be a positive number.` });
     }
-    if ((key === "signupReferralPercent" || key === "signupWithdrawDirectPercent") && value > 100) {
-      return res.status(400).json({ ok: false, message: `${key === "signupWithdrawDirectPercent" ? "Signup withdraw" : "Direct referral"} percent must be from 0 to 100.` });
+    if ((key === "signupReferralPercent" || key === "signupWithdrawDirectPercent" || key === "investmentReferralPercent") && value > 100) {
+      return res.status(400).json({ ok: false, message: "Percent must be from 0 to 100." });
     }
     settings[key] = value;
   }
@@ -641,6 +648,27 @@ router.put("/settings", requireDuty("settings"), async (req, res) => {
     settings.depositAddress = address;
   }
   if (typeof body.taskPublished === "boolean") settings.taskPublished = body.taskPublished;
+  if (typeof body.offerPopupEnabled === "boolean") settings.offerPopupEnabled = body.offerPopupEnabled;
+  if (typeof body.offerPopupLink === "string") settings.offerPopupLink = body.offerPopupLink.trim().slice(0, 500);
+  if (typeof body.offerPopupImage === "string" && body.offerPopupImage.trim() && !String(body.offerPopupData || "").startsWith("data:image/")) {
+    settings.offerPopupImage = body.offerPopupImage.trim().slice(0, 500);
+    settings.offerPopupKey = `${Date.now()}`;
+  }
+  if (typeof body.offerPopupData === "string" && body.offerPopupData.startsWith("data:image/")) {
+    try {
+      settings.offerPopupImage = await saveOfferPopupImage(body.offerPopupData);
+      settings.offerPopupKey = `${Date.now()}`;
+      if (body.offerPopupEnabled == null) settings.offerPopupEnabled = true;
+    } catch (error) {
+      return res.status(error.status || 400).json({ ok: false, message: error.message || "Could not save offer image." });
+    }
+  }
+  if (body.clearOfferPopup === true) {
+    settings.offerPopupEnabled = false;
+    settings.offerPopupImage = "";
+    settings.offerPopupLink = "";
+    settings.offerPopupKey = "";
+  }
   if (body.salaryRanks !== undefined) {
     const ranks = normalizeSalaryRanks(body.salaryRanks);
     if (!ranks.length) {

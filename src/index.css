@@ -204,6 +204,164 @@ html.landing-smooth {
   animation: landing-glow 5s ease-in-out infinite;
 }
 
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(12px, -18px, 0);
+  }
+}
+
+@keyframes landing-float-delay {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-14px, 16px, 0);
+  }
+}
+
+@keyframes landing-aurora-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate3d(4%, -3%, 0) scale(1.08);
+    opacity: 0.75;
+  }
+}
+
+@keyframes landing-grain {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-4%, -4%, 0);
+  }
+}
+
+.landing-float {
+  animation: landing-float 9s ease-in-out infinite;
+}
+
+.landing-float-delay {
+  animation: landing-float-delay 11s ease-in-out infinite;
+}
+
+.landing-atmosphere {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(225, 6, 0, 0.16), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 30%, rgba(88, 28, 135, 0.12), transparent 50%),
+    radial-gradient(ellipse 50% 35% at 0% 70%, rgba(225, 6, 0, 0.08), transparent 45%),
+    #07080d;
+}
+
+.landing-aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  animation: landing-aurora-drift 14s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.landing-aurora-a {
+  left: -10%;
+  top: 12%;
+  height: 28rem;
+  width: 28rem;
+  background: rgba(225, 6, 0, 0.22);
+}
+
+.landing-aurora-b {
+  right: -8%;
+  top: 38%;
+  height: 24rem;
+  width: 24rem;
+  background: rgba(124, 58, 237, 0.14);
+  animation-delay: -4s;
+}
+
+.landing-aurora-c {
+  left: 30%;
+  bottom: 8%;
+  height: 22rem;
+  width: 34rem;
+  background: rgba(225, 6, 0, 0.1);
+  animation-delay: -7s;
+}
+
+.landing-grain {
+  position: absolute;
+  inset: -20%;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: landing-grain 1.2s steps(2) infinite;
+  pointer-events: none;
+}
+
+.landing-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.45) 100%);
+  pointer-events: none;
+}
+
+.landing-band {
+  position: relative;
+}
+
+.landing-band::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.landing-band > * {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-band-about::before {
+  background:
+    linear-gradient(180deg, transparent, rgba(225, 6, 0, 0.05) 40%, transparent),
+    radial-gradient(ellipse 70% 60% at 85% 40%, rgba(225, 6, 0, 0.12), transparent 60%);
+}
+
+.landing-band-why::before {
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 30%, rgba(124, 58, 237, 0.1), transparent 55%),
+    linear-gradient(180deg, rgba(7, 8, 13, 0.2), transparent 50%, rgba(7, 8, 13, 0.35));
+}
+
+.landing-band-watch::before {
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 0%, rgba(225, 6, 0, 0.14), transparent 60%),
+    linear-gradient(180deg, #0a0b12 0%, transparent 30%, transparent 70%, #07080d 100%);
+}
+
+.landing-band-how::before {
+  background:
+    radial-gradient(ellipse 50% 45% at 50% 100%, rgba(225, 6, 0, 0.1), transparent 55%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.02), transparent);
+}
+
+.landing-band-faq::before {
+  background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(16, 18, 28, 0.9), transparent 70%);
+}
+
+.landing-band-close::before {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 100%, rgba(225, 6, 0, 0.16), transparent 55%),
+    linear-gradient(180deg, transparent, rgba(5, 6, 10, 0.85));
+}
+
 @keyframes hero-word-in {
   from {
     opacity: 0;
@@ -541,6 +699,10 @@ html.dark .dash-task-track {
   .landing-rise,
   .landing-zoom,
   .landing-glow,
+  .landing-float,
+  .landing-float-delay,
+  .landing-aurora,
+  .landing-grain,
   .hero-word,
   .hero-earn,
   .hero-rule {
@@ -616,7 +778,8 @@ html.dark .bg-slate-100 {
 html.dark .bg-\[\#fff5f5\],
 html.dark .bg-\[\#fff1ef\],
 html.dark .bg-red-50,
-html.dark .bg-rose-50 {
+html.dark .bg-rose-50,
+html.dark .bg-rose-50\/70 {
   background-color: #2a151c;
 }
 
@@ -681,13 +844,15 @@ html.dark .text-\[\#d0d5dd\] {
 html.dark .text-\[\#9f1239\],
 html.dark .text-\[\#7a1d17\],
 html.dark .text-red-600,
-html.dark .text-rose-600 {
+html.dark .text-rose-600,
+html.dark .text-rose-700 {
   color: #fda4af;
 }
 
 html.dark .text-\[\#7a4b00\],
 html.dark .text-amber-600,
 html.dark .text-amber-700,
+html.dark .text-amber-900,
 html.dark .text-orange-600 {
   color: #fcd34d;
 }

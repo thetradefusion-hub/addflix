@@ -33,6 +33,13 @@ const pageCopy = {
   "Other Income": ["Other Income", "Any other credit that is not AdView income, referral, or bonus."],
 };
 
+const LEVEL_FILTERS = Array.from({ length: 15 }, (_, index) => index + 1);
+
+function levelFromIncome(row) {
+  const match = String(row?.description || "").match(/Level\s+(\d+)/i);
+  return match ? Number(match[1]) : 0;
+}
+
 function exportRows(rows, toast) {
   if (!rows.length) {
     toast("No income to export.");
@@ -55,6 +62,7 @@ export default function Income({ preset = "All Income" }) {
   const ledger = liveIncome(income);
   const [tab, setTab] = useState(preset);
   const [status, setStatus] = useState("All");
+  const [level, setLevel] = useState(0);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState("date");
@@ -62,22 +70,24 @@ export default function Income({ preset = "All Income" }) {
   useEffect(() => {
     setTab(preset);
     setPage(1);
+    if (preset !== "Level Income") setLevel(0);
   }, [preset]);
 
   const filtered = useMemo(() => {
     let rows = ledger.filter((row) => {
       const typeOk = tab === "All Income" || row.type === tab || (tab === "Bonus Income" && row.type === "Bonus Income") || (tab === "Other Income" && row.type === "Other Income");
       const statusOk = status === "All" || row.status === status;
+      const levelOk = tab !== "Level Income" || !level || levelFromIncome(row) === level;
       const q = query.trim().toLowerCase();
       const searchOk = !q || `${row.description} ${row.tx} ${row.type}`.toLowerCase().includes(q);
-      return typeOk && statusOk && searchOk;
+      return typeOk && statusOk && levelOk && searchOk;
     });
     rows = [...rows].sort((a, b) => {
       if (sort === "amount") return Number(b.amount) - Number(a.amount);
       return (parseLedgerDate(b.date)?.getTime() || 0) - (parseLedgerDate(a.date)?.getTime() || 0);
     });
     return rows;
-  }, [ledger, tab, status, query, sort]);
+  }, [ledger, tab, status, level, query, sort]);
 
   const pageSize = 8;
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -115,14 +125,28 @@ export default function Income({ preset = "All Income" }) {
       <section className="lg:rounded-2xl lg:border lg:border-[#eaecf0] lg:bg-white lg:p-4">
         <div className="-mx-3 mb-3 flex gap-2 overflow-x-auto px-3 no-scrollbar lg:mx-0 lg:px-0">
           {tabs.map((item) => (
-            <button key={item} onClick={() => { setTab(item); setPage(1); }} className={`h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${tab === item ? "bg-[#e10600] text-white" : "bg-slate-100 text-[#475467]"}`}>{item === "ROI Income" ? "AdView income" : item.replace(" Income", "") === "All" ? "All" : item.replace(" Income", "")}</button>
+            <button key={item} onClick={() => { setTab(item); setPage(1); if (item !== "Level Income") setLevel(0); }} className={`h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${tab === item ? "bg-[#e10600] text-white" : "bg-slate-100 text-[#475467]"}`}>{item === "ROI Income" ? "AdView income" : item.replace(" Income", "") === "All" ? "All" : item.replace(" Income", "")}</button>
           ))}
         </div>
-        <div className="mb-3 space-y-2 lg:grid lg:grid-cols-4 lg:gap-2 lg:space-y-0">
+        {tab === "Level Income" ? (
+          <div className="-mx-3 mb-3 flex gap-1.5 overflow-x-auto px-3 no-scrollbar lg:mx-0 lg:flex-wrap lg:px-0">
+            <button type="button" onClick={() => { setLevel(0); setPage(1); }} className={`h-8 shrink-0 rounded-full px-3 text-xs font-semibold ${level === 0 ? "bg-[#111827] text-white" : "bg-slate-100 text-[#475467]"}`}>All levels</button>
+            {LEVEL_FILTERS.map((item) => (
+              <button key={item} type="button" onClick={() => { setLevel(item); setPage(1); }} className={`h-8 shrink-0 rounded-full px-3 text-xs font-semibold ${level === item ? "bg-[#111827] text-white" : "bg-slate-100 text-[#475467]"}`}>L{item}</button>
+            ))}
+          </div>
+        ) : null}
+        <div className={`mb-3 space-y-2 lg:gap-2 lg:space-y-0 ${tab === "Level Income" ? "lg:grid lg:grid-cols-5" : "lg:grid lg:grid-cols-4"}`}>
           <label className="relative block">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98a2b3]" />
             <input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} placeholder="Search income" className="h-10 w-full rounded-full border border-[#eaecf0] bg-white pl-9 pr-3 text-sm outline-none focus:border-[#e10600] lg:rounded-xl" aria-label="Search income" />
           </label>
+          {tab === "Level Income" ? (
+            <select value={level} onChange={(e) => { setLevel(Number(e.target.value) || 0); setPage(1); }} className="hidden h-10 rounded-xl border border-[#eaecf0] bg-white px-3 text-sm outline-none focus:border-[#e10600] lg:block" aria-label="Level">
+              <option value={0}>All levels</option>
+              {LEVEL_FILTERS.map((item) => <option key={item} value={item}>Level {item}</option>)}
+            </select>
+          ) : null}
           <div className="flex gap-2 lg:contents">
             <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="h-10 min-w-0 flex-1 rounded-full border border-[#eaecf0] bg-white px-3 text-xs outline-none focus:border-[#e10600] lg:rounded-xl lg:text-sm" aria-label="Status">
               {["All", "Credited", "Pending"].map((item) => <option key={item}>{item}</option>)}
@@ -137,7 +161,7 @@ export default function Income({ preset = "All Income" }) {
             <Button variant="outline" className="hidden lg:inline-flex" onClick={() => exportRows(filtered, toast)}>Export</Button>
           </div>
         </div>
-        {view.length === 0 ? <EmptyState title="No income found" body="Change the type, status, or search text." /> : (
+        {view.length === 0 ? <EmptyState title="No income found" body={tab === "Level Income" && level ? `No Level ${level} credits yet. Try All levels or another filter.` : "Change the type, status, or search text."} /> : (
           <>
             <div className="hidden lg:block">
               <table className="w-full text-left text-sm">

@@ -50,17 +50,36 @@ export default function Landing({ frame = false, children }) {
   if (frame) return <PublicFrame>{children}</PublicFrame>;
 
   return (
-    <div id="top" ref={rootRef} className="landing min-h-screen overflow-x-hidden bg-[#07080d] text-white">
+    <div id="top" ref={rootRef} className="landing relative min-h-screen overflow-x-hidden bg-[#07080d] text-white">
+      <div aria-hidden className="landing-atmosphere pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="landing-aurora landing-aurora-a" />
+        <div className="landing-aurora landing-aurora-b" />
+        <div className="landing-aurora landing-aurora-c" />
+        <div className="landing-grain" />
+        <div className="landing-vignette" />
+      </div>
       <LandingNav />
-      <main>
+      <main className="relative">
         <Hero />
         <ValueStrip />
-        <About />
-        <Why />
-        <Entertainment />
-        <HowItWorks />
-        <Faq />
-        <Closing />
+        <div className="landing-band landing-band-about">
+          <About />
+        </div>
+        <div className="landing-band landing-band-why">
+          <Why />
+        </div>
+        <div className="landing-band landing-band-watch">
+          <Entertainment />
+        </div>
+        <div className="landing-band landing-band-how">
+          <HowItWorks />
+        </div>
+        <div className="landing-band landing-band-faq">
+          <Faq />
+        </div>
+        <div className="landing-band landing-band-close">
+          <Closing />
+        </div>
       </main>
       <LandingFooter />
     </div>

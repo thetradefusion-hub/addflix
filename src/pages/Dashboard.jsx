@@ -9,6 +9,7 @@ import { WhatsAppIcon, whatsappShareUrl } from "@/lib/whatsappShare.jsx";
 import { incomeByDay, lifetimeFigures, liveIncome, liveTransactions } from "@/lib/ledger";
 import InactiveBanner, { useActiveGuard } from "@/components/common/ActiveGate";
 import { useOffDay } from "@/components/common/OffDayBanner";
+import OfferPopup from "@/components/common/OfferPopup";
 
 const txTone = {
   "ROI Credit": ["HandCoins", "bg-emerald-50 text-emerald-500"],
@@ -20,7 +21,7 @@ const txTone = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { balances, taskProgress, taskCompleted, roiUnlocked, roiClaimed, subscriptionActive, activatedAt, subscriptionPrice, claimRoi, sessionUser, investments, todayRoi, income, transactions, notes, referralCredits, toast } = useApp();
+  const { balances, taskProgress, taskCompleted, roiUnlocked, roiClaimed, subscriptionActive, activatedAt, subscriptionPrice, claimRoi, sessionUser, investments, todayRoi, income, transactions, notes, referralCredits, toast, offerPopup } = useApp();
   const guard = useActiveGuard();
   const [hidden, setHidden] = useState(false);
   const progress = taskCompleted ? 100 : taskProgress;
@@ -72,6 +73,7 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-[1180px] space-y-3">
+      <OfferPopup offer={offerPopup} />
       <InactiveBanner className="mb-0" />
       <section className="hidden items-start justify-between gap-3 lg:flex">
         <h1 className="min-w-0 truncate text-xl font-semibold tracking-tight text-[#101828] sm:text-2xl">

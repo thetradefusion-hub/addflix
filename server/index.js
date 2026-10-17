@@ -16,7 +16,7 @@ const app = express();
 
 app.use(compression({ threshold: 1024 }));
 app.use(cors({ origin: env.clientOrigin, credentials: true }));
-app.use(express.json());
+app.use(express.json({ limit: "4mb" }));
 
 app.get("/api/health", (_req, res) => {
   const state = mongoose.connection.readyState;

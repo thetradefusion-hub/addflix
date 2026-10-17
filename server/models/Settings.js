@@ -13,6 +13,7 @@ const settingsSchema = new mongoose.Schema(
     minWithdraw: { type: Number, default: 10 },
     withdrawFeeRate: { type: Number, default: 0.1 },
     signupWithdrawDirectPercent: { type: Number, default: 10 },
+    investmentReferralPercent: { type: Number, default: 5 },
     taskTitle: { type: String, default: "Watch Sponsored Video" },
     taskSubtitle: { type: String, default: "Premium Electric Cars" },
     taskVideoUrl: { type: String, default: "/images/task-video.png" },
@@ -22,6 +23,10 @@ const settingsSchema = new mongoose.Schema(
     bep20Rpc: { type: String, default: "" },
     depositAddress: { type: String, default: "0x3A7F9D8e4B2c1F6d5E8a9B0c3D4eF6A7b8C9D0e1" },
     salaryRanks: { type: Array, default: undefined },
+    offerPopupEnabled: { type: Boolean, default: false },
+    offerPopupImage: { type: String, default: "" },
+    offerPopupLink: { type: String, default: "" },
+    offerPopupKey: { type: String, default: "" },
   },
   { timestamps: true }
 );
