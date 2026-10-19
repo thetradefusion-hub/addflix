@@ -34,6 +34,7 @@ export default function Transfer({ mode = "Deposit" }) {
   const [address, setAddress] = useState("");
   const [addressReady, setAddressReady] = useState(false);
   const [pin, setPin] = useState("");
+  const [withdrawSource, setWithdrawSource] = useState("working");
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -79,8 +80,12 @@ export default function Transfer({ mode = "Deposit" }) {
   const fee = useMemo(() => Number(((Number(amount) || 0) * 0.1).toFixed(2)), [amount]);
   const receive = useMemo(() => Math.max(0, Number(((Number(amount) || 0) - fee).toFixed(2))), [amount, fee]);
   const available = Math.max(0, Number((balances.total - balances.locked).toFixed(2)));
+  const workingBalance = Number(signupGate?.free ?? available);
+  const signupBalance = Number(signupGate?.remaining ?? 0);
+  const signupUnlocked = Number(signupGate?.gated ?? 0);
   const maxCashout = Number(signupGate?.maxCashout ?? available);
   const unlockPercent = Number(signupGate?.unlockPercent ?? 10);
+  const selectedMax = withdrawSource === "signup" ? signupUnlocked : workingBalance;
 
   const sendDeposit = async () => {
     const value = Number(depositAmount);
@@ -112,7 +117,7 @@ export default function Transfer({ mode = "Deposit" }) {
 
   const submit = async () => {
     setBusy(true);
-    const ok = await submitWithdrawal({ amount, address, pin });
+    const ok = await submitWithdrawal({ amount, address, pin, source: withdrawSource });
     setBusy(false);
     if (ok) {
       setConfirm(false);
@@ -130,18 +135,25 @@ export default function Transfer({ mode = "Deposit" }) {
       />
       {tab !== "Deposit" ? <InactiveBanner /> : null}
 
-      <section className="mb-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:grid-cols-4">
-        {[
-          ["Total Balance", balances.total, "bg-emerald-50 text-emerald-500", "Wallet"],
-          ["Deposit Balance", Number((balances.referral + balances.bonus).toFixed(2)), "bg-sky-50 text-sky-500", "ArrowDownToLine"],
-          ["Earning Balance", Math.max(0, balances.total - balances.locked), "bg-rose-50 text-rose-500", "HandCoins"],
-          ["Locked Balance", balances.locked, "bg-violet-50 text-violet-500", "LockKeyhole"],
-        ].map(([label, value, color, icon]) => (
+      <section className={`mb-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 ${tab === "Withdraw" ? "" : "xl:grid-cols-4"}`}>
+        {(tab === "Withdraw"
+          ? [
+              ["Total working balance", workingBalance, "bg-emerald-50 text-emerald-500", "Wallet", "ROI and other income"],
+              ["Signup bonus & referral", signupBalance, "bg-amber-50 text-amber-500", "Gift", `Unlocked now $${money(signupUnlocked)}`],
+            ]
+          : [
+              ["Total Balance", balances.total, "bg-emerald-50 text-emerald-500", "Wallet", ""],
+              ["Deposit Balance", Number((balances.referral + balances.bonus).toFixed(2)), "bg-sky-50 text-sky-500", "ArrowDownToLine", ""],
+              ["Earning Balance", Math.max(0, balances.total - balances.locked), "bg-rose-50 text-rose-500", "HandCoins", ""],
+              ["Locked Balance", balances.locked, "bg-violet-50 text-violet-500", "LockKeyhole", ""],
+            ]
+        ).map(([label, value, color, icon, hint]) => (
           <article key={label} className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#eaecf0] bg-white p-3.5 shadow-sm">
             <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full ${color}`}><AppIcon name={icon} /></span>
             <div className="min-w-0">
               <p className="truncate text-xs text-[#667085]">{label}</p>
               <p className="truncate text-xl font-black">${money(value)}</p>
+              {hint ? <p className="truncate text-[11px] text-[#98a2b3]">{hint}</p> : null}
             </div>
           </article>
         ))}
@@ -263,33 +275,40 @@ export default function Transfer({ mode = "Deposit" }) {
         <section className="grid gap-3 lg:grid-cols-[0.9fr_1.1fr]">
           <article className="rounded-2xl border border-[#eaecf0] bg-white p-4">
             <p className="font-bold">Withdraw Funds</p>
-            <p className="text-sm text-[#667085]">Withdraw your available balance to your external wallet. Signup bonus and signup referral unlock with {unlockPercent}% of your direct referral business only. ROI and other income stay free.</p>
-            <div className="mt-3 rounded-xl border border-emerald-500 bg-emerald-50 p-3">
-              <p className="text-xs text-[#667085]">Max cashout now</p>
-              <p className="font-bold">${money(maxCashout)}</p>
-              <p className="text-[11px] text-[#667085]">Wallet available ${money(available)} · free ${money(signupGate?.free ?? available)} · unlocked signup ${money(signupGate?.gated || 0)}</p>
+            <p className="text-sm text-[#667085]">Choose working balance or signup balance. Signup unlocks with {unlockPercent}% of your direct referral business.</p>
+            <p className="mt-3 text-xs font-semibold text-[#667085]">Withdraw from</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setWithdrawSource("working")}
+                className={`rounded-xl border px-3 py-3 text-left ${withdrawSource === "working" ? "border-[#e10600] bg-red-50" : "border-[#eaecf0] bg-white"}`}
+              >
+                <p className="text-xs text-[#667085]">Total working balance</p>
+                <p className="text-lg font-black text-[#101828]">${money(workingBalance)}</p>
+                <p className="text-[11px] text-[#98a2b3]">ROI and other income</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setWithdrawSource("signup")}
+                className={`rounded-xl border px-3 py-3 text-left ${withdrawSource === "signup" ? "border-[#e10600] bg-red-50" : "border-[#eaecf0] bg-white"}`}
+              >
+                <p className="text-xs text-[#667085]">Signup bonus & referral</p>
+                <p className="text-lg font-black text-[#101828]">${money(signupBalance)}</p>
+                <p className="text-[11px] text-[#98a2b3]">Unlocked now ${money(signupUnlocked)}</p>
+              </button>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
-                <p className="text-[#667085]">Direct business</p>
-                <p className="font-bold text-[#101828]">${money(signupGate?.directBusiness || 0)}</p>
-              </div>
-              <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
-                <p className="text-[#667085]">{unlockPercent}% unlock</p>
-                <p className="font-bold text-[#101828]">${money(signupGate?.unlockCap || 0)}</p>
-              </div>
-              <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
-                <p className="text-[#667085]">Signup gated left</p>
-                <p className="font-bold text-[#101828]">${money(signupGate?.remaining || 0)}</p>
-              </div>
-              <div className="rounded-xl bg-[#f8fafc] px-3 py-2">
-                <p className="text-[#667085]">Already unlocked out</p>
-                <p className="font-bold text-[#101828]">${money(signupGate?.withdrawn || 0)}</p>
-              </div>
+            <div className="mt-3 rounded-xl border border-emerald-500 bg-emerald-50 p-3">
+              <p className="text-xs text-[#667085]">Selected max cashout</p>
+              <p className="font-bold">${money(selectedMax)}</p>
+              <p className="text-[11px] text-[#667085]">
+                {withdrawSource === "signup"
+                  ? `Direct business $${money(signupGate?.directBusiness || 0)} · ${unlockPercent}% unlock $${money(signupGate?.unlockCap || 0)} · already out $${money(signupGate?.withdrawn || 0)}`
+                  : `Working funds only · signup left $${money(signupBalance)}`}
+              </p>
             </div>
             <label className="mt-3 block text-xs text-[#667085]">Withdrawal Amount (USDT)</label>
             <input value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] px-3 text-sm" />
-            <p className="mt-1 text-[11px] text-[#98a2b3]">Max cashout: ${money(maxCashout)} · Minimum: 10 USDT</p>
+            <p className="mt-1 text-[11px] text-[#98a2b3]">Max from selected balance: ${money(selectedMax)} · Minimum: 10 USDT</p>
             <label className="mt-3 block text-xs text-[#667085]">Wallet Address (BEP-20)</label>
             <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="0x and 40 hex characters" className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] px-3 text-sm" />
             <label className="mt-3 block text-xs text-[#667085]">Transaction Password / PIN</label>
@@ -309,8 +328,13 @@ export default function Transfer({ mode = "Deposit" }) {
                 toast("Amount cannot exceed your withdrawable balance.", "warning");
                 return;
               }
-              if (value > maxCashout) {
-                toast(`Max cashout is $${money(maxCashout)}. Build direct business to unlock more signup bonus.`, "warning");
+              if (value > selectedMax) {
+                toast(
+                  withdrawSource === "signup"
+                    ? `Unlocked signup cashout is $${money(selectedMax)}. Build direct business to unlock more.`
+                    : `Working balance cashout is $${money(selectedMax)}.`,
+                  "warning"
+                );
                 return;
               }
               if (!/^0x[a-fA-F0-9]{40}$/.test(address.trim())) {
@@ -343,7 +367,7 @@ export default function Transfer({ mode = "Deposit" }) {
         onClose={() => setConfirm(false)}
         footer={<><Button variant="ghost" className="flex-1" onClick={() => setConfirm(false)}>Cancel</Button><Button className="flex-1" disabled={busy} onClick={submit}>{busy ? "Submitting..." : "Confirm"}</Button></>}
       >
-        <p>Lock <b>${money(Number(amount) || 0)} USDT</b> for review. Fee ${money(fee)} USDT. You receive <b>${money(receive)} USDT</b> when it is paid. Your total balance stays the same until then. Available becomes ${money(Math.max(0, available - (Number(amount) || 0)))}.</p>
+        <p>Lock <b>${money(Number(amount) || 0)} USDT</b> from <b>{withdrawSource === "signup" ? "signup bonus & referral" : "total working balance"}</b> for review. Fee ${money(fee)} USDT. You receive <b>${money(receive)} USDT</b> when it is paid.</p>
       </Modal>
     </div>
   );

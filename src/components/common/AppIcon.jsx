@@ -30,6 +30,7 @@ import {
   Play,
   QrCode,
   Share2,
+  TrendingUp,
   UserPlus,
   UserRound,
   Users,
@@ -73,6 +74,7 @@ export const iconMap = {
   Banknote,
   Copy,
   Share2,
+  TrendingUp,
 };
 
 export default function AppIcon({ name, size = 18, className, strokeWidth = 2.25 }) {

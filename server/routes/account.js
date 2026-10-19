@@ -518,10 +518,13 @@ router.post("/withdraw", async (req, res) => {
   const amount = money2(req.body?.amount);
   const address = String(req.body?.address || "").trim();
   const pin = String(req.body?.pin || "").trim();
+  const sourceRaw = String(req.body?.source || "working").trim().toLowerCase();
+  const source = sourceRaw === "signup" ? "signup" : "working";
   const settings = await getSettings();
   const minimum = Number(settings.minWithdraw) || 10;
   const summary = await presentSignupGate(account, req.user, settings);
   const percent = summary.unlockPercent;
+  const sourceMax = source === "signup" ? summary.gated : summary.free;
 
   if (!amount || amount < minimum) {
     return res.status(400).json({ ok: false, message: `Minimum withdrawal is ${minimum} USDT.` });
@@ -529,10 +532,17 @@ router.post("/withdraw", async (req, res) => {
   if (amount > summary.available) {
     return res.status(400).json({ ok: false, message: "Amount cannot exceed your withdrawable balance." });
   }
-  if (amount > summary.maxCashout) {
+  if (amount > sourceMax) {
+    if (source === "signup") {
+      return res.status(400).json({
+        ok: false,
+        message: `Signup bonus unlock is limited to ${percent}% of your direct referral business ($${summary.directBusiness.toFixed(2)} → $${summary.unlockCap.toFixed(2)}). Unlocked signup cashout now is $${summary.gated.toFixed(2)}.`,
+        signupGate: summary,
+      });
+    }
     return res.status(400).json({
       ok: false,
-      message: `Signup bonus unlock is limited to ${percent}% of your direct referral business ($${summary.directBusiness.toFixed(2)} → $${summary.unlockCap.toFixed(2)}). Max cashout now is $${summary.maxCashout.toFixed(2)} (free $${summary.free.toFixed(2)} + unlocked signup $${summary.gated.toFixed(2)}).`,
+      message: `Working balance cashout is $${summary.free.toFixed(2)}. Choose signup balance to withdraw unlocked signup funds.`,
       signupGate: summary,
     });
   }
@@ -547,10 +557,13 @@ router.post("/withdraw", async (req, res) => {
   }
 
   const quoted = quoteWithdrawal(amount, Number(settings.withdrawFeeRate));
-  const gatedTake = applyGatedTake(account, quoted.amount, summary);
-  const sources = takeFromBuckets(account.balances, quoted.amount);
+  const gatedTake = applyGatedTake(account, quoted.amount, summary, source);
+  const bucketOrder = source === "signup" ? ["bonus", "referral", "roi"] : ["roi", "referral", "bonus"];
+  const sources = takeFromBuckets(account.balances, quoted.amount, bucketOrder);
   sources.signupGated = gatedTake;
+  sources.walletSource = source;
   account.balances.locked = money2(Number(account.balances.locked || 0) + quoted.amount);
+  clampSignupRemaining(account);
   const when = stamp();
   const id = Date.now();
   account.withdrawals.unshift({
@@ -563,6 +576,7 @@ router.post("/withdraw", async (req, res) => {
     receive: quoted.receive,
     status: "Pending",
     address,
+    source,
     sources,
   });
   account.transactions.unshift({
@@ -574,7 +588,7 @@ router.post("/withdraw", async (req, res) => {
     receive: quoted.receive,
     status: "Pending",
     direction: "debit",
-    description: "Locked until review",
+    description: source === "signup" ? "Signup balance · locked until review" : "Working balance · locked until review",
     withdrawalId: id,
   });
   account.markModified("balances");

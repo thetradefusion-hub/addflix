@@ -1,3 +1,5 @@
+import { istDayKey } from "./day.js";
+
 /** Default binary salary ranks (admin can override in Settings). */
 export const DEFAULT_SALARY_RANKS = [
   { id: 1, name: "Sales Manager", bv: 5_000, daily: 5, tenure: 100 },
@@ -99,6 +101,8 @@ export function presentSalary(salary, bvOverride, ranks = getSalaryRanks()) {
   const daysPaid = Number(current.daysPaid) || 0;
   const tenure = Number(current.tenure) || Number(rank?.tenure) || 100;
   const active = Boolean(rank) && daysPaid < tenure;
+  const lastPaidDay = String(current.lastPaidDay || "");
+  const claimedToday = Boolean(lastPaidDay && lastPaidDay === istDayKey());
   const powerLeg = money2(current.powerLeg);
   const secondLeg = money2(current.secondLeg);
   return {
@@ -116,6 +120,9 @@ export function presentSalary(salary, bvOverride, ranks = getSalaryRanks()) {
     daysPaid,
     daysLeft: active ? Math.max(0, tenure - daysPaid) : 0,
     active,
+    lastPaidDay,
+    claimedToday,
+    canClaim: active && !claimedToday,
     nextRank: next
       ? { id: next.id, name: next.name, bv: next.bv, daily: next.daily, need: money2(next.bv - bv) }
       : null,

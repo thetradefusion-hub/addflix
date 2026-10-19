@@ -372,13 +372,26 @@ export function AppProvider({ children }) {
 
   const submitWithdrawal = async (payload) => {
     const amount = Number(payload.amount);
+    const source = payload.source === "signup" ? "signup" : "working";
     const withdrawable = Number((balances.total - balances.locked).toFixed(2));
+    const sourceMax = source === "signup"
+      ? Number(signupGate?.gated ?? 0)
+      : Number(signupGate?.free ?? withdrawable);
     if (!amount || amount < 10) {
       toast("Minimum withdrawal is 10 USDT.", "warning");
       return false;
     }
     if (amount > withdrawable) {
       toast("Amount cannot exceed your withdrawable balance.", "warning");
+      return false;
+    }
+    if (amount > sourceMax) {
+      toast(
+        source === "signup"
+          ? `Unlocked signup cashout is $${Number(sourceMax).toFixed(2)}.`
+          : `Working balance cashout is $${Number(sourceMax).toFixed(2)}.`,
+        "warning"
+      );
       return false;
     }
     if (!/^0x[a-fA-F0-9]{40}$/.test(payload.address || "")) {
@@ -392,7 +405,7 @@ export function AppProvider({ children }) {
     try {
       const data = await apiFetch("/api/account/withdraw", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, source }),
       });
       applyAccount(data.account);
       toast(data.message || "Withdrawal request submitted.");

@@ -46,6 +46,11 @@ export default function Dashboard() {
   const signupReferralAmount = liveRows
     .filter((row) => row.type === "Referral Income" && /^Signup bonus ·/i.test(String(row.description || "")))
     .reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+  // Headline excludes signup bonus + signup referral (shown separately below).
+  const walletDisplayTotal = Math.max(
+    0,
+    Number((Number(balances.total || 0) - signupBonusAmount - signupReferralAmount).toFixed(2))
+  );
   const txRows = liveTransactions(transactions).slice(0, 5).map((row) => {
     const [icon, tone] = txTone[row.type] || ["Coins", "bg-slate-100 text-slate-500"];
     return { ...row, icon, tone };
@@ -102,14 +107,14 @@ export default function Dashboard() {
         <div className="flex flex-col gap-3 lg:col-span-5">
         <article className="relative overflow-hidden rounded-2xl bg-[linear-gradient(125deg,#5b21b6_0%,#7c3aed_42%,#db2777_100%)] p-5 text-white shadow-[0_16px_36px_rgba(91,33,182,0.28)]">
           <img src="/images/wallet-card.png" alt="" className="pointer-events-none absolute -right-8 -top-3 h-32 w-32 object-cover [mask-image:radial-gradient(circle_at_55%_48%,black_42%,transparent_72%)] sm:-right-6 sm:-top-4 sm:h-44 sm:w-44" />
-          <p className="text-sm text-white/80">Total Balance (USDT)</p>
+          <p className="text-sm text-white/80">Total working balance</p>
           <div className="mt-1 flex items-center gap-2">
-            <p className="text-4xl font-black tracking-tight">{hidden ? "••••" : `$${money(balances.total)}`}</p>
+            <p className="text-4xl font-black tracking-tight">{hidden ? "••••" : `$${money(walletDisplayTotal)}`}</p>
             <button type="button" aria-label="Toggle balance visibility" onClick={() => setHidden((v) => !v)} className="text-white/80">
               {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <p className="mt-1 text-sm text-white/75">≈ {hidden ? "••••" : `$${money(balances.total)} USDT`}</p>
+          <p className="mt-1 text-sm text-white/75">≈ {hidden ? "••••" : `$${money(walletDisplayTotal)} USDT`}</p>
           <div className="relative z-[1] mt-4 grid grid-cols-2 gap-2">
             <div className="rounded-xl bg-white/15 px-3 py-2.5 backdrop-blur-[2px]">
               <p className="text-[11px] font-medium text-white/75">Signup Bonus</p>

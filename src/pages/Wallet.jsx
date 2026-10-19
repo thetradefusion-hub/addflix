@@ -38,7 +38,7 @@ export default function WalletPage() {
       <section className="grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <article className="relative min-h-[210px] overflow-hidden rounded-2xl bg-[linear-gradient(120deg,#5b21b6_0%,#7e22ce_42%,#db2777_100%)] p-5 text-white shadow-[0_16px_40px_rgba(91,33,182,0.25)]">
           <img src="/images/wallet-card.png" alt="" className="pointer-events-none absolute -right-10 top-0 h-36 w-36 object-cover [mask-image:radial-gradient(circle_at_55%_48%,black_42%,transparent_72%)] sm:h-52 sm:w-52" />
-          <p className="text-sm font-medium text-white/80">Total Balance (USDT)</p>
+          <p className="text-sm font-medium text-white/80">Total working balance</p>
           <div className="mt-1 flex items-center gap-2">
             <p className="text-4xl font-black tracking-tight sm:text-5xl">{hidden ? "••••" : `$${money(balances.total)}`}</p>
             <button aria-label="Toggle balance visibility" onClick={() => setHidden((v) => !v)} className="text-white/80">

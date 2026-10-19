@@ -117,10 +117,12 @@ export function maxCashout(account, directBusiness, percent = DEFAULT_PERCENT) {
  * Free-first cashout: deduct from bonus/referral/roi buckets, then reduce gated remaining.
  * Does not touch balances.total or locked — caller handles withdraw lock vs transfer debit.
  */
-export function takeFromBuckets(balances, amount) {
+export function takeFromBuckets(balances, amount, order = ["roi", "referral", "bonus"]) {
   let left = money2(amount);
   const sources = { bonus: 0, referral: 0, roi: 0 };
-  for (const key of ["roi", "referral", "bonus"]) {
+  const keys = Array.isArray(order) && order.length ? order : ["roi", "referral", "bonus"];
+  for (const key of keys) {
+    if (!Object.prototype.hasOwnProperty.call(sources, key)) continue;
     const have = money2(balances[key] || 0);
     const take = money2(Math.min(have, left));
     balances[key] = money2(have - take);
@@ -130,11 +132,20 @@ export function takeFromBuckets(balances, amount) {
   return sources;
 }
 
-export function applyGatedTake(account, amount, summary) {
+/** mode: auto (free-first), working (never touch gated), signup (take only from unlocked gated). */
+export function applyGatedTake(account, amount, summary, mode = "auto") {
   const value = money2(amount);
   const gate = ensureSignupWithdraw(account);
   const free = summary?.free ?? freeAvailable(account.balances, gate.remaining);
-  const gatedTake = money2(Math.max(0, Math.min(value - Math.min(value, free), summary?.gated ?? gate.remaining)));
+  const unlocked = money2(summary?.gated ?? gatedWithdrawable(gate.remaining, gate.withdrawn, summary?.unlockCap));
+  let gatedTake = 0;
+  if (mode === "working") {
+    gatedTake = 0;
+  } else if (mode === "signup") {
+    gatedTake = money2(Math.min(value, unlocked));
+  } else {
+    gatedTake = money2(Math.max(0, Math.min(value - Math.min(value, free), unlocked)));
+  }
   if (gatedTake > 0) {
     gate.remaining = money2(Math.max(0, gate.remaining - gatedTake));
     gate.withdrawn = money2(gate.withdrawn + gatedTake);
