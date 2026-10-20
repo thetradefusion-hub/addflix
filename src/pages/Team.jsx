@@ -18,6 +18,20 @@ function initials(name) {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 }
 
+/** Compact Total Business BV for genealogy card chips. */
+function cardBv(value) {
+  const n = Number(value) || 0;
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return `$${m >= 10 || Number.isInteger(m) ? m.toFixed(0) : m.toFixed(1)}M`;
+  }
+  if (n >= 1_000) {
+    const k = n / 1_000;
+    return `$${k >= 100 || Number.isInteger(k) ? k.toFixed(0) : k.toFixed(1)}k`;
+  }
+  return `$${money(n)}`;
+}
+
 function branchMatches(member, members, query) {
   if (`${member.name} ${member.id}`.toLowerCase().includes(query)) return true;
   return members.some((row) => sameId(row.parent, member.id) && branchMatches(row, members, query));
@@ -56,7 +70,7 @@ const PACKAGE_CARD = {
   },
 };
 
-function GeneNode({ member, members, onFocus, depth, query, focusLevel }) {
+function GeneNode({ member, members, onFocus, onOpenDetails, depth, query, focusLevel }) {
   const kids = members.filter((row) => sameId(row.parent, member.id));
   const visibleKids = query ? kids.filter((row) => branchMatches(row, members, query)) : kids;
   const [open, setOpen] = useState(depth < 1);
@@ -69,13 +83,22 @@ function GeneNode({ member, members, onFocus, depth, query, focusLevel }) {
   return (
     <li>
       <div className={`relative w-[8.75rem] rounded-2xl border px-2 py-2.5 text-center ${tone.card} ${hot ? "ring-2 ring-[#e10600] ring-offset-2" : ""}`}>
-        <button type="button" onClick={() => onFocus(member)} className="w-full text-center">
+        <button
+          type="button"
+          onClick={() => {
+            onFocus?.(member);
+            onOpenDetails?.(member);
+          }}
+          className="w-full text-center"
+        >
           <span className={`mx-auto grid h-9 w-9 place-items-center rounded-full text-xs font-bold ${tone.avatar}`}>{initials(member.name)}</span>
           <span className="mt-1 block truncate text-xs font-semibold">{member.name}</span>
           <span className={`block truncate text-[10px] ${tone.muted}`}>{member.id}</span>
           <span className="mt-1.5 flex flex-wrap items-center justify-center gap-1">
             <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`}>L{member.level}</span>
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`}>{tone.label}</span>
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`} title={`Total Business BV $${money(member.businessBv || 0)}`}>
+              {cardBv(member.businessBv)}
+            </span>
           </span>
         </button>
         {kids.length ? (
@@ -93,7 +116,7 @@ function GeneNode({ member, members, onFocus, depth, query, focusLevel }) {
       {open && visibleKids.length ? (
         <ul>
           {visibleKids.map((child) => (
-            <GeneNode key={child.id} member={child} members={members} onFocus={onFocus} depth={depth + 1} query={query} focusLevel={focusLevel} />
+            <GeneNode key={child.id} member={child} members={members} onFocus={onFocus} onOpenDetails={onOpenDetails} depth={depth + 1} query={query} focusLevel={focusLevel} />
           ))}
         </ul>
       ) : null}
@@ -112,7 +135,9 @@ function FocusRoot({ member, onOpenDetails }) {
         <p className={`truncate text-[10px] ${tone.muted}`}>{member.id}</p>
         <span className="mt-1.5 flex flex-wrap items-center justify-center gap-1">
           <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`}>L{member.level}</span>
-          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`}>{tone.label}</span>
+          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${tone.chip}`} title={`Total Business BV $${money(member.businessBv || 0)}`}>
+            {cardBv(member.businessBv)}
+          </span>
         </span>
       </button>
     </div>
@@ -241,13 +266,18 @@ export default function Team() {
                     <p className={`text-[10px] font-semibold uppercase tracking-wide ${selfTone.muted}`}>You</p>
                     <p className="mt-1 truncate text-sm font-black">{sessionUser?.name || "You"}</p>
                     <p className={`truncate text-[10px] ${selfTone.muted}`}>{memberId}</p>
-                    <span className={`mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold ${selfTone.chip}`}>{selfTone.label}</span>
+                    <span
+                      className={`mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold ${selfTone.chip}`}
+                      title={`Total Business BV $${money(network.businessBv || 0)}`}
+                    >
+                      {cardBv(network.businessBv)}
+                    </span>
                   </div>
                 )}
                 {roots.length ? (
                   <ul>
                     {roots.map((member) => (
-                      <GeneNode key={member.id} member={member} members={members} onFocus={setTreeFocus} depth={0} query={q} focusLevel={level} />
+                      <GeneNode key={member.id} member={member} members={members} onFocus={setTreeFocus} onOpenDetails={setPicked} depth={0} query={q} focusLevel={level} />
                     ))}
                   </ul>
                 ) : (
@@ -274,7 +304,7 @@ export default function Team() {
           <>
             <div className="hidden lg:block">
               <table className="w-full text-left text-sm">
-                <thead className="text-xs text-[#667085]"><tr>{["#", "User ID", "Name", "Level", "Sponsor", "Joined", "Status"].map((heading) => <th key={heading} className="pb-2 font-medium">{heading}</th>)}</tr></thead>
+                <thead className="text-xs text-[#667085]"><tr>{["#", "User ID", "Name", "Level", "Sponsor", "Joined", "Total Business BV", "Status"].map((heading) => <th key={heading} className="pb-2 font-medium">{heading}</th>)}</tr></thead>
                 <tbody>
                   {page.items.map((row, index) => (
                     <tr key={row.id} className="border-t border-[#f2f4f7]">
@@ -284,6 +314,7 @@ export default function Team() {
                       <td>Level {row.level}</td>
                       <td>{row.sponsor || "—"}</td>
                       <td>{row.joined}</td>
+                      <td className="font-semibold text-[#101828]">${money(row.businessBv || 0)}</td>
                       <td><StatusBadge tone={row.status}>{row.status}</StatusBadge></td>
                     </tr>
                   ))}
@@ -300,7 +331,7 @@ export default function Team() {
                       <StatusBadge tone={row.status}>{row.status}</StatusBadge>
                     </span>
                     <span className="mt-0.5 block truncate text-[11px] text-[#667085]">{row.id} · Level {row.level} · {row.sponsor || "—"}</span>
-                    <span className="mt-0.5 block text-[10px] text-[#98a2b3]">{row.joined}</span>
+                    <span className="mt-0.5 block text-[10px] text-[#98a2b3]">{row.joined} · BV ${money(row.businessBv || 0)}</span>
                   </span>
                 </button>
               ))}
@@ -313,7 +344,16 @@ export default function Team() {
       <Modal open={Boolean(picked)} title={picked?.name || "Member"} onClose={() => setPicked(null)}>
         {picked ? (
           <ul className="space-y-2">
-            {[["User ID", picked.id], ["Level", `Level ${picked.level}`], ["Sponsor", picked.sponsor || "—"], ["Joined", picked.joined], ["Subscription", picked.status], ["Active plan", picked.plan || "—"], ["Investment", `$${money(picked.investment || 0)}`]].map(([label, value]) => (
+            {[
+              ["User ID", picked.id],
+              ["Level", `Level ${picked.level}`],
+              ["Sponsor", picked.sponsor || "—"],
+              ["Joined", picked.joined],
+              ["Subscription", picked.status],
+              ["Active plan", picked.plan || "—"],
+              ["Active Investment", `$${money(picked.investment || 0)}`],
+              ["Total Business BV", `$${money(picked.businessBv || 0)}`],
+            ].map(([label, value]) => (
               <li key={label} className="flex justify-between gap-3 text-sm"><span className="text-[#667085]">{label}</span><span className="font-semibold text-[#101828]">{value}</span></li>
             ))}
           </ul>

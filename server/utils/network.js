@@ -1,30 +1,64 @@
 import Account from "../models/Account.js";
 import User from "../models/User.js";
 import { readSettings, referralRatesFrom } from "./settings.js";
+import { money2 } from "./salaryRanks.js";
 
 const MAX_LEVEL = 4;
 
-async function downline(rootCode) {
+function investmentTotal(account) {
+  return money2((account?.investments || []).reduce((sum, row) => sum + (Number(row.amount) || 0), 0));
+}
+
+async function downline(rootCode, { maxDepth = MAX_LEVEL - 1 } = {}) {
+  const lookup = {
+    from: User.collection.name,
+    startWith: "$referralId",
+    connectFromField: "referralId",
+    connectToField: "sponsorId",
+    as: "team",
+    depthField: "depth",
+    restrictSearchWithMatch: { role: { $ne: "admin" } },
+  };
+  if (Number.isFinite(maxDepth) && maxDepth >= 0) lookup.maxDepth = maxDepth;
   const [root] = await User.aggregate([
     { $match: { referralId: rootCode } },
     { $limit: 1 },
-    {
-      $graphLookup: {
-        from: User.collection.name,
-        startWith: "$referralId",
-        connectFromField: "referralId",
-        connectToField: "sponsorId",
-        as: "team",
-        maxDepth: MAX_LEVEL - 1,
-        depthField: "depth",
-        restrictSearchWithMatch: { role: { $ne: "admin" } },
-      },
-    },
+    { $graphLookup: lookup },
     { $project: { team: { _id: 1, fullName: 1, referralId: 1, sponsorId: 1, createdAt: 1, active: 1, depth: 1 } } },
   ]);
   return (root?.team || [])
     .map((member) => ({ member, level: member.depth + 1, parent: String(member.sponsorId || "").toUpperCase() }))
     .sort((a, b) => a.level - b.level || new Date(a.member.createdAt) - new Date(b.member.createdAt));
+}
+
+/** Self investment + entire unilevel downline investment totals (Total Business BV). */
+function buildBusinessBvMap(rootCode, treeItems, invByCode) {
+  const children = new Map();
+  for (const item of treeItems) {
+    const parent = String(item.parent || "").toUpperCase();
+    const code = String(item.member.referralId || "").trim().toUpperCase();
+    if (!parent || !code) continue;
+    if (!children.has(parent)) children.set(parent, []);
+    children.get(parent).push(code);
+  }
+  const memo = new Map();
+  function subtree(code) {
+    const key = String(code || "").toUpperCase();
+    if (!key) return 0;
+    if (memo.has(key)) return memo.get(key);
+    let total = money2(invByCode.get(key) || 0);
+    for (const child of children.get(key) || []) {
+      total = money2(total + subtree(child));
+    }
+    memo.set(key, total);
+    return total;
+  }
+  subtree(rootCode);
+  for (const item of treeItems) {
+    const code = String(item.member.referralId || "").trim().toUpperCase();
+    if (code) subtree(code);
+  }
+  return memo;
 }
 
 function idKey(value) {
@@ -40,10 +74,21 @@ function idKey(value) {
 
 export async function buildNetwork(user) {
   const rootCode = String(user.referralId || "").trim().toUpperCase();
-  const [items, settings] = await Promise.all([rootCode ? downline(rootCode) : [], readSettings()]);
+  const [items, fullTree, settings, selfAccount] = await Promise.all([
+    rootCode ? downline(rootCode) : [],
+    rootCode ? downline(rootCode, { maxDepth: null }) : [],
+    readSettings(),
+    user?._id ? Account.findOne({ user: user._id }).select("investments.amount").lean() : null,
+  ]);
 
   // Resolve accounts via User.referralId → Account.user. graphLookup _ids can fail $in match.
-  const codes = [...new Set(items.map((item) => String(item.member.referralId || "").trim().toUpperCase()).filter(Boolean))];
+  const codes = [
+    ...new Set(
+      [...items, ...fullTree]
+        .map((item) => String(item.member.referralId || "").trim().toUpperCase())
+        .filter(Boolean),
+    ),
+  ];
   const users = codes.length
     ? await User.find({ referralId: { $in: codes } }).select("_id referralId").lean()
     : [];
@@ -68,6 +113,12 @@ export async function buildNetwork(user) {
       .lean()
     : [];
   const accountByUser = new Map(accounts.map((row) => [idKey(row.user), row]));
+  const invByCode = new Map();
+  if (rootCode) invByCode.set(rootCode, investmentTotal(selfAccount));
+  for (const [code, userId] of userIdByCode) {
+    invByCode.set(code, investmentTotal(accountByUser.get(userId)));
+  }
+  const businessBvByCode = buildBusinessBvMap(rootCode, fullTree, invByCode);
 
   const flat = items.map((item) => {
     const code = String(item.member.referralId || "").trim().toUpperCase();
@@ -87,6 +138,7 @@ export async function buildNetwork(user) {
       hasPlan,
       plan: plan?.planName || "—",
       investment: Number(plan?.amount) || 0,
+      businessBv: Number(businessBvByCode.get(code) || invByCode.get(code) || 0),
       joined: new Date(item.member.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
       sponsor: item.parent,
       tasks: 0,
@@ -110,6 +162,7 @@ export async function buildNetwork(user) {
     total: flat.length,
     active: flat.filter((row) => row.status === "Active").length,
     direct: flat.filter((row) => row.level === 1).length,
+    businessBv: Number(businessBvByCode.get(rootCode) || invByCode.get(rootCode) || 0),
     commissionPerTen: levels.reduce((sum, row) => sum + Number(row.amount || 0), 0),
   };
 }
