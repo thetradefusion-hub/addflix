@@ -105,30 +105,47 @@ export default function Dashboard() {
 
       <section className="grid gap-3 lg:grid-cols-12">
         <div className="flex flex-col gap-3 lg:col-span-5">
-        <article className="relative overflow-hidden rounded-2xl bg-[linear-gradient(125deg,#5b21b6_0%,#7c3aed_42%,#db2777_100%)] p-5 text-white shadow-[0_16px_36px_rgba(91,33,182,0.28)]">
-          <img src="/images/wallet-card.png" alt="" className="pointer-events-none absolute -right-8 -top-3 h-32 w-32 object-cover [mask-image:radial-gradient(circle_at_55%_48%,black_42%,transparent_72%)] sm:-right-6 sm:-top-4 sm:h-44 sm:w-44" />
-          <p className="text-sm text-white/80">Total working balance</p>
-          <div className="mt-1 flex items-center gap-2">
-            <p className="text-4xl font-black tracking-tight">{hidden ? "••••" : `$${money(walletDisplayTotal)}`}</p>
-            <button type="button" aria-label="Toggle balance visibility" onClick={() => setHidden((v) => !v)} className="text-white/80">
-              {hidden ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-          <p className="mt-1 text-sm text-white/75">≈ {hidden ? "••••" : `$${money(walletDisplayTotal)} USDT`}</p>
-          <div className="relative z-[1] mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-white/15 px-3 py-2.5 backdrop-blur-[2px]">
-              <p className="text-[11px] font-medium text-white/75">Signup Bonus</p>
-              <p className="mt-0.5 text-sm font-black tracking-tight">{hidden ? "••••" : `$${money(signupBonusAmount)}`}</p>
+        <article className="dash-wallet">
+          <div className="dash-wallet__shine" aria-hidden="true" />
+          <div className="dash-wallet__orb dash-wallet__orb--a" aria-hidden="true" />
+          <div className="dash-wallet__orb dash-wallet__orb--b" aria-hidden="true" />
+          <img src="/images/wallet-card.png" alt="" className="dash-wallet__art" />
+          <div className="dash-wallet__body">
+            <p className="dash-wallet__label">Total working balance</p>
+            <div className="dash-wallet__amount-row">
+              <p className="dash-wallet__amount">{hidden ? "••••" : `$${money(walletDisplayTotal)}`}</p>
+              <button type="button" aria-label="Toggle balance visibility" onClick={() => setHidden((v) => !v)} className="dash-wallet__eye">
+                {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
-            <div className="rounded-xl bg-white/15 px-3 py-2.5 backdrop-blur-[2px]">
-              <p className="text-[11px] font-medium text-white/75">Signup Referral</p>
-              <p className="mt-0.5 text-sm font-black tracking-tight">{hidden ? "••••" : `$${money(signupReferralAmount)}`}</p>
+            <p className="dash-wallet__approx">≈ {hidden ? "••••" : `$${money(walletDisplayTotal)} USDT`}</p>
+            <div className="dash-wallet__tiles">
+              <div className="dash-wallet__tile">
+                <span className="dash-wallet__tile-icon"><AppIcon name="Gift" size={16} /></span>
+                <span className="min-w-0">
+                  <span className="dash-wallet__tile-label">Signup Bonus</span>
+                  <span className="dash-wallet__tile-value">{hidden ? "••••" : `$${money(signupBonusAmount)}`}</span>
+                </span>
+              </div>
+              <div className="dash-wallet__tile">
+                <span className="dash-wallet__tile-icon"><AppIcon name="Users" size={16} /></span>
+                <span className="min-w-0">
+                  <span className="dash-wallet__tile-label">Signup Referral</span>
+                  <span className="dash-wallet__tile-value">{hidden ? "••••" : `$${money(signupReferralAmount)}`}</span>
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="relative z-[1] mt-4 grid grid-cols-3 gap-2">
-            <button onClick={() => navigate("/wallet/deposit")} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#e10600] px-2 text-xs font-bold sm:text-sm"><AppIcon name="ArrowDownToLine" size={15} /> Deposit</button>
-            <button onClick={() => { if (!guard()) return; navigate("/wallet/withdraw"); }} className="theme-fixed inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-white px-2 text-xs font-bold text-[#111827] sm:text-sm"><AppIcon name="ArrowUpFromLine" size={15} /> Withdraw</button>
-            <button onClick={() => navigate("/wallet/transfer")} className="inline-flex h-10 items-center justify-center gap-1 rounded-xl bg-[#4c1d95] px-2 text-xs font-bold sm:text-sm"><AppIcon name="ArrowLeftRight" size={15} /> Transfer</button>
+            <div className="dash-wallet__actions">
+              <button type="button" onClick={() => navigate("/wallet/deposit")} className="dash-wallet__btn dash-wallet__btn--deposit">
+                <AppIcon name="ArrowDownToLine" size={15} /> Deposit
+              </button>
+              <button type="button" onClick={() => { if (!guard()) return; navigate("/wallet/withdraw"); }} className="theme-fixed dash-wallet__btn dash-wallet__btn--withdraw">
+                <AppIcon name="ArrowUpFromLine" size={15} /> Withdraw
+              </button>
+              <button type="button" onClick={() => navigate("/wallet/transfer")} className="dash-wallet__btn dash-wallet__btn--transfer">
+                <AppIcon name="ArrowLeftRight" size={15} /> Transfer
+              </button>
+            </div>
           </div>
         </article>
         <article className="rounded-2xl border border-[#eaecf0] bg-white p-3 shadow-[0_8px_24px_rgba(16,24,40,0.04)]">
