@@ -48,7 +48,6 @@ export default function Investment() {
   });
   const daily = selected ? (amount * selected.dailyRoi) / 100 : 0;
   const cap = selected ? (amount * selected.maxRoi) / 100 : 0;
-  const projected = selected ? Math.min(daily * selected.validity, cap) : 0;
   const progress = featured && featured.cap ? Math.min(100, (featured.earnedRoi / featured.cap) * 100) : 0;
   const statIcons = [
     ["Active Plan", featured ? featured.planName : "None", featured ? "Active" : "", "Crown", "bg-violet-50 text-violet-500"],
@@ -222,65 +221,6 @@ export default function Investment() {
           ))}
         </div>
         <Pager page={planPage.page} pages={planPage.pages} total={planPage.total} size={planPage.size} onChange={planPage.setPage} />
-      </section>
-
-      <section className="grid gap-3 lg:grid-cols-3">
-        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm sm:p-5">
-          <p className="font-bold">Invest in Plan</p>
-          <label className="mt-4 block text-xs font-semibold text-[#667085]">Select Plan</label>
-          <select className="mt-1.5 h-12 w-full rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600] focus:bg-white" value={selected?.id || ""} onChange={(e) => {
-            const plan = plans.find((p) => p.id === e.target.value);
-            if (!plan) return;
-            setSelectedId(plan.id);
-            setAmount(plan.min);
-          }}>
-            {plans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name} (Min ${plan.min})</option>)}
-          </select>
-          <label className="mt-3 block text-xs font-semibold text-[#667085]">Investment Amount (USDT)</label>
-          <input type="number" min={selected?.min || 0} max={investable} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="mt-1.5 h-12 w-full rounded-xl border border-[#eaecf0] bg-[#f8fafc] px-3 text-sm outline-none focus:border-[#e10600] focus:bg-white" />
-          <p className="mt-2 text-xs text-[#667085]">Investable ${money(investable)} · Signup bonus excluded · Wallet ${money(balances.total)}</p>
-          <Button className="mt-4 w-full" onClick={() => { if (!guard()) return; setOpen(true); }}>Proceed to Invest →</Button>
-        </article>
-
-        <article className="rounded-2xl border border-[#eaecf0] bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="font-bold">{selected?.name || "Plan"}</p>
-            <span className={`grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br text-white ${colors[selected?.accent] || colors.red}`}>
-              {(() => { const Icon = icons[selected?.accent] || Crown; return <Icon size={16} />; })()}
-            </span>
-          </div>
-          <ul className="space-y-2 text-sm text-[#475467]">
-            {[
-              ["Minimum", `$${selected?.min || 0} USDT`],
-              ["Daily AdView", `${selected?.dailyRoi || 0}% after the task`],
-              ["Maximum AdView", `${selected?.maxRoi || 0}%`],
-              ["Validity", `${selected?.validity || 0} days`],
-              ["AdView days", roiDaysLabel(selected?.offDays).replace(/^(?:ROI|AdView) /, "")],
-              ["Task", "Watch the sponsored video"],
-            ].map(([label, value]) => (
-              <li key={label} className="flex items-center justify-between gap-3 rounded-xl bg-[#f8fafc] px-3 py-2.5">
-                <span className="text-[#667085]">{label}</span>
-                <span className="text-right font-semibold text-[#101828]">{value}</span>
-              </li>
-            ))}
-          </ul>
-        </article>
-
-        <article className="rounded-2xl bg-[linear-gradient(165deg,#064e3b_0%,#059669_100%)] p-5 text-white shadow-[0_16px_32px_rgba(5,150,105,0.22)]">
-          <p className="text-[11px] font-bold tracking-[0.14em] text-white/75">ESTIMATED EARNING</p>
-          <p className="mt-2 text-4xl font-black tracking-tight">${money(projected || 0)}</p>
-          <p className="mt-1 text-sm text-white/80">in {selected?.validity || 0} {selected?.offDays?.length ? "AdView days" : "days"} if every task is completed</p>
-          <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-xl bg-white/15 px-3 py-3">
-              <p className="text-[11px] text-white/70">Amount</p>
-              <p className="font-bold">${money(amount || 0)}</p>
-            </div>
-            <div className="rounded-xl bg-white/15 px-3 py-3">
-              <p className="text-[11px] text-white/70">Daily AdView</p>
-              <p className="font-bold">${money(daily || 0)}</p>
-            </div>
-          </div>
-        </article>
       </section>
 
       <Modal

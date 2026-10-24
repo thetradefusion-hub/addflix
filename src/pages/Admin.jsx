@@ -1474,6 +1474,7 @@ function SettingsForm({ settings, setSettings, onSave }) {
     ["level3", "Level 3 commission"],
     ["level4", "Level 4 commission"],
     ["minWithdraw", "Minimum withdrawal"],
+    ["minDeposit", "Minimum deposit"],
     ["withdrawFeeRate", "Withdrawal fee rate"],
     ["taskDuration", "Task seconds"],
     ["taskRequired", "Required watch %"],

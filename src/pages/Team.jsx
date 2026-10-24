@@ -156,10 +156,31 @@ export default function Team() {
     refreshNetwork?.();
   }, []);
   const q = query.trim().toLowerCase();
-  const selfTone = useMemo(() => {
-    const hasPlan = (investments || []).some((row) => row.status === "Active");
-    return PACKAGE_CARD[packageTone({ subscribed: Boolean(subscriptionActive), hasPlan })];
-  }, [subscriptionActive, investments]);
+  const activePlan = useMemo(
+    () => (investments || []).find((row) => row.status === "Active"),
+    [investments],
+  );
+  const selfMember = useMemo(() => {
+    const hasPlan = Boolean(activePlan);
+    return {
+      id: memberId,
+      name: sessionUser?.name || "You",
+      level: 0,
+      levelLabel: "You",
+      sponsor: sessionUser?.sponsorId || "—",
+      joined: sessionUser?.joined || "—",
+      status: subscriptionActive ? "Active" : "Inactive",
+      plan: activePlan?.planName || "—",
+      investment: Number(activePlan?.amount) || 0,
+      businessBv: Number(network.businessBv) || 0,
+      subscribed: Boolean(subscriptionActive),
+      hasPlan,
+    };
+  }, [activePlan, memberId, network.businessBv, sessionUser, subscriptionActive]);
+  const selfTone = useMemo(
+    () => PACKAGE_CARD[packageTone(selfMember)],
+    [selfMember],
+  );
   const focused = useMemo(
     () => (treeFocus ? members.find((row) => sameId(row.id, treeFocus.id)) || treeFocus : null),
     [members, treeFocus],
@@ -263,15 +284,17 @@ export default function Team() {
                   </div>
                 ) : (
                   <div ref={rootRef} className={`w-[8.75rem] rounded-2xl border px-2 py-3 text-center ${selfTone.card}`}>
-                    <p className={`text-[10px] font-semibold uppercase tracking-wide ${selfTone.muted}`}>You</p>
-                    <p className="mt-1 truncate text-sm font-black">{sessionUser?.name || "You"}</p>
-                    <p className={`truncate text-[10px] ${selfTone.muted}`}>{memberId}</p>
-                    <span
-                      className={`mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold ${selfTone.chip}`}
-                      title={`Total Business BV $${money(network.businessBv || 0)}`}
-                    >
-                      {cardBv(network.businessBv)}
-                    </span>
+                    <button type="button" onClick={() => setPicked(selfMember)} className="w-full text-center">
+                      <p className={`text-[10px] font-semibold uppercase tracking-wide ${selfTone.muted}`}>You</p>
+                      <p className="mt-1 truncate text-sm font-black">{selfMember.name}</p>
+                      <p className={`truncate text-[10px] ${selfTone.muted}`}>{selfMember.id}</p>
+                      <span
+                        className={`mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-bold ${selfTone.chip}`}
+                        title={`Total Business BV $${money(selfMember.businessBv || 0)}`}
+                      >
+                        {cardBv(selfMember.businessBv)}
+                      </span>
+                    </button>
                   </div>
                 )}
                 {roots.length ? (
@@ -346,7 +369,7 @@ export default function Team() {
           <ul className="space-y-2">
             {[
               ["User ID", picked.id],
-              ["Level", `Level ${picked.level}`],
+              ["Level", picked.levelLabel || (picked.level ? `Level ${picked.level}` : "You")],
               ["Sponsor", picked.sponsor || "—"],
               ["Joined", picked.joined],
               ["Subscription", picked.status],

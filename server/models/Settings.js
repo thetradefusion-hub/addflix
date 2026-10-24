@@ -11,6 +11,7 @@ const settingsSchema = new mongoose.Schema(
     level3: { type: Number, default: 1 },
     level4: { type: Number, default: 0.5 },
     minWithdraw: { type: Number, default: 10 },
+    minDeposit: { type: Number, default: 10 },
     withdrawFeeRate: { type: Number, default: 0.1 },
     signupWithdrawDirectPercent: { type: Number, default: 10 },
     investmentReferralPercent: { type: Number, default: 5 },

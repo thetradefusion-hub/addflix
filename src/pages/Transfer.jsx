@@ -18,7 +18,7 @@ const paths = { Deposit: "/wallet/deposit", Withdraw: "/wallet/withdraw", Transf
 
 export default function Transfer({ mode = "Deposit" }) {
   const navigate = useNavigate();
-  const { balances, signupGate, depositRows, withdrawalRows, transactions, submitWithdrawal, submitTransfer, toast, submitDeposit, depositAddress, walletAddress } = useApp();
+  const { balances, signupGate, depositRows, withdrawalRows, transactions, submitWithdrawal, submitTransfer, toast, submitDeposit, depositAddress, minDeposit, walletAddress } = useApp();
   const guard = useActiveGuard();
   const [tab, setTab] = useState(mode);
   const [recipient, setRecipient] = useState("");
@@ -87,10 +87,11 @@ export default function Transfer({ mode = "Deposit" }) {
   const unlockPercent = Number(signupGate?.unlockPercent ?? 10);
   const selectedMax = withdrawSource === "signup" ? signupUnlocked : workingBalance;
 
+  const depositMinimum = Number(minDeposit) || 10;
   const sendDeposit = async () => {
     const value = Number(depositAmount);
-    if (!Number.isFinite(value) || value < 10) {
-      toast("Minimum deposit is 10 USDT.", "warning");
+    if (!Number.isFinite(value) || value < depositMinimum) {
+      toast(`Minimum deposit is ${depositMinimum} USDT.`, "warning");
       return;
     }
     setBusy(true);
@@ -230,14 +231,14 @@ export default function Transfer({ mode = "Deposit" }) {
             <label className="mt-3 block text-xs font-semibold text-[#667085]">Amount (USDT)</label>
             <input
               type="number"
-              min="10"
+              min={depositMinimum}
               step="0.01"
               value={depositAmount}
               onChange={(e) => setDepositAmount(e.target.value)}
               placeholder="Amount you sent"
               className="mt-1 h-11 w-full rounded-xl border border-[#eaecf0] px-3 text-sm outline-none focus:border-[#e10600]"
             />
-            <p className="mt-1 text-[11px] text-[#98a2b3]">Minimum 10 USDT. This stays Pending until admin marks it Success.</p>
+            <p className="mt-1 text-[11px] text-[#98a2b3]">Minimum {depositMinimum} USDT. This stays Pending until admin marks it Success.</p>
             <label className="mt-3 block text-xs font-semibold text-[#667085]">Transaction hash</label>
             <input
               value={depositTx}
@@ -262,7 +263,7 @@ export default function Transfer({ mode = "Deposit" }) {
               <ul className="mt-1 list-disc space-y-1 pl-4">
                 <li>Send only USDT using {network} network.</li>
                 <li>Do not send from other networks.</li>
-                <li>Minimum Deposit: 10 USDT</li>
+                <li>Minimum Deposit: {depositMinimum} USDT</li>
                 <li>Confirmations: 3 – 10 minutes</li>
                 <li>Do not send any other coin or token.</li>
               </ul>

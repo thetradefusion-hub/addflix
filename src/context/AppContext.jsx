@@ -58,6 +58,7 @@ export function AppProvider({ children }) {
   const [walletAddress, setWalletAddress] = useState("");
   const [plans, setPlans] = useState([]);
   const [depositAddress, setDepositAddress] = useState("");
+  const [minDeposit, setMinDeposit] = useState(10);
   const [subscriptionPrice, setSubscriptionPrice] = useState(10);
   const [offerPopup, setOfferPopup] = useState({ enabled: false, image: "", link: "", key: "" });
   const [network, setNetwork] = useState(EMPTY_NETWORK);
@@ -237,6 +238,7 @@ export function AppProvider({ children }) {
       .then((data) => {
         setPlans(Array.isArray(data.plans) ? data.plans : []);
         if (data.depositAddress) setDepositAddress(data.depositAddress);
+        if (data.minDeposit != null) setMinDeposit(Number(data.minDeposit) || 10);
         if (data.subscriptionAmount) setSubscriptionPrice(Number(data.subscriptionAmount));
         if (data.offerPopup) setOfferPopup(data.offerPopup);
       })
@@ -552,6 +554,7 @@ export function AppProvider({ children }) {
       submitSubscription,
       plans,
       depositAddress,
+      minDeposit,
       subscriptionPrice,
       offerPopup,
       network,
@@ -606,6 +609,7 @@ export function AppProvider({ children }) {
       walletAddress,
       plans,
       depositAddress,
+      minDeposit,
       subscriptionPrice,
       offerPopup,
       network,

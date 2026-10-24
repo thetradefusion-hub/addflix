@@ -45,6 +45,7 @@ function publicSettings(settings) {
     level3: settings.level3,
     level4: settings.level4,
     minWithdraw: settings.minWithdraw,
+    minDeposit: Number(settings.minDeposit) || 10,
     withdrawFeeRate: settings.withdrawFeeRate,
     signupWithdrawDirectPercent: Number(settings.signupWithdrawDirectPercent) || 10,
     investmentReferralPercent: Number(settings.investmentReferralPercent) || 5,
@@ -665,7 +666,7 @@ router.get("/settings", requireDuty("settings"), async (_req, res) => {
 router.put("/settings", requireDuty("settings"), async (req, res) => {
   const settings = await getSettings();
   const body = req.body || {};
-  const numbers = ["subscriptionAmount", "signupBonus", "signupReferralPercent", "signupWithdrawDirectPercent", "investmentReferralPercent", "level1", "level2", "level3", "level4", "minWithdraw", "withdrawFeeRate", "taskDuration", "taskRequired"];
+  const numbers = ["subscriptionAmount", "signupBonus", "signupReferralPercent", "signupWithdrawDirectPercent", "investmentReferralPercent", "level1", "level2", "level3", "level4", "minWithdraw", "minDeposit", "withdrawFeeRate", "taskDuration", "taskRequired"];
   for (const key of numbers) {
     if (body[key] == null || body[key] === "") continue;
     const value = Number(body[key]);

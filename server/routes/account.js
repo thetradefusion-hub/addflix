@@ -763,11 +763,13 @@ router.post("/transfer", async (req, res) => {
 
 router.post("/deposit", async (req, res) => {
   const account = await loadAccount(req.user._id);
+  const settings = await getSettings();
+  const minimum = Number(settings.minDeposit) || 10;
   const allowed = ["BEP-20", "ERC-20", "TRC-20"];
   const network = allowed.includes(req.body?.network) ? req.body.network : "BEP-20";
   const amount = money2(req.body?.amount);
-  if (!amount || amount < 10) {
-    return res.status(400).json({ ok: false, message: "Minimum deposit is 10 USDT." });
+  if (!amount || amount < minimum) {
+    return res.status(400).json({ ok: false, message: `Minimum deposit is ${minimum} USDT.` });
   }
   const tx = String(req.body?.tx || "").trim().slice(0, 120);
   const row = {
